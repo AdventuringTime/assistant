@@ -1,7 +1,8 @@
-from PySide6.QtWidgets import QMainWindow, QLabel
+from PySide6.QtWidgets import QLabel
 from PySide6.QtCore import Qt
+from core.base_window import BaseWindow
 
-class MainWindow(QMainWindow):
+class MainWindow(BaseWindow):
     def __init__(self):
         super().__init__()
         
