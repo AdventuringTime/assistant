@@ -10,4 +10,5 @@ class BaseWindow(QMainWindow):
         super().__init__()
         
         # 设置窗口图标
-        self.setWindowIcon(QIcon(os.path.join("img", "logo.ico")))
+        self.icon = QIcon(os.path.join("img", "logo.ico"))
+        self.setWindowIcon(self.icon)
