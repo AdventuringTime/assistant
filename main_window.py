@@ -1,6 +1,5 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QLabel
+from PySide6.QtWidgets import QMainWindow, QLabel
 from PySide6.QtCore import Qt
-import sys
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -29,16 +28,3 @@ class MainWindow(QMainWindow):
         
         # 将标签设置为窗口的中心部件
         self.setCentralWidget(label)
-
-if __name__ == "__main__":
-    # 创建应用程序对象
-    app = QApplication(sys.argv)
-    
-    # 创建主窗口对象
-    window = MainWindow()
-    
-    # 显示窗口
-    window.show()
-    
-    # 进入应用程序事件循环，等待用户操作
-    sys.exit(app.exec())
