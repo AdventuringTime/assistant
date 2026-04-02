@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
 from core.base_window import BaseWindow
-from core.widgets import ClockWidget
+from core.widgets import TopStatusWidget
 from core.global_constants import app_name
 
 class MainWindow(BaseWindow):
@@ -19,9 +19,6 @@ class MainWindow(BaseWindow):
         
         # 设置窗口标题
         self.setWindowTitle(app_name)
-        
-        # 设置窗口大小
-        self.resize(400, 300)
         
         # 初始化系统托盘
         self.init_system_tray()
@@ -81,7 +78,7 @@ class MainWindow(BaseWindow):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         # 内容部件
-        content_widgets = [ClockWidget()]
+        content_widgets = [TopStatusWidget()]
         
         # 组合部件
         for widget in content_widgets:

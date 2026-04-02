@@ -1,58 +1,12 @@
 import numpy as np
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from PySide6.QtCore import QRectF
 import datetime
 import json
 import os
-from core.isFirstToday import get_today
-
-class ExampleWidget(QWidget):
-    """示例内容部件，包含文本和切换按钮"""
-    
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        
-        # 初始化显示状态
-        self.is_hello = True
-        
-        # 创建布局和部件
-        self.init_ui()
-    
-    def init_ui(self):
-        """初始化用户界面"""
-        # 创建布局
-        layout = QHBoxLayout()
-        
-        # 创建文本标签
-        self.text_label = QLabel("Hello, world!")
-        self.text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        # 创建切换按钮
-        self.toggle_button = QPushButton("切换文字")
-        
-        # 连接按钮点击事件
-        self.toggle_button.clicked.connect(self.toggle_text)
-        
-        # 将部件添加到布局
-        layout.addWidget(self.text_label)
-        layout.addWidget(self.toggle_button)
-        
-        # 设置布局
-        self.setLayout(layout)
-    
-    def toggle_text(self):
-        """切换显示的文本"""
-        if self.is_hello:
-            # 切换到另一段文字
-            self.text_label.setText("欢迎使用PySide6应用程序！\n这是一个功能演示。")
-        else:
-            # 切换回Hello world
-            self.text_label.setText("Hello, world!")
-        
-        # 切换状态
-        self.is_hello = not self.is_hello
+from core.functions import get_today
 
 class ClockWidget(QWidget):
     """时钟部件，显示三个同心环进度条"""
@@ -64,8 +18,8 @@ class ClockWidget(QWidget):
         self.ring_width = 8
         self.dot_size = 8
         
-        # 设置组件的最小尺寸
-        self.setMinimumSize(128, 128)
+        # 设置组件的尺寸
+        self.setFixedSize(128, 128)
         
         # 计算初始进度值（创建时计算一次）
         self.calculate_progress()
@@ -212,6 +166,18 @@ class ClockWidget(QWidget):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawEllipse(int(dot_x - self.dot_size / 2), int(dot_y - self.dot_size / 2), 
                           self.dot_size, self.dot_size)
+        
+class DateTimeLabel(QLabel):
+    """日期时间标签，显示日期和时间"""
+    def __init__(self, week_number, parent=None):
+        super().__init__(parent)
+        self.update_display(week_number)
+
+    def update_display(self, week_number):
+        """更新显示内容"""
+        # 更新日期周次
+        date_str = get_today().strftime("%m月%d日")
+        self.setText(f"{date_str} 第{week_number}周")
 
 class PeriodSeasonLabel(QLabel):
     """时期与季节标签，显示时期和季节信息"""
@@ -242,5 +208,67 @@ class PeriodSeasonLabel(QLabel):
         self.setText(display_text)
     
 class TopStatusWidget(QWidget):
-    """顶部状态部件，包含时钟、日期、周次、时期、季节"""
-    pass
+    """顶部状态部件，圆角矩形框内，左侧时钟，右侧日期周次和时期季节"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # 设置组件
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("""
+            TopStatusWidget {
+                border-radius: 15px;
+                border: 1px solid #E0E0E0;
+            }
+        """)
+        
+        # 创建布局和部件
+        self.init_ui()
+        
+        # 初始化显示
+        self.update_display()
+    
+    def init_ui(self):
+        """初始化用户界面"""
+        # 主水平布局（设置边距确保边框可见）
+        main_layout = QHBoxLayout(self)
+        
+        # 左侧：时钟部件
+        self.clock_widget = ClockWidget()
+        main_layout.addWidget(self.clock_widget)
+        
+        # 右侧：垂直布局（日期周次 + 时期季节）
+        right_layout = QVBoxLayout()
+        right_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        
+        # 日期周次标签
+        self.date_week_label = DateTimeLabel(self.get_week_number(), self)
+        self.date_week_label.setStyleSheet("""
+            font-size: 36px;
+            font-weight: bold;
+            color: #FFFFFF;
+        """)
+        right_layout.addWidget(self.date_week_label)
+        
+        # 时期季节标签
+        self.period_season_label = PeriodSeasonLabel()
+        self.period_season_label.setStyleSheet("""
+            font-size: 24px;
+            color: #888888;
+        """)
+        right_layout.addWidget(self.period_season_label)
+
+        main_layout.addLayout(right_layout, 1)
+    
+    def get_week_number(self):
+        """获取周次"""
+        # 获取时钟部件的内环进度（对应周次进度）
+        inner_progress = self.clock_widget.inner_progress
+        # 根据进度计算周次（总300周）
+        return int(inner_progress * 300) + 1
+    
+    def update_display(self):
+        """更新所有显示"""
+        self.clock_widget.update()  # 刷新时钟显示
+        self.date_week_label.update_display(self.get_week_number())
+        self.period_season_label.load_data()
