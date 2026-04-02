@@ -8,16 +8,17 @@
 from PySide6.QtWidgets import QLabel, QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QIcon
+
 from core.base_window import BaseWindow
 from core.content_widget import ContentWidget
-import os
+from core.global_constants import app_name
 
 class MainWindow(BaseWindow):
     def __init__(self):
         super().__init__()
         
         # 设置窗口标题
-        self.setWindowTitle("我的第一个PySide6程序")
+        self.setWindowTitle(app_name)
         
         # 设置窗口大小
         self.resize(400, 300)
@@ -32,7 +33,7 @@ class MainWindow(BaseWindow):
         """初始化系统托盘"""
         # 创建系统托盘图标
         self.tray = QSystemTrayIcon(self.icon, self)
-        self.tray.setToolTip("我的第一个PySide6程序")
+        self.tray.setToolTip(app_name)
         
         # 创建托盘菜单
         tray_menu = QMenu()
