@@ -5,12 +5,12 @@
 - content_widgets：要在主窗口显示的内容部件列表。
 '''
 
-from PySide6.QtWidgets import QLabel, QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction
 
 from core.base_window import BaseWindow
-from core.content_widget import ContentWidget
+from core.widgets import ClockWidget
 from core.global_constants import app_name
 
 class MainWindow(BaseWindow):
@@ -81,7 +81,7 @@ class MainWindow(BaseWindow):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         # 内容部件
-        content_widgets = [ContentWidget()]
+        content_widgets = [ClockWidget()]
         
         # 组合部件
         for widget in content_widgets:
