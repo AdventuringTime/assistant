@@ -4,7 +4,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from PySide6.QtCore import QRectF
 import datetime
-import math
+import json
+import os
 from core.isFirstToday import get_today
 
 class ExampleWidget(QWidget):
@@ -212,6 +213,34 @@ class ClockWidget(QWidget):
         painter.drawEllipse(int(dot_x - self.dot_size / 2), int(dot_y - self.dot_size / 2), 
                           self.dot_size, self.dot_size)
 
+class PeriodSeasonLabel(QLabel):
+    """时期与季节标签，显示时期和季节信息"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # 加载并显示数据
+        self.load_data()
+    
+    def load_data(self):
+        """从JSON文件加载数据并更新显示"""
+        
+        # 构建文件路径
+        json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+                                'data', 'homepage', 'PeriodSeason.json')
+        
+        # 读取JSON文件
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 获取时期和季节数据
+        period = data.get('period', '未知')
+        season = data.get('season', '未知')
+        
+        # 显示文本（固定格式：时期 + 季节）
+        display_text = f"{period}期 {season}季"
+        self.setText(display_text)
+    
 class TopStatusWidget(QWidget):
     """顶部状态部件，包含时钟、日期、周次、时期、季节"""
     pass
