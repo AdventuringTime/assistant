@@ -1,7 +1,15 @@
-from PySide6.QtWidgets import QLabel, QSystemTrayIcon, QMenu, QApplication
+'''
+主窗口类，包含系统托盘和内容部件
+
+常需修改的变量：
+- content_widgets：要在主窗口显示的内容部件列表。
+'''
+
+from PySide6.QtWidgets import QLabel, QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction, QIcon
 from core.base_window import BaseWindow
+from core.content_widget import ContentWidget
 import os
 
 class MainWindow(BaseWindow):
@@ -67,20 +75,15 @@ class MainWindow(BaseWindow):
     
     def init_content(self):
         """初始化窗口内容"""
-        # 创建标签，显示文字
-        label = QLabel("Hello, world!", self)
+        container = QWidget()
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
-        # 设置标签居中显示
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # 内容部件
+        content_widgets = [ContentWidget()]
         
-        # 设置标签样式（可选，让文字更大更好看）
-        label.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                font-weight: bold;
-                color: #3498db;
-            }
-        """)
-        
-        # 将标签设置为窗口的中心部件
-        self.setCentralWidget(label)
+        # 组合部件
+        for widget in content_widgets:
+            layout.addWidget(widget)
+        container.setLayout(layout)
+        self.setCentralWidget(container)
