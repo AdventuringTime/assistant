@@ -218,7 +218,7 @@ class TopStatusWidget(QWidget):
         self.setStyleSheet("""
             TopStatusWidget {
                 border-radius: 15px;
-                border: 1px solid #E0E0E0;
+                border: 1px solid #808080;
             }
         """)
         
