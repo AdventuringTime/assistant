@@ -11,6 +11,7 @@ from winotify import Notification
 
 from core.functions import get_today
 from core.global_constants import app_name
+from core.heartbeat import Heartbeat
 
 
 class ClockWidget(QWidget):
@@ -307,8 +308,8 @@ class TopStatusWidget(QWidget):
         # 创建布局和部件
         self.init_ui()
         
-        # 初始化显示
-        self.update_display()
+        # 定期更新显示
+        self.updater = Heartbeat(self.update_display, interval=300)
     
     def init_ui(self):
         """初始化用户界面"""
@@ -374,7 +375,8 @@ class NotificationItemWidget(QWidget):
             click_action=None,
             icon_path='',
             is_read=False,
-            notification_system=None
+            notification_system=None,
+            create_time=None
         ):
         super().__init__()
         self.title = title
@@ -382,7 +384,7 @@ class NotificationItemWidget(QWidget):
         self.is_read = is_read
         self.click_action = click_action
         self.icon_path = icon_path
-        self.create_time = datetime.datetime.now()
+        self.create_time = create_time if create_time else datetime.datetime.now()
         self.notification_system = notification_system
         
         # 设置组件样式
@@ -414,7 +416,7 @@ class NotificationItemWidget(QWidget):
         bottom_layout = QHBoxLayout()
         
         # 左侧：创建时间
-        self.time_label = QLabel()
+        self.time_label = QLabel(self.create_time.strftime("%Y-%m-%d %H:%M:%S"))
         self.time_label.setStyleSheet("""
             font-size: 12px;
             color: #888888;
@@ -454,9 +456,6 @@ class NotificationItemWidget(QWidget):
         
         # 设置已读状态样式
         self.update_read_style()
-        
-        # 更新时间显示
-        self.update_time_display()
     
     def update_read_style(self):
         """更新已读状态样式"""
@@ -549,29 +548,6 @@ class NotificationItemWidget(QWidget):
         if content is not None:
             self.content = content
             self.content_label.setText(content)
-    
-    def update_time_display(self):
-        """更新时间显示"""
-        now = datetime.datetime.now()
-        time_diff = now - self.create_time
-        
-        if time_diff.total_seconds() < 60:
-            # 1分钟内显示"刚刚"
-            time_text = "刚刚"
-        elif time_diff.total_seconds() < 3600:
-            # 1小时内显示分钟数
-            minutes = int(time_diff.total_seconds() // 60)
-            time_text = f"{minutes}分钟前"
-        elif time_diff.total_seconds() < 86400:
-            # 1天内显示小时数
-            hours = int(time_diff.total_seconds() // 3600)
-            time_text = f"{hours}小时前"
-        else:
-            # 超过1天显示日期
-            days = int(time_diff.total_seconds() // 86400)
-            time_text = f"{days}天前"
-        
-        self.time_label.setText(time_text)
     
     def toggle_read_status(self):
         """切换已读/未读状态"""
@@ -853,11 +829,9 @@ class NotificationSystemWidget(QWidget):
                 click_action=notification_data.get("click_action"),
                 icon_path=notification_data.get("icon_path", ''),
                 is_read=notification_data["is_read"],
-                notification_system=self
+                notification_system=self,
+                create_time=datetime.datetime.fromisoformat(notification_data["create_time"])
             )
-            
-            # 设置创建时间
-            notification_item.create_time = datetime.datetime.fromisoformat(notification_data["create_time"])
             
             # 添加到列表
             self.notifications.append(notification_item)
@@ -871,9 +845,6 @@ class NotificationSystemWidget(QWidget):
             
             # 添加通知项到布局
             self.notification_layout.addWidget(notification_item)
-            
-            # 更新时间显示
-            notification_item.update_time_display()
             
             # 更新已读状态样式
             notification_item.update_read_style()
