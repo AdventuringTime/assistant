@@ -579,20 +579,25 @@ class NotificationSystemWidget(QWidget):
             icon_path='',
             is_read=False):
         """添加新通知"""
-        # 如果有通知，先添加分界线
-        if self.notifications:
-            separator = QLabel()
-            separator.setFixedHeight(1)
-            separator.setStyleSheet("background-color: #808080;")
-            self.notification_layout.addWidget(separator)
-        
         # 添加通知项
         notification_item = NotificationItemWidget(
             title, content, click_callback, icon_path, is_read,
             self, self.main_window
         )
-        self.notifications.append(notification_item)
-        self.notification_layout.addWidget(notification_item)
+        
+        # 将新通知插入到列表的开头（最新的在最前面）
+        self.notifications.insert(0, notification_item)
+        
+        # 如果有其他通知，在新通知下方添加分界线
+        if len(self.notifications) > 1:
+            separator = QLabel()
+            separator.setFixedHeight(1)
+            separator.setStyleSheet("background-color: #808080;")
+            self.notification_layout.insertWidget(0, separator)
+        
+        # 将新通知插入到布局的开头（显示在最上方）
+        self.notification_layout.insertWidget(0, notification_item)
+        
         # 发送系统弹窗气泡通知
         notification_item.send_system_notification()
         
