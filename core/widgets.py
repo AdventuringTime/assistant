@@ -346,6 +346,7 @@ class NotificationItemWidget(QWidget):
         self.content = content
         self.is_read = is_read
         self.click_callback = click_callback
+        self.icon_path = icon_path
         self.create_time = datetime.datetime.now()
         self.main_window = main_window
         
@@ -358,7 +359,7 @@ class NotificationItemWidget(QWidget):
         """)
         
         # 发送系统弹窗气泡通知
-        self.send_system_notification(icon_path)
+        self.send_system_notification()
         
         # 创建布局和部件
         self.init_ui()
@@ -511,13 +512,13 @@ class NotificationItemWidget(QWidget):
         else:
             self.mark_as_read()
     
-    def send_system_notification(self, icon_path=''):
+    def send_system_notification(self):
         """发送系统弹窗气泡通知"""
         notif = Notification(
             app_id=app_name,
             title=self.title,
             msg=self.content,
-            icon=icon_path
+            icon=self.icon_path
         ) # TODO: 再次运行改编成打开主窗口后，增加打开app的链接
         notif.show() 
         
