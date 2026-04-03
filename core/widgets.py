@@ -109,7 +109,14 @@ class ClockWidget(QWidget):
         rect = QRectF(center_x - radius, center_y - radius, 
                      radius * 2, radius * 2)
         
-        # 设置画笔（蓝色）
+        # 先绘制灰色背景圆环
+        bg_pen = QPen(QColor(128, 128, 128, 128))
+        bg_pen.setWidth(self.ring_width)
+        bg_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(bg_pen)
+        painter.drawArc(rect, 0, 5760)  # 完整的背景环
+        
+        # 再绘制蓝色进度条
         pen = QPen(QColor(100, 100, 255))  # 蓝色
         pen.setWidth(self.ring_width)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -130,7 +137,14 @@ class ClockWidget(QWidget):
         rect = QRectF(center_x - radius, center_y - radius, 
                      radius * 2, radius * 2)
         
-        # 设置画笔（绿色）
+        # 先绘制灰色背景圆环
+        bg_pen = QPen(QColor(128, 128, 128, 128))
+        bg_pen.setWidth(self.ring_width)
+        bg_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(bg_pen)
+        painter.drawArc(rect, 0, 5760)  # 完整的背景环
+        
+        # 再绘制绿色进度条
         pen = QPen(QColor(100, 255, 100))  # 绿色
         pen.setWidth(self.ring_width)
         pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -144,17 +158,17 @@ class ClockWidget(QWidget):
         painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
     
     def draw_day_ring(self, painter, center_x, center_y, radius, progress):
-        """绘制外环：本日状态（灰色虚线 + 黄色圆点）"""
+        """绘制外环：本日状态（灰色背景 + 黄色圆点）"""
         # 计算环的矩形区域
         rect = QRectF(center_x - radius, center_y - radius, 
                      radius * 2, radius * 2)
         
-        # 绘制灰色细虚线背景环
-        bg_pen = QPen(QColor(100, 100, 100))  # 灰色
-        bg_pen.setWidth(1)  # 细虚线
-        bg_pen.setStyle(Qt.PenStyle.DashLine)
+        # 绘制灰色背景圆环
+        bg_pen = QPen(QColor(128, 128, 128, 128))
+        bg_pen.setWidth(self.ring_width)
+        bg_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(bg_pen)
-        painter.drawArc(rect, 0, 5760)  # 完整的虚线环
+        painter.drawArc(rect, 0, 5760)  # 完整的背景环
         
         # 计算黄色圆点的位置
         angle_rad = (90 - progress * 360) * np.pi / 180  # 转换为弧度，从顶部开始顺时针
@@ -207,6 +221,34 @@ class PeriodSeasonLabel(QLabel):
         display_text = f"{period}期 {season}季"
         self.setText(display_text)
     
+class VersionLabel(QLabel):
+    """版本标签，显示应用版本与个人版本信息"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # 加载并显示数据
+        self.load_data()
+    
+    def load_data(self):
+        """从JSON文件加载数据并更新显示"""
+        
+        # 构建文件路径
+        json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+                                'data', 'homepage', 'Version.json')
+        
+        # 读取JSON文件
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 获取版本数据
+        user_version = data.get('user_version', '未知')
+        app_version = data.get('app_version', '未知')
+        
+        # 显示文本
+        display_text = f"版本：user:{user_version} app:{app_version}"
+        self.setText(display_text)
+    
 class TopStatusWidget(QWidget):
     """顶部状态部件，圆角矩形框内，左侧时钟，右侧日期周次和时期季节"""
     
@@ -257,6 +299,14 @@ class TopStatusWidget(QWidget):
             color: #888888;
         """)
         right_layout.addWidget(self.period_season_label)
+
+        # 版本标签
+        self.version_label = VersionLabel()
+        self.version_label.setStyleSheet("""
+            font-size: 24px;
+            color: #888888;
+        """)
+        right_layout.addWidget(self.version_label)
 
         main_layout.addLayout(right_layout, 1)
     
