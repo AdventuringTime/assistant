@@ -5,12 +5,12 @@
 - content_widgets：要在主窗口显示的内容部件列表。
 '''
 
-from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QPushButton, QHBoxLayout
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
 from core.base_window import BaseWindow
-from core.widgets import TopStatusWidget
+from core.widgets import TopStatusWidget, NotificationSystemWidget
 from core.global_constants import app_name
 
 class MainWindow(BaseWindow):
@@ -51,6 +51,11 @@ class MainWindow(BaseWindow):
     
     def show_window(self):
         """显示窗口"""
+        # 如果窗口是最小化状态，先解除最小化
+        if self.isMinimized():
+            self.showNormal()
+        
+        # 显示窗口并激活
         self.show()
         self.activateWindow()
         self.raise_()
@@ -78,10 +83,26 @@ class MainWindow(BaseWindow):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         # 内容部件
-        content_widgets = [TopStatusWidget()]
+        self.top_status_widget = TopStatusWidget()
+        self.test_button = QPushButton("发送测试通知")
+        self.notification_system = NotificationSystemWidget(main_window=self)  # 传递主窗口引用
+        self.content_widgets = [
+            self.top_status_widget,
+            self.test_button,
+            self.notification_system
+        ]
         
+        self.test_button.clicked.connect(self.send_test_notification)
+
         # 组合部件
-        for widget in content_widgets:
+        for widget in self.content_widgets:
             layout.addWidget(widget)
         container.setLayout(layout)
         self.setCentralWidget(container)
+    
+    def send_test_notification(self):
+        """发送测试通知"""
+        self.notification_system.add_notification(
+            title="测试",
+            click_callback=lambda self: print("用户点击了测试通知")
+        )

@@ -1,12 +1,16 @@
-import numpy as np
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPainter, QPen, QBrush, QColor
-from PySide6.QtCore import QRectF
 import datetime
 import json
+import numpy as np
 import os
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QPainter, QPen, QBrush, QColor
+from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
+    QPushButton)
+from winotify import Notification
+
 from core.functions import get_today
+from core.global_constants import icon_path, app_name
+
 
 class ClockWidget(QWidget):
     """时钟部件，显示三个同心环进度条"""
@@ -322,3 +326,276 @@ class TopStatusWidget(QWidget):
         self.clock_widget.update()  # 刷新时钟显示
         self.date_week_label.update_display(self.get_week_number())
         self.period_season_label.load_data()
+
+
+class NotificationItemWidget(QWidget):
+    """单个通知项部件"""
+    
+    def __init__(
+            self,
+            title="来自助手的通知",
+            content="助手没收到更多内容哦",
+            click_callback=None,
+            icon_path='',
+            is_read=False,
+            parent=None,
+            main_window=None
+        ):
+        super().__init__(parent)
+        self.title = title
+        self.content = content
+        self.is_read = is_read
+        self.click_callback = click_callback
+        self.create_time = datetime.datetime.now()
+        self.main_window = main_window
+        
+        # 设置组件样式
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("""
+            NotificationItemWidget:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+        """)
+        
+        # 发送系统弹窗气泡通知
+        self.send_system_notification(icon_path)
+        
+        # 创建布局和部件
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化用户界面"""
+        layout = QVBoxLayout(self)
+        
+        # 标题标签
+        self.title_label = QLabel(self.title)
+        self.title_label.setWordWrap(True)
+        layout.addWidget(self.title_label)
+        
+        # 内容标签
+        self.content_label = QLabel(self.content)
+        self.content_label.setWordWrap(True)
+        layout.addWidget(self.content_label)
+        
+        # 底部行：左侧时间 + 右侧状态按钮
+        bottom_layout = QHBoxLayout()
+        
+        # 左侧：创建时间
+        self.time_label = QLabel()
+        self.time_label.setStyleSheet("""
+            font-size: 12px;
+            color: #888888;
+        """)
+        bottom_layout.addWidget(self.time_label)
+        
+        # 右侧：伸缩空间
+        bottom_layout.addStretch()
+        
+        # 右侧：已读/未读状态按钮
+        self.status_button = QPushButton()
+        self.status_button.setFixedSize(20, 20)
+        self.status_button.clicked.connect(self.toggle_read_status)
+        bottom_layout.addWidget(self.status_button)
+        
+        layout.addLayout(bottom_layout)
+        
+        # 设置已读状态样式
+        self.update_read_style()
+        
+        # 更新时间显示
+        self.update_time_display()
+    
+    def update_read_style(self):
+        """更新已读状态样式"""
+        if self.is_read:
+            self.title_label.setStyleSheet("""
+                font-size: 18px;
+                font-weight: normal;
+                color: #888888;
+            """)
+            self.content_label.setStyleSheet("""
+                font-size: 14px;
+                color: #666666;
+            """)
+            # 已读状态：空心圆圈
+            self.status_button.setStyleSheet("""
+                QPushButton {
+                    border: 1px solid #808080;
+                    border-radius: 10px;
+                    background-color: transparent;
+                }
+                QPushButton:hover {
+                    background-color: rgba(255, 255, 255, 0.1);
+                }
+            """)
+        else:
+            self.title_label.setStyleSheet("""
+                font-size: 18px;
+                font-weight: bold;
+                color: #FFFFFF;
+            """)
+            self.content_label.setStyleSheet("""
+                font-size: 14px;
+                color: #CCCCCC;
+            """)
+            # 未读状态：蓝色实心圆圈
+            self.status_button.setStyleSheet("""
+                QPushButton {
+                    border: 1px solid #007AFF;
+                    border-radius: 10px;
+                    background-color: #007AFF;
+                }
+                QPushButton:hover {
+                    background-color: #005FAF;
+                }
+            """)
+    
+    def set_click_callback(self, callback):
+        """设置点击事件回调函数"""
+        self.click_callback = callback
+    
+    def mousePressEvent(self, event):
+        """鼠标点击事件"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            if self.click_callback:
+                self.click_callback(self)
+        self.mark_as_read()
+        super().mousePressEvent(event)
+    
+    def mark_as_read(self):
+        """标记为已读"""
+        self.is_read = True
+        self.update_read_style()
+    
+    def mark_as_unread(self):
+        """标记为未读"""
+        self.is_read = False
+        self.update_read_style()
+    
+    def update_content(self, title=None, content=None):
+        """更新通知内容"""
+        if title is not None:
+            self.title = title
+            self.title_label.setText(title)
+        if content is not None:
+            self.content = content
+            self.content_label.setText(content)
+    
+    def update_time_display(self):
+        """更新时间显示"""
+        now = datetime.datetime.now()
+        time_diff = now - self.create_time
+        
+        if time_diff.total_seconds() < 60:
+            # 1分钟内显示"刚刚"
+            time_text = "刚刚"
+        elif time_diff.total_seconds() < 3600:
+            # 1小时内显示分钟数
+            minutes = int(time_diff.total_seconds() // 60)
+            time_text = f"{minutes}分钟前"
+        elif time_diff.total_seconds() < 86400:
+            # 1天内显示小时数
+            hours = int(time_diff.total_seconds() // 3600)
+            time_text = f"{hours}小时前"
+        else:
+            # 超过1天显示日期
+            days = int(time_diff.total_seconds() // 86400)
+            time_text = f"{days}天前"
+        
+        self.time_label.setText(time_text)
+    
+    def toggle_read_status(self):
+        """切换已读/未读状态"""
+        if self.is_read:
+            self.mark_as_unread()
+        else:
+            self.mark_as_read()
+    
+    def send_system_notification(self, icon_path=''):
+        """发送系统弹窗气泡通知"""
+        notif = Notification(
+            app_id=app_name,
+            title=self.title,
+            msg=self.content,
+            icon=icon_path
+        ) # TODO: 再次运行改编成打开主窗口后，增加打开app的链接
+        notif.show() 
+        
+class NotificationSystemWidget(QWidget):
+    """通知系统部件，管理多个通知项"""
+    
+    def __init__(self, parent=None, main_window=None):
+        super().__init__(parent)
+        self.notifications = []
+        self.main_window = main_window  # 保存主窗口引用
+        
+        # 创建布局和部件
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化用户界面"""
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # 标题名称
+        self.title_label = QLabel("通知")
+        self.title_label.setStyleSheet("""
+            font-size: 24px;
+            font-weight: bold;
+            color: #FFFFFF;
+        """)
+        layout.addWidget(self.title_label)
+        
+        # 通知容器（滚动区域）
+        self.notification_container = QWidget()
+        self.notification_layout = QVBoxLayout(self.notification_container)
+        self.notification_layout.setSpacing(0)  # 通知项之间紧挨
+        self.notification_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        layout.addWidget(self.notification_container)
+    
+    def add_notification(self,
+            title="来自助手的通知",
+            content="助手没收到更多内容哦",
+            click_callback=None,
+            is_read=False):
+        """添加新通知"""
+        # 如果有通知，先添加分界线
+        if self.notifications:
+            separator = QLabel()
+            separator.setFixedHeight(1)
+            separator.setStyleSheet("background-color: #808080;")
+            self.notification_layout.addWidget(separator)
+        
+        # 添加通知项
+        notification_item = NotificationItemWidget(
+            title, content, click_callback, is_read,
+            self, self.main_window
+        )  # 传递主窗口引用
+        self.notifications.append(notification_item)
+        self.notification_layout.addWidget(notification_item)
+        
+        return notification_item
+    
+    def remove_notification(self, notification_item):
+        """移除通知"""
+        if notification_item in self.notifications:
+            self.notifications.remove(notification_item)
+            notification_item.setParent(None)
+            notification_item.deleteLater()
+    
+    def clear_notifications(self):
+        """清空所有通知"""
+        for notification in self.notifications:
+            notification.setParent(None)
+            notification.deleteLater()
+        self.notifications.clear()
+    
+    def get_unread_count(self):
+        """获取未读通知数量"""
+        return sum(1 for notification in self.notifications if not notification.is_read)
+    
+    def mark_all_as_read(self):
+        """标记所有通知为已读"""
+        for notification in self.notifications:
+            notification.mark_as_read()

@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QMainWindow
 from PySide6.QtGui import QIcon
 import os
+from core.global_constants import icon_path
 
 class BaseWindow(QMainWindow):
     """
@@ -10,5 +11,5 @@ class BaseWindow(QMainWindow):
         super().__init__()
         
         # 设置窗口图标
-        self.icon = QIcon(os.path.join("img", "logo.ico"))
+        self.icon = QIcon(icon_path)
         self.setWindowIcon(self.icon)
