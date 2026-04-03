@@ -103,6 +103,5 @@ class MainWindow(BaseWindow):
     def send_test_notification(self):
         """发送测试通知"""
         self.notification_system.add_notification(
-            title="测试",
-            click_callback=lambda self: print("用户点击了测试通知")
+            title="测试"
         )

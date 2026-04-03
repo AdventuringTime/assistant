@@ -6,6 +6,7 @@ from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
     QPushButton)
+import webbrowser
 from winotify import Notification
 
 from core.functions import get_today
@@ -335,20 +336,19 @@ class NotificationItemWidget(QWidget):
             self,
             title="来自助手的通知",
             content="助手没收到更多内容哦",
-            click_callback=None,
+            click_action=None,
             icon_path='',
             is_read=False,
-            parent=None,
-            main_window=None
+            notification_system=None
         ):
-        super().__init__(parent)
+        super().__init__()
         self.title = title
         self.content = content
         self.is_read = is_read
-        self.click_callback = click_callback
+        self.click_action = click_action
         self.icon_path = icon_path
         self.create_time = datetime.datetime.now()
-        self.main_window = main_window
+        self.notification_system = notification_system
         
         # 设置组件样式
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -399,7 +399,7 @@ class NotificationItemWidget(QWidget):
         self.delete_button = QPushButton("×")
         self.delete_button.setFixedSize(20, 20)
         self.delete_button.clicked.connect(
-            lambda: self.parent().parent().remove_notification(self)
+            lambda: self.notification_system.remove_notification(self)
         )
         self.delete_button.setStyleSheet("""
             QPushButton {
@@ -468,15 +468,21 @@ class NotificationItemWidget(QWidget):
                 }
             """)
     
-    def set_click_callback(self, callback):
-        """设置点击事件回调函数"""
-        self.click_callback = callback
-    
     def mousePressEvent(self, event):
         """鼠标点击事件"""
         if event.button() == Qt.MouseButton.LeftButton:
-            if self.click_callback:
-                self.click_callback(self)
+            if self.click_action:
+                if self.click_action["type"] == "open_url":
+                    url = self.click_action["value"]
+                    webbrowser.open(url)
+                elif self.click_action["type"] == "open_file":
+                    file_path = self.click_action["value"]
+                    os.startfile(file_path)
+                elif self.click_action["type"] == "open_app":
+                    app_name = self.click_action["value"]
+                    exec(f"import {app_name}")
+                else:
+                    raise ValueError(f"未知点击操作类型: {self.click_action['type']}")
         self.mark_as_read()
         super().mousePressEvent(event)
     
@@ -484,11 +490,17 @@ class NotificationItemWidget(QWidget):
         """标记为已读"""
         self.is_read = True
         self.update_read_style()
+        # 保存状态变化
+        if hasattr(self, 'notification_system'):
+            self.notification_system.save_notifications()
     
     def mark_as_unread(self):
         """标记为未读"""
         self.is_read = False
         self.update_read_style()
+        # 保存状态变化
+        if hasattr(self, 'notification_system'):
+            self.notification_system.save_notifications()
     
     def update_content(self, title=None, content=None):
         """更新通知内容"""
@@ -528,6 +540,8 @@ class NotificationItemWidget(QWidget):
             self.mark_as_unread()
         else:
             self.mark_as_read()
+        # 保存状态变化
+        self.notification_system.save_notifications()
     
     def send_system_notification(self):
         """发送系统弹窗气泡通知"""
@@ -547,8 +561,17 @@ class NotificationSystemWidget(QWidget):
         self.notifications = []
         self.main_window = main_window  # 保存主窗口引用
         
+        # 通知数据文件路径
+        self.notifications_file = "data/homepage/notifications.json"
+        
+        # 确保数据目录存在
+        os.makedirs(os.path.dirname(self.notifications_file), exist_ok=True)
+        
         # 创建布局和部件
         self.init_ui()
+        
+        # 加载保存的通知
+        self.load_notifications()
     
     def init_ui(self):
         """初始化用户界面"""
@@ -575,14 +598,13 @@ class NotificationSystemWidget(QWidget):
     def add_notification(self,
             title="来自助手的通知",
             content="助手没收到更多内容哦",
-            click_callback=None,
+            click_action=None,
             icon_path='',
             is_read=False):
         """添加新通知"""
         # 添加通知项
         notification_item = NotificationItemWidget(
-            title, content, click_callback, icon_path, is_read,
-            self, self.main_window
+            title, content, click_action, icon_path, is_read, self
         )
         
         # 将新通知插入到列表的开头（最新的在最前面）
@@ -600,6 +622,9 @@ class NotificationSystemWidget(QWidget):
         
         # 发送系统弹窗气泡通知
         notification_item.send_system_notification()
+        
+        # 保存通知到文件
+        self.save_notifications()
         
         return notification_item
     
@@ -647,6 +672,9 @@ class NotificationSystemWidget(QWidget):
             # 从列表中移除
             self.notifications.remove(notification_item)
             
+            # 保存更新后的通知列表
+            self.save_notifications()
+            
     def clear_notifications(self):
         """清空所有通知"""
         # 清空布局中的所有部件
@@ -669,3 +697,66 @@ class NotificationSystemWidget(QWidget):
         """标记所有通知为已读"""
         for notification in self.notifications:
             notification.mark_as_read()
+        # 保存更新后的状态
+        self.save_notifications()
+    
+    def save_notifications(self):
+        """保存通知到JSON文件"""
+        notifications_data = []
+        for notification in self.notifications:
+            notification_data = {
+                "title": notification.title,
+                "content": notification.content,
+                "is_read": notification.is_read,
+                "create_time": notification.create_time.isoformat(),
+                "icon_path": notification.icon_path,
+                "click_action": notification.click_action  # 保存点击操作字典
+            }
+            notifications_data.append(notification_data)
+        
+        with open(self.notifications_file, 'w', encoding='utf-8') as f:
+            json.dump(notifications_data, f, ensure_ascii=False, indent=4)
+    
+    def load_notifications(self):
+        """从JSON文件加载通知"""
+        if not os.path.exists(self.notifications_file):
+            return
+        
+        with open(self.notifications_file, 'r', encoding='utf-8') as f:
+            notifications_data = json.load(f)
+        
+        # 清空现有通知
+        self.clear_notifications()
+        
+        # 直接创建通知项（不使用add_notification方法）
+        for i, notification_data in enumerate(reversed(notifications_data)):  # 反转顺序，最新的在前
+            notification_item = NotificationItemWidget(
+                title=notification_data["title"],
+                content=notification_data["content"],
+                click_action=notification_data.get("click_action"),
+                icon_path=notification_data.get("icon_path", ''),
+                is_read=notification_data["is_read"],
+                notification_system=self
+            )
+            
+            # 设置创建时间
+            notification_item.create_time = datetime.datetime.fromisoformat(notification_data["create_time"])
+            
+            # 添加到列表
+            self.notifications.append(notification_item)
+            
+            # 如果不是第一个通知项，先添加分界线
+            if i > 0:
+                separator = QLabel()
+                separator.setFixedHeight(1)
+                separator.setStyleSheet("background-color: #808080;")
+                self.notification_layout.addWidget(separator)
+            
+            # 添加通知项到布局
+            self.notification_layout.addWidget(notification_item)
+            
+            # 更新时间显示
+            notification_item.update_time_display()
+            
+            # 更新已读状态样式
+            notification_item.update_read_style()
