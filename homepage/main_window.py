@@ -5,7 +5,7 @@
 - content_widgets：要在主窗口显示的内容部件列表。
 '''
 
-from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QPushButton, QHBoxLayout
+from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QScrollArea
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
@@ -78,6 +78,14 @@ class MainWindow(BaseWindow):
     
     def init_content(self):
         """初始化窗口内容"""
+        # 创建滚动区域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setMinimumSize(720, 480)
+        
+        # 创建内容容器
         container = QWidget()
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -98,7 +106,10 @@ class MainWindow(BaseWindow):
         for widget in self.content_widgets:
             layout.addWidget(widget)
         container.setLayout(layout)
-        self.setCentralWidget(container)
+        
+        # 设置滚动区域的内容部件
+        scroll_area.setWidget(container)
+        self.setCentralWidget(scroll_area)
     
     def send_test_notification(self):
         """发送测试通知"""
