@@ -358,9 +358,6 @@ class NotificationItemWidget(QWidget):
             }
         """)
         
-        # 发送系统弹窗气泡通知
-        self.send_system_notification()
-        
         # 创建布局和部件
         self.init_ui()
     
@@ -397,6 +394,26 @@ class NotificationItemWidget(QWidget):
         self.status_button.setFixedSize(20, 20)
         self.status_button.clicked.connect(self.toggle_read_status)
         bottom_layout.addWidget(self.status_button)
+        
+        # 右侧：删除按钮
+        self.delete_button = QPushButton("×")
+        self.delete_button.setFixedSize(20, 20)
+        self.delete_button.clicked.connect(
+            lambda: self.parent().parent().remove_notification(self)
+        )
+        self.delete_button.setStyleSheet("""
+            QPushButton {
+                border: 1px solid #FF4444;
+                border-radius: 10px;
+                background-color: transparent;
+                color: #FF4444;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 68, 68, 0.2);
+            }
+        """)
+        bottom_layout.addWidget(self.delete_button)
         
         layout.addLayout(bottom_layout)
         
@@ -559,6 +576,7 @@ class NotificationSystemWidget(QWidget):
             title="来自助手的通知",
             content="助手没收到更多内容哦",
             click_callback=None,
+            icon_path='',
             is_read=False):
         """添加新通知"""
         # 如果有通知，先添加分界线
@@ -570,26 +588,72 @@ class NotificationSystemWidget(QWidget):
         
         # 添加通知项
         notification_item = NotificationItemWidget(
-            title, content, click_callback, is_read,
+            title, content, click_callback, icon_path, is_read,
             self, self.main_window
-        )  # 传递主窗口引用
+        )
         self.notifications.append(notification_item)
         self.notification_layout.addWidget(notification_item)
+        # 发送系统弹窗气泡通知
+        notification_item.send_system_notification()
         
         return notification_item
     
     def remove_notification(self, notification_item):
         """移除通知"""
         if notification_item in self.notifications:
+            # 获取通知项在布局中的索引
+            item_index = self.notifications.index(notification_item)
+            
+            # 计算需要移除的部件索引
+            # 每个通知项前面可能有一个分界线（除了第一个）
+            layout_index = item_index * 2  # 每个通知项占用2个位置（分界线 + 通知项）
+            
+            # 从布局中移除通知项
+            layout_item = self.notification_layout.itemAt(layout_index)
+            if layout_item:
+                widget = layout_item.widget()
+                if widget and widget == notification_item:
+                    self.notification_layout.removeWidget(widget)
+                    widget.setParent(None)
+                    widget.deleteLater()
+            
+            # 如果这不是第一个通知项，移除前面的分界线
+            if item_index > 0:
+                separator_index = layout_index - 1
+                separator_item = self.notification_layout.itemAt(separator_index)
+                if separator_item:
+                    separator_widget = separator_item.widget()
+                    if separator_widget:
+                        self.notification_layout.removeWidget(separator_widget)
+                        separator_widget.setParent(None)
+                        separator_widget.deleteLater()
+            
+            # 如果这是第一个通知项而且不仅有一个通知项，移除后面的分界线
+            elif item_index == 0 and len(self.notifications) > 1:
+                separator_index = layout_index # 第一个通知已被移除
+                separator_item = self.notification_layout.itemAt(separator_index)
+                if separator_item:
+                    separator_widget = separator_item.widget()
+                    if separator_widget:
+                        self.notification_layout.removeWidget(separator_widget)
+                        separator_widget.setParent(None)
+                        separator_widget.deleteLater()
+            
+            # 从列表中移除
             self.notifications.remove(notification_item)
-            notification_item.setParent(None)
-            notification_item.deleteLater()
-    
+            
     def clear_notifications(self):
         """清空所有通知"""
-        for notification in self.notifications:
-            notification.setParent(None)
-            notification.deleteLater()
+        # 清空布局中的所有部件
+        for i in reversed(range(self.notification_layout.count())):
+            item = self.notification_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if widget:
+                    self.notification_layout.removeWidget(widget)
+                    widget.setParent(None)
+                    widget.deleteLater()
+        
         self.notifications.clear()
     
     def get_unread_count(self):
