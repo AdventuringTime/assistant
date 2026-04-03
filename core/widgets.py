@@ -10,7 +10,7 @@ import webbrowser
 from winotify import Notification
 
 from core.functions import get_today
-from core.global_constants import icon_path, app_name
+from core.global_constants import app_name
 
 
 class ClockWidget(QWidget):
@@ -195,8 +195,11 @@ class DateTimeLabel(QLabel):
     def update_display(self, week_number):
         """更新显示内容"""
         # 更新日期周次
-        date_str = get_today().strftime("%m月%d日")
-        self.setText(f"{date_str} 第{week_number}周")
+        today = get_today()
+        date_str = f"{today.month}月{today.day}日"
+        weekday_num = today.weekday()
+        weekday_cn = ["一", "二", "三", "四", "五", "六", "日"][weekday_num]
+        self.setText(f"{date_str} 第{week_number}周 星期{weekday_cn}")
 
 class PeriodSeasonLabel(QLabel):
     """时期与季节标签，显示时期和季节信息"""
