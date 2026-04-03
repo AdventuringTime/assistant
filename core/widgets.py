@@ -525,6 +525,8 @@ class NotificationItemWidget(QWidget):
         # 保存状态变化
         if hasattr(self, 'notification_system'):
             self.notification_system.save_notifications()
+            # 更新未读计数
+            self.notification_system.update_unread_count()
     
     def mark_as_unread(self):
         """标记为未读"""
@@ -533,6 +535,8 @@ class NotificationItemWidget(QWidget):
         # 保存状态变化
         if hasattr(self, 'notification_system'):
             self.notification_system.save_notifications()
+            # 更新未读计数
+            self.notification_system.update_unread_count()
     
     def update_content(self, title=None, content=None):
         """更新通知内容"""
@@ -634,6 +638,22 @@ class NotificationSystemWidget(QWidget):
         """)
         title_layout.addWidget(self.title_label)
         
+        # 未读消息计数标签
+        self.unread_count_label = QLabel()
+        self.unread_count_label.setFixedSize(24, 24)
+        self.unread_count_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.unread_count_label.setStyleSheet("""
+            QLabel {
+                background-color: #007AFF;
+                border-radius: 12px;
+                color: #FFFFFF;
+                font-size: 12px;
+                font-weight: bold;
+            }
+        """)
+        self.unread_count_label.hide()  # 初始隐藏
+        title_layout.addWidget(self.unread_count_label)
+        
         # 右侧伸缩空间
         title_layout.addStretch()
         
@@ -666,6 +686,22 @@ class NotificationSystemWidget(QWidget):
             self.arrow_label.setText("▼")
             self.notification_container.show()
     
+    def get_unread_count(self):
+        """获取未读通知数量"""
+        return sum(1 for notification in self.notifications if not notification.is_read)
+    
+    def update_unread_count(self):
+        """更新未读消息计数"""
+        unread_count = self.get_unread_count()
+        
+        self.unread_count_label.setText(str(unread_count))
+        if unread_count > 0:
+            # 显示未读计数
+            self.unread_count_label.show()
+        else:
+            # 隐藏未读计数
+            self.unread_count_label.hide()
+    
     def add_notification(self,
             title="来自助手的通知",
             content="助手没收到更多内容哦",
@@ -696,6 +732,9 @@ class NotificationSystemWidget(QWidget):
         
         # 保存通知到文件
         self.save_notifications()
+        
+        # 更新未读计数
+        self.update_unread_count()
         
         return notification_item
     
@@ -746,6 +785,9 @@ class NotificationSystemWidget(QWidget):
             # 保存更新后的通知列表
             self.save_notifications()
             
+            # 更新未读计数
+            self.update_unread_count()
+            
     def clear_notifications(self):
         """清空所有通知"""
         # 清空布局中的所有部件
@@ -759,10 +801,9 @@ class NotificationSystemWidget(QWidget):
                     widget.deleteLater()
         
         self.notifications.clear()
-    
-    def get_unread_count(self):
-        """获取未读通知数量"""
-        return sum(1 for notification in self.notifications if not notification.is_read)
+        
+        # 更新未读计数
+        self.update_unread_count()
     
     def mark_all_as_read(self):
         """标记所有通知为已读"""
@@ -770,6 +811,8 @@ class NotificationSystemWidget(QWidget):
             notification.mark_as_read()
         # 保存更新后的状态
         self.save_notifications()
+        # 更新未读计数
+        self.update_unread_count()
     
     def save_notifications(self):
         """保存通知到JSON文件"""
@@ -831,3 +874,6 @@ class NotificationSystemWidget(QWidget):
             
             # 更新已读状态样式
             notification_item.update_read_style()
+        
+        # 更新未读计数
+        self.update_unread_count()
