@@ -208,21 +208,35 @@ class PeriodSeasonLabel(QLabel):
         self.load_data()
     
     def load_data(self):
-        """从JSON文件加载数据并更新显示"""
+        """从JSON文件加载数据并更新显示，如果文件不存在则使用默认值并创建文件"""
         
         # 构建文件路径
         json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
                                 'data', 'homepage', 'PeriodSeason.json')
+                
+        # 尝试读取并解析JSON文件
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # 获取时期和季节数据
+            period = data['period']
+            season = data['season']
+            
+        except (FileNotFoundError, json.JSONDecodeError, IOError, KeyError, TypeError):
+            # 如果文件不存在、损坏、读取失败或数据格式错误，尝试创建目录并写入默认数据
+            default_data = {
+                "period": "原初",
+                "season": "夏"
+            }
+            try:
+                os.makedirs(os.path.dirname(json_path), exist_ok=True)
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(default_data, f, ensure_ascii=False, indent=4)
+            except IOError:
+                pass  # 如果无法写入，继续使用默认数据
         
-        # 读取JSON文件
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # 获取时期和季节数据
-        period = data.get('period', '未知')
-        season = data.get('season', '未知')
-        
-        # 显示文本（固定格式：时期 + 季节）
+        # 设置显示文本（无论是否发生异常都会执行）
         display_text = f"{period}期 {season}季"
         self.setText(display_text)
     
@@ -236,22 +250,36 @@ class VersionLabel(QLabel):
         self.load_data()
     
     def load_data(self):
-        """从JSON文件加载数据并更新显示"""
+        """从JSON文件加载数据并更新显示，如果文件不存在则使用默认值并创建文件"""
         
         # 构建文件路径
         json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
                                 'data', 'homepage', 'Version.json')
         
-        # 读取JSON文件
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # 尝试读取并解析JSON文件
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # 获取版本数据
+            user_version = data['user_version']
+            app_version = data['app_version']
+            
+        except (FileNotFoundError, json.JSONDecodeError, IOError, KeyError, TypeError):
+            # 如果文件不存在、损坏、读取失败或数据格式错误，尝试创建目录并写入默认数据
+            default_data = {
+                "user_version": "未知",
+                "app_version": "未知"
+            }        
+            try:
+                os.makedirs(os.path.dirname(json_path), exist_ok=True)
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(default_data, f, ensure_ascii=False, indent=4)
+            except IOError:
+                pass  # 如果无法写入，继续使用默认数据
         
-        # 获取版本数据
-        user_version = data.get('user_version', '未知')
-        app_version = data.get('app_version', '未知')
-        
-        # 显示文本
-        display_text = f"版本：user:{user_version} app:{app_version}"
+        # 设置显示文本（无论是否发生异常都会执行）
+        display_text = f"版本：user: {user_version} app: {app_version}"
         self.setText(display_text)
     
 class TopStatusWidget(QWidget):
