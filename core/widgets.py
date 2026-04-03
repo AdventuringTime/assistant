@@ -343,7 +343,7 @@ class TopStatusWidget(QWidget):
         # 版本标签
         self.version_label = VersionLabel()
         self.version_label.setStyleSheet("""
-            font-size: 24px;
+            font-size: 18px;
             color: #888888;
         """)
         right_layout.addWidget(self.version_label)
