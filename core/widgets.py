@@ -229,6 +229,8 @@ class PeriodSeasonLabel(QLabel):
                 "period": "原初",
                 "season": "夏"
             }
+            period = "原初"
+            season = "夏"
             try:
                 os.makedirs(os.path.dirname(json_path), exist_ok=True)
                 with open(json_path, 'w', encoding='utf-8') as f:
@@ -271,6 +273,8 @@ class VersionLabel(QLabel):
                 "user_version": "未知",
                 "app_version": "未知"
             }        
+            user_version = "未知"
+            app_version = "未知"
             try:
                 os.makedirs(os.path.dirname(json_path), exist_ok=True)
                 with open(json_path, 'w', encoding='utf-8') as f:
