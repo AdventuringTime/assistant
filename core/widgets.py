@@ -2,7 +2,7 @@ import datetime
 import json
 import numpy as np
 import os
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QRectF, Qt, Signal, QThread
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
     QPushButton)
@@ -571,16 +571,21 @@ class NotificationItemWidget(QWidget):
 class NotificationSystemWidget(QWidget):
     """通知系统部件，管理多个通知项"""
     
-    def __init__(self, parent=None, main_window=None):
+    # 定义信号，用于线程安全的通知添加
+    notify_signal = Signal(str, str, object, str, bool)
+    
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.notifications = []
-        self.main_window = main_window  # 保存主窗口引用
         
         # 通知数据文件路径
         self.notifications_file = "data/homepage/notifications.json"
         
         # 确保数据目录存在
         os.makedirs(os.path.dirname(self.notifications_file), exist_ok=True)
+        
+        # 连接信号到槽函数
+        self.notify_signal.connect(self._notify)
         
         # 创建布局和部件
         self.init_ui()
@@ -681,13 +686,28 @@ class NotificationSystemWidget(QWidget):
             # 隐藏未读计数
             self.unread_count_label.hide()
     
-    def add_notification(self,
+    def notify(self,
             title="来自助手的通知",
             content="助手没收到更多内容哦",
             click_action=None,
             icon_path='',
             is_read=False):
-        """添加新通知"""
+        """添加新通知（线程安全版本）"""
+        # 如果当前线程不是主线程，使用信号槽机制
+        if QThread.currentThread() != self.thread():
+            self.notify_signal.emit(title, content, click_action, icon_path, is_read)
+            return
+        
+        # 在主线程中直接执行
+        return self._notify(title, content, click_action, icon_path, is_read)
+    
+    def _notify(self,
+            title="来自助手的通知",
+            content="助手没收到更多内容哦",
+            click_action=None,
+            icon_path='',
+            is_read=False):
+        """线程安全的通知添加方法（在主线程中执行）"""
         # 添加通知项
         notification_item = NotificationItemWidget(
             title, content, click_action, icon_path, is_read, self

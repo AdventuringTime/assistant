@@ -1,3 +1,4 @@
+from core.heartbeat import Heartbeat
 '''
 主窗口类，包含系统托盘和内容部件
 
@@ -10,8 +11,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
 from core.base_window import BaseWindow
-from core.widgets import TopStatusWidget, NotificationSystemWidget
 from core.global_constants import app_name
+from core.notification import notification_system
+from core.widgets import TopStatusWidget
 
 class MainWindow(BaseWindow):
     def __init__(self):
@@ -25,6 +27,9 @@ class MainWindow(BaseWindow):
     
         # 初始化窗口内容
         self.init_content()
+
+        # 初始化自启动程序
+        self.init_auto_start()
 
     def init_system_tray(self):
         """初始化系统托盘"""
@@ -92,16 +97,12 @@ class MainWindow(BaseWindow):
         
         # 内容部件
         self.top_status_widget = TopStatusWidget()
-        self.test_button = QPushButton("发送测试通知")
-        self.notification_system = NotificationSystemWidget(main_window=self)  # 传递主窗口引用
+        self.notification_system = notification_system  # NotificationSystemWidget
         self.content_widgets = [
             self.top_status_widget,
-            self.test_button,
             self.notification_system
         ]
         
-        self.test_button.clicked.connect(self.send_test_notification)
-
         # 组合部件
         for widget in self.content_widgets:
             layout.addWidget(widget)
@@ -110,9 +111,12 @@ class MainWindow(BaseWindow):
         # 设置滚动区域的内容部件
         scroll_area.setWidget(container)
         self.setCentralWidget(scroll_area)
-    
-    def send_test_notification(self):
-        """发送测试通知"""
-        self.notification_system.add_notification(
-            title="测试"
-        )
+
+    def init_auto_start(self):
+        """初始化自启动程序"""
+        # 新闻监测器
+        from apps import news_monitor
+        self.auto_start = [(
+            news_monitor,
+            Heartbeat(news_monitor.check_news_update, 1800)
+        )]
