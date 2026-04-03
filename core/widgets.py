@@ -610,6 +610,21 @@ class NotificationSystemWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        # 标题行：可点击的标题和折叠箭头
+        self.title_widget = QWidget()
+        title_layout = QHBoxLayout(self.title_widget)
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # 折叠箭头
+        self.arrow_label = QLabel("▼")
+        self.arrow_label.setFixedSize(20, 20)
+        self.arrow_label.setStyleSheet("""
+            font-size: 16px;
+            color: #FFFFFF;
+            font-weight: bold;
+        """)
+        title_layout.addWidget(self.arrow_label)
+        
         # 标题名称
         self.title_label = QLabel("通知")
         self.title_label.setStyleSheet("""
@@ -617,7 +632,16 @@ class NotificationSystemWidget(QWidget):
             font-weight: bold;
             color: #FFFFFF;
         """)
-        layout.addWidget(self.title_label)
+        title_layout.addWidget(self.title_label)
+        
+        # 右侧伸缩空间
+        title_layout.addStretch()
+        
+        # 设置标题可点击
+        self.title_widget.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.title_widget.mousePressEvent = self.toggle_collapse
+        
+        layout.addWidget(self.title_widget)
         
         # 通知容器（滚动区域）
         self.notification_container = QWidget()
@@ -626,6 +650,21 @@ class NotificationSystemWidget(QWidget):
         self.notification_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         layout.addWidget(self.notification_container)
+        
+        # 初始状态：展开
+        self.is_collapsed = False
+    
+    def toggle_collapse(self, event):
+        """切换折叠/展开状态"""
+        self.is_collapsed = not self.is_collapsed
+        
+        # 更新箭头方向
+        if self.is_collapsed:
+            self.arrow_label.setText("▶")
+            self.notification_container.hide()
+        else:
+            self.arrow_label.setText("▼")
+            self.notification_container.show()
     
     def add_notification(self,
             title="来自助手的通知",
@@ -761,7 +800,7 @@ class NotificationSystemWidget(QWidget):
         self.clear_notifications()
         
         # 直接创建通知项（不使用add_notification方法）
-        for i, notification_data in enumerate(reversed(notifications_data)):  # 反转顺序，最新的在前
+        for i, notification_data in enumerate(notifications_data):
             notification_item = NotificationItemWidget(
                 title=notification_data["title"],
                 content=notification_data["content"],
