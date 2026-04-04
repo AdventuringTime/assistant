@@ -645,6 +645,11 @@ class NotificationSystemWidget(QWidget):
         
         # 设置标题可点击
         self.title_widget.mousePressEvent = self.toggle_collapse
+        self.title_widget.setStyleSheet("""
+            QWidget:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+        """)
         
         layout.addWidget(self.title_widget)
         
