@@ -740,6 +740,205 @@ class NotificationSystemWidget(QWidget):
         
         # 更新未读计数
         self.update_unread_count()
+
+
+class AppIconWidget(QWidget):
+    """应用图标部件，显示单个应用的图标和名称"""
+    
+    def __init__(self, app_info, parent=None):
+        super().__init__(parent)
+        self.app_info = app_info
+        
+        # 设置组件样式
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setFixedSize(80, 100)  # 固定尺寸
+        self.setStyleSheet("""
+            AppIconWidget {
+                border-radius: 10px;
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            AppIconWidget:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        
+        # 创建布局和部件
+        self.init_ui()
+    
+    def init_ui(self):
+        """初始化用户界面"""
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(5)
+        
+        # 图标（暂时使用占位符）
+        self.icon_label = QLabel("📱")
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon_label.setStyleSheet("""
+            font-size: 32px;
+        """)
+        layout.addWidget(self.icon_label)
+        
+        # 应用名称
+        self.name_label = QLabel(self.app_info["name"])
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setWordWrap(True)
+        self.name_label.setStyleSheet("""
+            font-size: 12px;
+            color: #FFFFFF;
+        """)
+        layout.addWidget(self.name_label)
+    
+    def mousePressEvent(self, event):
+        """鼠标点击事件"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.execute_app_action()
+        super().mousePressEvent(event)
+    
+    def execute_app_action(self):
+        """执行应用点击操作"""
+        action = self.app_info.get("action")
+        if action:
+            if action["type"] == "open_url":
+                url = action["value"]
+                webbrowser.open(url)
+            elif action["type"] == "open_file":
+                file_path = action["value"]
+                os.startfile(file_path)
+            elif action["type"] == "open_app":
+                app_name = action["value"]
+                # 这里可以添加打开具体应用的逻辑
+                print(f"打开应用: {app_name}")
+            else:
+                print(f"未知操作类型: {action['type']}")
+
+
+class AppEntryWidget(QWidget):
+    """应用入口部件，支持折叠/展开显示应用图标"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.is_expanded = False  # 默认折叠状态
+        
+        # 设置组件样式
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("""
+            AppEntryWidget {
+                border-radius: 15px;
+                border: 1px solid #808080;
+            }
+        """)
+        
+        # 创建布局和部件
+        self.init_ui()
+        
+        # 加载应用列表
+        self.load_apps()
+    
+    def init_ui(self):
+        """初始化用户界面"""
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        # 标题行：可点击的标题和折叠箭头
+        self.title_widget = QWidget()
+        title_layout = QHBoxLayout(self.title_widget)
+        
+        # 折叠箭头
+        self.arrow_label = QLabel("▶")
+        self.arrow_label.setFixedSize(20, 20)
+        self.arrow_label.setStyleSheet("""
+            font-size: 16px;
+            color: #FFFFFF;
+            font-weight: bold;
+        """)
+        title_layout.addWidget(self.arrow_label)
+        
+        # 标题名称
+        self.title_label = QLabel("应用入口")
+        self.title_label.setStyleSheet("""
+            font-size: 18px;
+            color: #FFFFFF;
+            font-weight: bold;
+        """)
+        title_layout.addWidget(self.title_label)
+        
+        # 右侧：应用数量
+        self.count_label = QLabel("")
+        self.count_label.setStyleSheet("""
+            font-size: 14px;
+            color: #888888;
+        """)
+        title_layout.addStretch()
+        title_layout.addWidget(self.count_label)
+        
+        layout.addWidget(self.title_widget)
+        
+        # 应用图标容器（默认隐藏）
+        self.apps_container = QWidget()
+        self.apps_layout = QHBoxLayout(self.apps_container)
+        self.apps_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.apps_layout.setSpacing(10)
+        self.apps_container.hide()
+        
+        layout.addWidget(self.apps_container)
+        
+        # 连接标题点击事件
+        self.title_widget.mousePressEvent = self.toggle_expand
+    
+    def load_apps(self):
+        """加载应用列表"""
+        try:
+            from apps.app_list import get_app_list
+            self.apps = get_app_list()
+            self.update_count_display()
+        except ImportError:
+            self.apps = []
+            print("无法加载应用列表")
+    
+    def toggle_expand(self, event):
+        """切换折叠/展开状态"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_expanded = not self.is_expanded
+            self.update_display()
+    
+    def update_display(self):
+        """更新显示状态"""
+        # 更新箭头方向
+        if self.is_expanded:
+            self.arrow_label.setText("▼")
+            self.apps_container.show()
+            self.populate_apps()
+        else:
+            self.arrow_label.setText("▶")
+            self.apps_container.hide()
+            self.clear_apps()
+    
+    def populate_apps(self):
+        """填充应用图标"""
+        # 清空现有应用图标
+        self.clear_apps()
+        
+        # 添加应用图标
+        for app_info in self.apps:
+            app_icon = AppIconWidget(app_info)
+            self.apps_layout.addWidget(app_icon)
+    
+    def clear_apps(self):
+        """清空应用图标"""
+        for i in reversed(range(self.apps_layout.count())):
+            item = self.apps_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if widget:
+                    self.apps_layout.removeWidget(widget)
+                    widget.setParent(None)
+                    widget.deleteLater()
+    
+    def update_count_display(self):
+        """更新应用数量显示"""
+        count = len(self.apps)
+        self.count_label.setText(f"{count}个应用")
         
         return notification_item
     
