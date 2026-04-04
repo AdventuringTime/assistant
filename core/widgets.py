@@ -416,7 +416,7 @@ class NotificationItemWidget(QWidget):
         bottom_layout = QHBoxLayout()
         
         # 左侧：创建时间
-        self.time_label = QLabel(self.create_time.strftime("%Y-%m-%d %H:%M:%S"))
+        self.time_label = QLabel(self.create_time.strftime("%m-%d %H:%M:%S"))
         self.time_label.setStyleSheet("""
             font-size: 12px;
             color: #888888;
