@@ -604,7 +604,6 @@ class NotificationSystemWidget(QWidget):
         # 标题行：可点击的标题和折叠箭头
         self.title_widget = QWidget()
         title_layout = QHBoxLayout(self.title_widget)
-        title_layout.setContentsMargins(0, 0, 0, 0)
         
         # 折叠箭头
         self.arrow_label = QLabel("▼")
@@ -645,7 +644,6 @@ class NotificationSystemWidget(QWidget):
         title_layout.addStretch()
         
         # 设置标题可点击
-        self.title_widget.setCursor(Qt.CursorShape.PointingHandCursor)
         self.title_widget.mousePressEvent = self.toggle_collapse
         
         layout.addWidget(self.title_widget)
