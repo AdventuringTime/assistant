@@ -438,6 +438,7 @@ class NotificationItemWidget(QWidget):
         self.delete_button.clicked.connect(
             lambda: self.notification_system.remove_notification(self)
         )
+        self.delete_button.setToolTip("删除")
         self.delete_button.setStyleSheet("""
             QPushButton {
                 border: 1px solid #FF4444;
@@ -480,6 +481,7 @@ class NotificationItemWidget(QWidget):
                     background-color: rgba(255, 255, 255, 0.1);
                 }
             """)
+            self.status_button.setToolTip("标记未读")
         else:
             self.title_label.setStyleSheet("""
                 font-size: 18px;
@@ -501,6 +503,7 @@ class NotificationItemWidget(QWidget):
                     background-color: #005FAF;
                 }
             """)
+            self.status_button.setToolTip("标记已读")
     
     def mousePressEvent(self, event):
         """鼠标点击事件"""
