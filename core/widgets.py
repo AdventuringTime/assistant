@@ -360,6 +360,7 @@ class TopStatusWidget(QWidget):
     
     def update_display(self):
         """更新所有显示"""
+        self.clock_widget.calculate_progress()
         self.clock_widget.update()  # 刷新时钟显示
         self.date_week_label.update_display(self.get_week_number())
         self.period_season_label.load_data()
