@@ -365,6 +365,9 @@ class TopStatusWidget(QWidget):
         self.date_week_label.update_display(self.get_week_number())
         self.period_season_label.load_data()
 
+class NotificationTitleWidget(QWidget):
+    """通知标题部件"""
+    pass
 
 class NotificationItemWidget(QWidget):
     """单个通知项部件"""
@@ -603,7 +606,7 @@ class NotificationSystemWidget(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # 标题行：可点击的标题和折叠箭头
-        self.title_widget = QWidget()
+        self.title_widget = NotificationTitleWidget()
         title_layout = QHBoxLayout(self.title_widget)
         
         # 折叠箭头
@@ -646,8 +649,9 @@ class NotificationSystemWidget(QWidget):
         
         # 设置标题可点击
         self.title_widget.mousePressEvent = self.toggle_collapse
+        self.title_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.title_widget.setStyleSheet("""
-            QWidget:hover {
+            NotificationTitleWidget:hover {
                 background-color: rgba(255, 255, 255, 0.1);
             }
         """)
