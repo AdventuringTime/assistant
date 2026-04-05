@@ -114,9 +114,9 @@ class MainWindow(BaseWindow):
 
     def init_auto_start(self):
         """初始化自启动程序"""
-        # 新闻监测器
-        from apps import news_monitor
-        self.auto_start = [(
-            news_monitor,
-            Heartbeat(news_monitor.check_news_update, 1800)
-        )]
+        from apps import news_monitor, daily_year
+        self.auto_start = [
+            (news_monitor,
+             Heartbeat(news_monitor.check_news_update, 1800)),
+            (daily_year,)
+        ]
