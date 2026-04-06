@@ -5,8 +5,8 @@ import os
 from PySide6.QtCore import QRectF, Qt, Signal, QThread
 from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap
 from PySide6.QtSvgWidgets import QSvgWidget
-from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
-    QPushButton)
+from PySide6.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
+    QLabel, QPushButton)
 import webbrowser
 from winotify import Notification
 
@@ -806,6 +806,9 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         
         # 更新未读计数
         self.update_unread_count()
+
+        # 窗口高亮提示
+        QApplication.alert(self.window())
 
         return notification_item
     
