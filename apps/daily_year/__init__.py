@@ -1,6 +1,6 @@
 from datetime import date
 
-from core.notification import notification_system
+from core.widgets import notification_system
 from .utils.isFirstToday import is_first_run_today
 
 base_url_format = "https://baike.baidu.com/item/{year}%E5%B9%B4/0"

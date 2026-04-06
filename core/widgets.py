@@ -3,7 +3,7 @@ import json
 import numpy as np
 import os
 from PySide6.QtCore import QRectF, Qt, Signal, QThread
-from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap
+from PySide6.QtGui import QPainter, QPen, QBrush, QColor
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QPushButton)
@@ -946,6 +946,8 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         
         # 更新未读计数
         self.update_unread_count()
+
+notification_system = NotificationSystemWidget()
 
 
 class AppItemWidget(QWidget):
