@@ -13,7 +13,7 @@ from winotify import Notification
 from core.functions import get_today
 from core.global_constants import app_name
 from core.heartbeat import Heartbeat
-from apps.app_list import APP_LIST
+from apps import APP_LIST
 
 
 class ClockWidget(QWidget):
@@ -1038,7 +1038,7 @@ class AppEntryWidget(CollapsibleContainerWidget):
     
     def load_apps(self):
         """加载应用列表"""
-        from apps.app_list import APP_LIST
+        from apps import APP_LIST
         self.apps = APP_LIST
     
     def add_app(self, app_name, app_info):

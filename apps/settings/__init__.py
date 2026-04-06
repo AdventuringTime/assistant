@@ -22,15 +22,26 @@ class SettingsWindow(BaseWindow):
         self.setWindowTitle("设置")
         self.setMinimumSize(600, 400)
         
+        # 创建中心widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        central_widget.setStyleSheet("""
+            QScrollArea, QListWidget {
+                background-color: transparent;
+                border: none;
+                outline: none;
+            }
+        """)
+        
         # 主布局
-        main_layout = QHBoxLayout(self)
+        main_layout = QHBoxLayout(central_widget)
         
         # 左侧类别列表
         self.category_scroll_area = QScrollArea()
         self.category_scroll_area.setWidgetResizable(True)
         self.category_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.category_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.category_scroll_area.setMinimumSize(150, 400)
+        self.category_scroll_area.setFixedWidth(180)
 
         self.category_list = QListWidget()
         self.category_list.currentRowChanged.connect(self.on_category_changed)
@@ -44,14 +55,9 @@ class SettingsWindow(BaseWindow):
         for i, category in enumerate(self.settings_data):
             item = QListWidgetItem(category[0])  # 类别名称在第一个元素
             self.category_list.addItem(item)
-        
-        # 分隔线
-        separator = QFrame()
-        separator.setFrameShape(QFrame.VLine)
-        
+                
         # 添加到主布局
         main_layout.addWidget(self.category_scroll_area)
-        main_layout.addWidget(separator)
         main_layout.addWidget(self.stacked_widget)
         
         # 默认选择第一个类别
@@ -96,7 +102,9 @@ class SettingsWindow(BaseWindow):
                 
                 # 设置项
                 for item in items:
-                    field_layout = QVBoxLayout()
+                    # 创建水平布局容器widget
+                    field_widget = QWidget()
+                    field_layout = QHBoxLayout(field_widget)
                     
                     # 项标签
                     label = QLabel(item["label"] + ":")
@@ -115,7 +123,7 @@ class SettingsWindow(BaseWindow):
                     else:
                         raise ValueError(f"未知类型: {item['type']}")
                     
-                    content_layout.addLayout(field_layout)
+                    content_layout.addWidget(field_widget)
             
             # 添加弹性空间
             content_layout.addStretch()
@@ -138,7 +146,7 @@ class SettingsWindow(BaseWindow):
             
     def get_field_value(self, field):
         """获取字段的当前值"""
-        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), field["path"])
+        file_path = field["path"]
         if os.path.exists(file_path):
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -147,7 +155,7 @@ class SettingsWindow(BaseWindow):
     
     def save_field_value(self, field, value):
         """保存字段值到对应文件"""
-        file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), field["path"])
+        file_path = field["path"]
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
         
         # 读取现有数据

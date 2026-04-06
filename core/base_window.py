@@ -6,8 +6,8 @@ class BaseWindow(QMainWindow):
     """
     基础窗口类，提供统一的窗口样式
     """
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         
         # 设置窗口图标
         self.icon = QIcon(icon_path)
