@@ -1,3 +1,4 @@
+import json
 from core.heartbeat import Heartbeat
 '''
 主窗口类，包含系统托盘和内容部件
@@ -118,9 +119,16 @@ class MainWindow(BaseWindow):
 
     def init_auto_start(self):
         """初始化自启动程序"""
-        from apps import news_monitor, daily_year
-        self.auto_start = [
-            (news_monitor,
-             Heartbeat(news_monitor.check_news_update, 1800)),
-            (daily_year,)
-        ]
+        self.auto_start = []
+        with open("apps/news_monitor/data/settings.json", "r") as f:
+            news_monitor_settings = json.load(f)
+        if news_monitor_settings["activated"]:
+            from apps import news_monitor
+            self.auto_start.append((news_monitor,
+                Heartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])))
+
+        with open("apps/daily_year/data/settings.json", "r") as f:
+            daily_year_settings = json.load(f)
+        if daily_year_settings["activated"]:
+            from apps import daily_year
+            self.auto_start.append((daily_year,))

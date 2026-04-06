@@ -1,3 +1,5 @@
+from PySide6.QtWidgets import QSpinBox
+from PySide6.QtWidgets import QCheckBox
 from glom import glom, Assign
 import json
 import os
@@ -7,6 +9,9 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QScrollArea, QStackedWidget)
 
 from core.base_window import BaseWindow
+
+
+bool_map = {0: False, 1: None, 2: True}
 
 
 class SettingsWindow(BaseWindow):
@@ -67,7 +72,7 @@ class SettingsWindow(BaseWindow):
     
     def load_settings(self):
         """加载设置数据"""
-        settings_path = os.path.join(os.path.dirname(__file__), "data", "settings.json")
+        settings_path = os.path.join(os.path.dirname(__file__), "data", "items.json")
         with open(settings_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     
@@ -120,6 +125,21 @@ class SettingsWindow(BaseWindow):
                         input_field.textChanged.connect(lambda text, field_data=item: 
                             self.on_setting_changed(field_data, text))
                         field_layout.addWidget(input_field)
+                    elif item["type"] == "bool":
+                        # 复选框
+                        checkbox = QCheckBox()
+                        checkbox.setChecked(current_value)
+                        checkbox.stateChanged.connect(lambda state, field_data=item: 
+                            self.on_setting_changed(field_data, state))
+                        field_layout.addWidget(checkbox)
+                    elif item["type"] == "int":
+                        # 整数输入框
+                        spinbox = QSpinBox()
+                        spinbox.setRange(int(item.get("min")), int(item.get("max")))
+                        spinbox.setValue(int(current_value))
+                        spinbox.valueChanged.connect(lambda value, field_data=item: 
+                            self.on_setting_changed(field_data, value))
+                        field_layout.addWidget(spinbox)
                     else:
                         raise ValueError(f"未知类型: {item['type']}")
                     
@@ -161,7 +181,11 @@ class SettingsWindow(BaseWindow):
         # 读取现有数据
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
+
+        # 处理布尔值
+        if field["type"] == "bool":
+            value = bool_map[value]
+
         # 更新数据
         self.set_json_value(data, field["json_path"], value)
         
