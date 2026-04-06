@@ -904,10 +904,10 @@ class AppItemWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setFixedSize(80, 100)  # 固定尺寸
         self.setStyleSheet("""
-            AppIconWidget {
+            AppItemWidget {
                 border-radius: 10px;
             }
-            AppIconWidget:hover {
+            AppItemWidget:hover {
                 background-color: rgba(255, 255, 255, 0.1);
             }
         """)
@@ -1032,20 +1032,16 @@ class AppEntryWidget(QWidget):
     
     def load_apps(self):
         """加载应用列表"""
-        try:
-            from apps.app_list import APP_LIST
-            self.apps = APP_LIST
-        except ImportError:
-            self.apps = {}
-            print("无法加载应用列表")
+        from apps.app_list import APP_LIST
+        self.apps = APP_LIST
     
     def toggle_expand(self, event):
         """切换折叠/展开状态"""
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_expanded = not self.is_expanded
-            self.update_display()
+            self.update_expansion_display()
     
-    def update_display(self):
+    def update_expansion_display(self):
         """更新显示状态"""
         # 更新箭头方向
         if self.is_expanded:
@@ -1056,6 +1052,16 @@ class AppEntryWidget(QWidget):
             self.arrow_label.setText("▶")
             self.apps_container.hide()
             self.clear_apps()
+
+    def add_app(self, app_name, app_info):
+        """添加应用图标"""
+        app_icon = AppItemWidget(
+            app_name=app_name,
+            display_name=app_info.get("display_name", app_name),
+            icon_path=app_info.get("icon"),
+            description=app_info.get("description", "")
+        )
+        self.apps_layout.addWidget(app_icon)
     
     def populate_apps(self):
         """填充应用图标"""
@@ -1064,21 +1070,20 @@ class AppEntryWidget(QWidget):
         
         # 添加应用图标
         for app_name, app_info in self.apps.items():
-            app_icon = AppItemWidget(
-                app_name=app_name,
-                display_name=app_info.get("display_name", app_name),
-                icon_path=app_info.get("icon"),
-                description=app_info.get("description", "")
-            )
-            self.apps_layout.addWidget(app_icon)
+            self.add_app(app_name, app_info)
+
+    def delete_app(self, idx):
+        """删除应用图标"""
+        item = self.apps_layout.itemAt(idx)
+        if item:
+            widget = item.widget()
+            if widget:
+                self.apps_layout.removeWidget(widget)
+                widget.setParent(None)
+                widget.deleteLater()
+        
     
     def clear_apps(self):
         """清空应用图标"""
         for i in reversed(range(self.apps_layout.count())):
-            item = self.apps_layout.itemAt(i)
-            if item:
-                widget = item.widget()
-                if widget:
-                    self.apps_layout.removeWidget(widget)
-                    widget.setParent(None)
-                    widget.deleteLater()
+            self.delete_app(i)
