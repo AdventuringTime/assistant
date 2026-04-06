@@ -42,7 +42,7 @@ class MainWindow(BaseWindow):
         
         # 添加退出菜单项
         exit_action = QAction("退出", self)
-        exit_action.triggered.connect(self.quit_application)
+        exit_action.triggered.connect(QApplication.quit)
         tray_menu.addAction(exit_action)
         
         # 设置托盘菜单
@@ -64,11 +64,6 @@ class MainWindow(BaseWindow):
         self.show()
         self.activateWindow()
         self.raise_()
-    
-    def quit_application(self):
-        """退出应用程序"""
-        self.tray.hide()
-        QApplication.quit()
     
     def on_tray_activated(self, reason):
         """托盘图标激活事件"""
