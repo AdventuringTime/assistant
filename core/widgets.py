@@ -885,6 +885,10 @@ class NotificationSystemWidget(QWidget):
         # 更新未读计数
         self.update_unread_count()
 
+class AppTitleWidget(QWidget):
+    """应用标题部件"""
+    pass
+
 class AppItemWidget(QWidget):
     """应用图标部件，显示单个应用的图标和名称"""
     
@@ -982,7 +986,7 @@ class AppEntryWidget(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         # 标题行：可点击的标题和折叠箭头
-        self.title_widget = QWidget()
+        self.title_widget = AppTitleWidget()
         title_layout = QHBoxLayout(self.title_widget)
         
         # 折叠箭头
@@ -1008,10 +1012,10 @@ class AppEntryWidget(QWidget):
         title_layout.addStretch()
         
         # 设置标题悬停高亮提示
+        self.title_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.title_widget.setStyleSheet("""
-            QWidget:hover {
+            AppTitleWidget:hover {
                 background-color: rgba(255, 255, 255, 0.1);
-                border-radius: 5px;
             }
         """)
         
