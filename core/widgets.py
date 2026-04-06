@@ -950,7 +950,7 @@ class AppItemWidget(QWidget):
         """打开应用对应的窗口"""
         app_info = APP_LIST.get(self.app_name)
         if app_info and "window" in app_info:
-            app_info["window"].show()
+            app_info["window"]().show()
         else:
             raise TypeError(f"应用 {self.app_name} 未定义或没有窗口函数")
 
