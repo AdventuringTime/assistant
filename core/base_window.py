@@ -2,6 +2,47 @@ from PySide6.QtWidgets import QMainWindow
 from PySide6.QtGui import QIcon
 from core.global_constants import icon_path
 
+
+class WindowsManager:
+    """窗口管理器，用于统一管理所有打开的窗口"""
+    
+    _instance = None
+    _windows = []
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    @classmethod
+    def register_window(cls, window):
+        """注册窗口到管理器"""
+        if window not in cls._windows:
+            cls._windows.append(window)
+    
+    @classmethod
+    def unregister_window(cls, window):
+        """从管理器注销窗口"""
+        if window in cls._windows:
+            cls._windows.remove(window)
+    
+    @classmethod
+    def close_all_windows(cls):
+        """关闭所有注册的窗口"""
+        for window in cls._windows[:]:  # 使用副本遍历，避免修改列表时出错
+            try:
+                window.close()
+                cls.unregister_window(window)
+            except Exception:
+                # 如果窗口已经销毁，忽略错误
+                pass
+    
+    @classmethod
+    def get_window_count(cls):
+        """获取当前打开的窗口数量"""
+        return len(cls._windows)
+
+
 class BaseWindow(QMainWindow):
     """
     基础窗口类，提供统一的窗口样式
@@ -15,3 +56,12 @@ class BaseWindow(QMainWindow):
         
         # 设置窗口背景颜色
         self.setStyleSheet("QMainWindow { background-color: #1E1E1E; }")
+        
+        # 注册窗口到窗口管理器
+        WindowsManager.register_window(self)
+    
+    def closeEvent(self, event):
+        """窗口关闭事件"""
+        # 从窗口管理器注销
+        WindowsManager.unregister_window(self)
+        super().closeEvent(event)

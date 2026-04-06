@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
-from core.base_window import BaseWindow
+from core.base_window import BaseWindow, WindowsManager
 from core.global_constants import app_name
 from core.notification import notification_system
 from core.widgets import TopStatusWidget, AppEntryWidget
@@ -42,7 +42,7 @@ class MainWindow(BaseWindow):
         
         # 添加退出菜单项
         exit_action = QAction("退出", self)
-        exit_action.triggered.connect(QApplication.quit)
+        exit_action.triggered.connect(self.quit_application)
         tray_menu.addAction(exit_action)
         
         # 设置托盘菜单
@@ -75,6 +75,13 @@ class MainWindow(BaseWindow):
         """关闭窗口不会退出程序"""
         event.ignore()  # 忽略关闭事件
         self.hide()     # 隐藏窗口
+    
+    def quit_application(self):
+        """退出应用程序，关闭所有窗口"""
+        # 关闭所有注册的窗口
+        WindowsManager.close_all_windows()
+        # 退出应用程序
+        QApplication.quit()
     
     def init_content(self):
         """初始化窗口内容"""
