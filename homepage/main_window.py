@@ -13,7 +13,7 @@ from PySide6.QtGui import QAction
 from core.base_window import BaseWindow
 from core.global_constants import app_name
 from core.notification import notification_system
-from core.widgets import TopStatusWidget
+from core.widgets import TopStatusWidget, AppEntryWidget
 
 class MainWindow(BaseWindow):
     def __init__(self):
@@ -98,8 +98,10 @@ class MainWindow(BaseWindow):
         # 内容部件
         self.top_status_widget = TopStatusWidget()
         self.notification_system = notification_system  # NotificationSystemWidget
+        self.app_entry_widget = AppEntryWidget()
         self.content_widgets = [
             self.top_status_widget,
+            self.app_entry_widget,
             self.notification_system
         ]
         
