@@ -3,7 +3,8 @@ import json
 import numpy as np
 import os
 from PySide6.QtCore import QRectF, Qt, Signal, QThread
-from PySide6.QtGui import QPainter, QPen, QBrush, QColor
+from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap
+from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
     QPushButton)
 import webbrowser
@@ -12,6 +13,7 @@ from winotify import Notification
 from core.functions import get_today
 from core.global_constants import app_name
 from core.heartbeat import Heartbeat
+from apps.app_list import APP_LIST
 
 
 class ClockWidget(QWidget):
@@ -742,12 +744,25 @@ class NotificationSystemWidget(QWidget):
         self.update_unread_count()
 
 
-class AppIconWidget(QWidget):
+class AppItemWidget(QWidget):
     """应用图标部件，显示单个应用的图标和名称"""
     
-    def __init__(self, app_info, parent=None):
+    def __init__(self, app_name, display_name, icon_path=None, description="", parent=None):
         super().__init__(parent)
-        self.app_info = app_info
+        self.app_name = app_name
+        self.display_name = display_name
+        self.description = description
+        
+        # 设置图标路径
+        if icon_path:
+            self.icon_path = icon_path
+        else:
+            # 默认路径：apps/应用名/icon.svg
+            self.icon_path = os.path.join("apps", app_name, "icon.svg")
+        
+        # 检查图标文件是否存在，如果不存在则使用默认图标
+        if not os.path.exists(self.icon_path):
+            self.icon_path = os.path.join("apps", "default", "icon.svg")
         
         # 设置组件样式
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -755,12 +770,15 @@ class AppIconWidget(QWidget):
         self.setStyleSheet("""
             AppIconWidget {
                 border-radius: 10px;
-                background-color: rgba(255, 255, 255, 0.1);
             }
             AppIconWidget:hover {
-                background-color: rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.1);
             }
         """)
+        
+        # 设置悬停提示
+        if self.description:
+            self.setToolTip(self.description)
         
         # 创建布局和部件
         self.init_ui()
@@ -771,16 +789,13 @@ class AppIconWidget(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(5)
         
-        # 图标（暂时使用占位符）
-        self.icon_label = QLabel("📱")
-        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.icon_label.setStyleSheet("""
-            font-size: 32px;
-        """)
-        layout.addWidget(self.icon_label)
+        # 加载并设置图标
+        self.svg_widget = QSvgWidget(self.icon_path)
+        self.svg_widget.setFixedSize(48, 48)
+        layout.addWidget(self.svg_widget)
         
         # 应用名称
-        self.name_label = QLabel(self.app_info["name"])
+        self.name_label = QLabel(self.display_name)
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.name_label.setWordWrap(True)
         self.name_label.setStyleSheet("""
@@ -792,25 +807,16 @@ class AppIconWidget(QWidget):
     def mousePressEvent(self, event):
         """鼠标点击事件"""
         if event.button() == Qt.MouseButton.LeftButton:
-            self.execute_app_action()
+            self.open_app()
         super().mousePressEvent(event)
     
-    def execute_app_action(self):
-        """执行应用点击操作"""
-        action = self.app_info.get("action")
-        if action:
-            if action["type"] == "open_url":
-                url = action["value"]
-                webbrowser.open(url)
-            elif action["type"] == "open_file":
-                file_path = action["value"]
-                os.startfile(file_path)
-            elif action["type"] == "open_app":
-                app_name = action["value"]
-                # 这里可以添加打开具体应用的逻辑
-                print(f"打开应用: {app_name}")
-            else:
-                print(f"未知操作类型: {action['type']}")
+    def open_app(self):
+        """打开应用对应的窗口"""
+        app_info = APP_LIST.get(self.app_name)
+        if app_info and "window" in app_info:
+            app_info["window"].show()
+        else:
+            raise TypeError(f"应用 {self.app_name} 未定义或没有窗口函数")
 
 
 class AppEntryWidget(QWidget):
@@ -889,11 +895,11 @@ class AppEntryWidget(QWidget):
     def load_apps(self):
         """加载应用列表"""
         try:
-            from apps.app_list import get_app_list
-            self.apps = get_app_list()
+            from apps.app_list import APP_LIST
+            self.apps = APP_LIST
             self.update_count_display()
         except ImportError:
-            self.apps = []
+            self.apps = {}
             print("无法加载应用列表")
     
     def toggle_expand(self, event):
@@ -920,8 +926,13 @@ class AppEntryWidget(QWidget):
         self.clear_apps()
         
         # 添加应用图标
-        for app_info in self.apps:
-            app_icon = AppIconWidget(app_info)
+        for app_name, app_info in self.apps.items():
+            app_icon = AppItemWidget(
+                app_name=app_name,
+                display_name=app_info.get("display_name", app_name),
+                icon_path=app_info.get("icon"),
+                description=app_info.get("description", "")
+            )
             self.apps_layout.addWidget(app_icon)
     
     def clear_apps(self):
