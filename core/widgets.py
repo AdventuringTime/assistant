@@ -367,9 +367,119 @@ class TopStatusWidget(QWidget):
         self.date_week_label.update_display(self.get_week_number())
         self.period_season_label.load_data()
 
-class NotificationTitleWidget(QWidget):
-    """通知标题部件"""
+
+class CollapsibleTitleWidget(QWidget):
+    """可折叠标题部件"""
     pass
+
+class CollapsibleContainerWidget(QWidget):
+    """可折叠容器基类，提供统一的标题格式和折叠/展开功能"""
+    
+    def __init__(self, title="", default_expanded=False, parent=None):
+        super().__init__(parent)
+        self.is_expanded = default_expanded
+        self.title = title
+        
+        # 设置组件样式
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        
+        # 创建布局和部件
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        # 标题行：可点击的标题和折叠箭头
+        self.title_widget = CollapsibleTitleWidget()
+        title_layout = QHBoxLayout(self.title_widget)
+        
+        # 折叠箭头
+        self.arrow_label = QLabel("▶" if not self.is_expanded else "▼")
+        self.arrow_label.setFixedSize(20, 20)
+        self.arrow_label.setStyleSheet("""
+            font-size: 16px;
+            color: #FFFFFF;
+            font-weight: bold;
+        """)
+        title_layout.addWidget(self.arrow_label)
+        
+        # 标题名称
+        self.title_label = QLabel(self.title)
+        self.title_label.setStyleSheet("""
+            font-size: 24px;
+            color: #FFFFFF;
+            font-weight: bold;
+        """)
+        title_layout.addWidget(self.title_label)
+        
+        # 右侧伸缩空间
+        title_layout.addStretch()
+        
+        # 设置标题悬停高亮提示
+        self.title_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.title_widget.setStyleSheet("""
+            CollapsibleTitleWidget:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+        """)
+        
+        layout.addWidget(self.title_widget)
+        
+        # 内容容器（根据初始状态显示/隐藏）
+        self.content_container = QWidget()
+        
+        if not self.is_expanded:
+            self.content_container.hide()
+        
+        layout.addWidget(self.content_container)
+        
+        # 连接标题点击事件
+        self.title_widget.mousePressEvent = self.toggle_expand
+    
+    def toggle_expand(self, event):
+        """切换折叠/展开状态"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.is_expanded = not self.is_expanded
+            self.update_expansion_display()
+    
+    def update_expansion_display(self):
+        """更新显示状态"""
+        # 更新箭头方向
+        if self.is_expanded:
+            self.arrow_label.setText("▼")
+            self.content_container.show()
+            self.on_expand()
+        else:
+            self.arrow_label.setText("▶")
+            self.content_container.hide()
+            self.on_collapse()
+    
+    def on_expand(self):
+        """展开时的回调函数，子类可以重写"""
+        pass
+    
+    def on_collapse(self):
+        """折叠时的回调函数，子类可以重写"""
+        pass
+    
+    def set_title(self, title):
+        """设置标题"""
+        self.title = title
+        self.title_label.setText(title)
+    
+    def add_widget_to_content(self, widget):
+        """向内容容器添加部件"""
+        self.content_layout.addWidget(widget)
+    
+    def clear_content(self):
+        """清空内容容器"""
+        for i in reversed(range(self.content_layout.count())):
+            item = self.content_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if widget:
+                    self.content_layout.removeWidget(widget)
+                    widget.setParent(None)
+                    widget.deleteLater()
+
 
 class NotificationItemWidget(QWidget):
     """单个通知项部件"""
@@ -577,14 +687,14 @@ class NotificationItemWidget(QWidget):
         ) # TODO: 再次运行改编成打开主窗口后，增加打开app的链接
         notif.show() 
         
-class NotificationSystemWidget(QWidget):
+class NotificationSystemWidget(CollapsibleContainerWidget):
     """通知系统部件，管理多个通知项"""
     
     # 定义信号，用于线程安全的通知添加
     notify_signal = Signal(str, str, object, str, bool)
     
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super().__init__("通知", True, parent)  # 默认展开状态
         self.notifications = []
         
         # 通知数据文件路径
@@ -596,39 +706,21 @@ class NotificationSystemWidget(QWidget):
         # 连接信号到槽函数
         self.notify_signal.connect(self._notify)
         
-        # 创建布局和部件
-        self.init_ui()
+        # 添加未读消息计数标签到标题
+        self.add_unread_count_label()
+        
+        # 设置通知布局（垂直布局）
+        self.content_layout = QVBoxLayout(self.content_container)
+        self.content_layout.setSpacing(0)  # 通知项之间紧挨
+        self.content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
         # 加载保存的通知
         self.load_notifications()
     
-    def init_ui(self):
-        """初始化用户界面"""
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        # 标题行：可点击的标题和折叠箭头
-        self.title_widget = NotificationTitleWidget()
-        title_layout = QHBoxLayout(self.title_widget)
-        
-        # 折叠箭头
-        self.arrow_label = QLabel("▼")
-        self.arrow_label.setFixedSize(20, 20)
-        self.arrow_label.setStyleSheet("""
-            font-size: 16px;
-            color: #FFFFFF;
-            font-weight: bold;
-        """)
-        title_layout.addWidget(self.arrow_label)
-        
-        # 标题名称
-        self.title_label = QLabel("通知")
-        self.title_label.setStyleSheet("""
-            font-size: 24px;
-            font-weight: bold;
-            color: #FFFFFF;
-        """)
-        title_layout.addWidget(self.title_label)
+    def add_unread_count_label(self):
+        """添加未读消息计数标签到标题"""
+        # 获取标题布局
+        title_layout = self.title_widget.layout()
         
         # 未读消息计数标签
         self.unread_count_label = QLabel()
@@ -644,44 +736,11 @@ class NotificationSystemWidget(QWidget):
             }
         """)
         self.unread_count_label.hide()  # 初始隐藏
-        title_layout.addWidget(self.unread_count_label)
         
-        # 右侧伸缩空间
-        title_layout.addStretch()
-        
-        # 设置标题可点击
-        self.title_widget.mousePressEvent = self.toggle_collapse
-        self.title_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.title_widget.setStyleSheet("""
-            NotificationTitleWidget:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-            }
-        """)
-        
-        layout.addWidget(self.title_widget)
-        
-        # 通知容器（滚动区域）
-        self.notification_container = QWidget()
-        self.notification_layout = QVBoxLayout(self.notification_container)
-        self.notification_layout.setSpacing(0)  # 通知项之间紧挨
-        self.notification_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        
-        layout.addWidget(self.notification_container)
-        
-        # 初始状态：展开
-        self.is_collapsed = False
+        # 插入到标题标签后面
+        title_layout.insertWidget(2, self.unread_count_label)
     
-    def toggle_collapse(self, event):
-        """切换折叠/展开状态"""
-        self.is_collapsed = not self.is_collapsed
-        
-        # 更新箭头方向
-        if self.is_collapsed:
-            self.arrow_label.setText("▶")
-            self.notification_container.hide()
-        else:
-            self.arrow_label.setText("▼")
-            self.notification_container.show()
+    # 移除toggle_collapse方法，基类已处理折叠/展开逻辑
     
     def get_unread_count(self):
         """获取未读通知数量"""
@@ -734,10 +793,10 @@ class NotificationSystemWidget(QWidget):
             separator = QLabel()
             separator.setFixedHeight(1)
             separator.setStyleSheet("background-color: #808080;")
-            self.notification_layout.insertWidget(0, separator)
+            self.content_layout.insertWidget(0, separator)
         
         # 将新通知插入到布局的开头（显示在最上方）
-        self.notification_layout.insertWidget(0, notification_item)
+        self.content_layout.insertWidget(0, notification_item)
         
         # 发送系统弹窗气泡通知
         notification_item.send_system_notification()
@@ -761,33 +820,33 @@ class NotificationSystemWidget(QWidget):
             layout_index = item_index * 2  # 每个通知项占用2个位置（分界线 + 通知项）
             
             # 从布局中移除通知项
-            layout_item = self.notification_layout.itemAt(layout_index)
+            layout_item = self.content_layout.itemAt(layout_index)
             if layout_item:
                 widget = layout_item.widget()
                 if widget and widget == notification_item:
-                    self.notification_layout.removeWidget(widget)
+                    self.content_layout.removeWidget(widget)
                     widget.setParent(None)
                     widget.deleteLater()
             
             # 如果这不是第一个通知项，移除前面的分界线
             if item_index > 0:
                 separator_index = layout_index - 1
-                separator_item = self.notification_layout.itemAt(separator_index)
+                separator_item = self.content_layout.itemAt(separator_index)
                 if separator_item:
                     separator_widget = separator_item.widget()
                     if separator_widget:
-                        self.notification_layout.removeWidget(separator_widget)
+                        self.content_layout.removeWidget(separator_widget)
                         separator_widget.setParent(None)
                         separator_widget.deleteLater()
             
             # 如果这是第一个通知项而且不仅有一个通知项，移除后面的分界线
             elif item_index == 0 and len(self.notifications) > 1:
                 separator_index = layout_index # 第一个通知已被移除
-                separator_item = self.notification_layout.itemAt(separator_index)
+                separator_item = self.content_layout.itemAt(separator_index)
                 if separator_item:
                     separator_widget = separator_item.widget()
                     if separator_widget:
-                        self.notification_layout.removeWidget(separator_widget)
+                        self.content_layout.removeWidget(separator_widget)
                         separator_widget.setParent(None)
                         separator_widget.deleteLater()
             
@@ -803,12 +862,12 @@ class NotificationSystemWidget(QWidget):
     def clear_notifications(self):
         """清空所有通知"""
         # 清空布局中的所有部件
-        for i in reversed(range(self.notification_layout.count())):
-            item = self.notification_layout.itemAt(i)
+        for i in reversed(range(self.content_layout.count())):
+            item = self.content_layout.itemAt(i)
             if item:
                 widget = item.widget()
                 if widget:
-                    self.notification_layout.removeWidget(widget)
+                    self.content_layout.removeWidget(widget)
                     widget.setParent(None)
                     widget.deleteLater()
         
@@ -874,10 +933,10 @@ class NotificationSystemWidget(QWidget):
                 separator = QLabel()
                 separator.setFixedHeight(1)
                 separator.setStyleSheet("background-color: #808080;")
-                self.notification_layout.addWidget(separator)
+                self.content_layout.addWidget(separator)
             
             # 添加通知项到布局
-            self.notification_layout.addWidget(notification_item)
+            self.content_layout.addWidget(notification_item)
             
             # 更新已读状态样式
             notification_item.update_read_style()
@@ -885,9 +944,6 @@ class NotificationSystemWidget(QWidget):
         # 更新未读计数
         self.update_unread_count()
 
-class AppTitleWidget(QWidget):
-    """应用标题部件"""
-    pass
 
 class AppItemWidget(QWidget):
     """应用图标部件，显示单个应用的图标和名称"""
@@ -964,98 +1020,27 @@ class AppItemWidget(QWidget):
             raise TypeError(f"应用 {self.app_name} 未定义或没有窗口函数")
 
 
-class AppEntryWidget(QWidget):
+class AppEntryWidget(CollapsibleContainerWidget):
     """应用入口部件，支持折叠/展开显示应用图标"""
     
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.is_expanded = False  # 默认折叠状态
-        
-        # 设置组件样式
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        
-        # 创建布局和部件
-        self.init_ui()
+        super().__init__("应用", False, parent)
         
         # 加载应用列表
         self.load_apps()
-    
-    def init_ui(self):
-        """初始化用户界面"""
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
-        # 标题行：可点击的标题和折叠箭头
-        self.title_widget = AppTitleWidget()
-        title_layout = QHBoxLayout(self.title_widget)
+        # 应用图标容器（水平布局）
+        self.content_layout = QHBoxLayout(self.content_container)
+        self.content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         
-        # 折叠箭头
-        self.arrow_label = QLabel("▶")
-        self.arrow_label.setFixedSize(20, 20)
-        self.arrow_label.setStyleSheet("""
-            font-size: 16px;
-            color: #FFFFFF;
-            font-weight: bold;
-        """)
-        title_layout.addWidget(self.arrow_label)
-        
-        # 标题名称
-        self.title_label = QLabel("应用")
-        self.title_label.setStyleSheet("""
-            font-size: 24px;
-            color: #FFFFFF;
-            font-weight: bold;
-        """)
-        title_layout.addWidget(self.title_label)
-        
-        # 右侧伸缩空间
-        title_layout.addStretch()
-        
-        # 设置标题悬停高亮提示
-        self.title_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.title_widget.setStyleSheet("""
-            AppTitleWidget:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-            }
-        """)
-        
-        layout.addWidget(self.title_widget)
-        
-        # 应用图标容器（默认隐藏）
-        self.apps_container = QWidget()
-        self.apps_layout = QHBoxLayout(self.apps_container)
-        self.apps_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.apps_layout.setSpacing(10)
-        self.apps_container.hide()
-        
-        layout.addWidget(self.apps_container)
-        
-        # 连接标题点击事件
-        self.title_widget.mousePressEvent = self.toggle_expand
+        # 填充应用图标
+        self.populate_apps()
     
     def load_apps(self):
         """加载应用列表"""
         from apps.app_list import APP_LIST
         self.apps = APP_LIST
     
-    def toggle_expand(self, event):
-        """切换折叠/展开状态"""
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.is_expanded = not self.is_expanded
-            self.update_expansion_display()
-    
-    def update_expansion_display(self):
-        """更新显示状态"""
-        # 更新箭头方向
-        if self.is_expanded:
-            self.arrow_label.setText("▼")
-            self.apps_container.show()
-            self.populate_apps()
-        else:
-            self.arrow_label.setText("▶")
-            self.apps_container.hide()
-            self.clear_apps()
-
     def add_app(self, app_name, app_info):
         """添加应用图标"""
         app_icon = AppItemWidget(
@@ -1064,7 +1049,7 @@ class AppEntryWidget(QWidget):
             icon_path=app_info.get("icon"),
             description=app_info.get("description", "")
         )
-        self.apps_layout.addWidget(app_icon)
+        self.content_layout.addWidget(app_icon)
     
     def populate_apps(self):
         """填充应用图标"""
@@ -1077,16 +1062,16 @@ class AppEntryWidget(QWidget):
 
     def delete_app(self, idx):
         """删除应用图标"""
-        item = self.apps_layout.itemAt(idx)
+        item = self.content_layout.itemAt(idx)
         if item:
             widget = item.widget()
             if widget:
-                self.apps_layout.removeWidget(widget)
+                self.content_layout.removeWidget(widget)
                 widget.setParent(None)
                 widget.deleteLater()
         
     
     def clear_apps(self):
         """清空应用图标"""
-        for i in reversed(range(self.apps_layout.count())):
+        for i in reversed(range(self.content_layout.count())):
             self.delete_app(i)
