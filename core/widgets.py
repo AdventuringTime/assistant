@@ -964,12 +964,6 @@ class AppEntryWidget(QWidget):
         
         # 设置组件样式
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("""
-            AppEntryWidget {
-                border-radius: 15px;
-                border: 1px solid #808080;
-            }
-        """)
         
         # 创建布局和部件
         self.init_ui()
@@ -999,7 +993,7 @@ class AppEntryWidget(QWidget):
         # 标题名称
         self.title_label = QLabel("应用")
         self.title_label.setStyleSheet("""
-            font-size: 18px;
+            font-size: 24px;
             color: #FFFFFF;
             font-weight: bold;
         """)
