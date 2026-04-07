@@ -28,9 +28,9 @@ class SettingsWindow(BaseWindow):
         self.setMinimumSize(600, 400)
         
         # 创建中心widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        central_widget.setStyleSheet("""
+        container = QWidget()
+        self.setCentralWidget(container)
+        container.setStyleSheet("""
             QScrollArea, QListWidget {
                 background-color: transparent;
                 border: none;
@@ -39,7 +39,7 @@ class SettingsWindow(BaseWindow):
         """)
         
         # 主布局
-        main_layout = QHBoxLayout(central_widget)
+        main_layout = QHBoxLayout(container)
         
         # 左侧类别列表
         self.category_scroll_area = QScrollArea()
