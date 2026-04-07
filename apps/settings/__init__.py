@@ -72,7 +72,7 @@ class SettingsWindow(BaseWindow):
     
     def load_settings(self):
         """加载设置数据"""
-        settings_path = os.path.join(os.path.dirname(__file__), "data", "items.json")
+        settings_path = os.path.join(os.path.dirname(__file__), "items.json")
         with open(settings_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     

@@ -1,0 +1,83 @@
+[
+    [
+        "主页",
+        [
+            [
+                "时期与季节",
+                [
+                    {
+                        "label": "时期",
+                        "type": "text",
+                        "path": "data/homepage/PeriodSeason.json",
+                        "json_path": "period",
+                        "default": "萌镇"
+                    },
+                    {
+                        "label": "季节",
+                        "type": "text",
+                        "path": "data/homepage/PeriodSeason.json",
+                        "json_path": "season",
+                        "default": "樱绽"
+                    }
+                ]
+            ],
+            [
+                "版本",
+                [
+                    {
+                        "label": "用户版本",
+                        "type": "text",
+                        "path": "data/homepage/Version.json",
+                        "json_path": "user_version",
+                        "default": "5.1.0"
+                    },
+                    {
+                        "label": "系统版本",
+                        "type": "text",
+                        "path": "data/homepage/Version.json",
+                        "json_path": "app_version",
+                        "default": "0.0"
+                    }
+                ]
+            ]
+        ]
+    ],
+    [
+        "启动项",
+        [
+            [
+                "新闻监控",
+                [
+                    {
+                        "label": "激活",
+                        "type": "bool",
+                        "path": "apps/news_monitor/data/settings.json",
+                        "json_path": "activated",
+                        "default": false
+                    },
+                    {
+                        "label": "检查间隔（秒）",
+                        "type": "int",
+                        "path": "apps/news_monitor/data/settings.json",
+                        "json_path": "interval",
+                        "min": 1,
+                        "max": 2147483647,
+                        "default": 1800
+                    }
+                ]
+            ],
+            [
+                "每日年份",
+                [
+                    {
+                        "label": "激活",
+                        "type": "bool",
+                        "path": "apps/daily_year/data/settings.json",
+                        "json_path": "activated",
+                        "default": false
+                    }
+                ]
+            ]
+        ]
+    ]
+]
