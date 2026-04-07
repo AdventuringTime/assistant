@@ -308,13 +308,6 @@ class TopStatusWidget(QWidget):
         """)
         
         # 创建布局和部件
-        self.init_ui()
-        
-        # 定期更新显示
-        self.updater = Heartbeat(self.update_display, interval=300)
-    
-    def init_ui(self):
-        """初始化用户界面"""
         # 主水平布局（设置边距确保边框可见）
         main_layout = QHBoxLayout(self)
         
@@ -352,6 +345,9 @@ class TopStatusWidget(QWidget):
         right_layout.addWidget(self.version_label)
 
         main_layout.addLayout(right_layout, 1)
+    
+        # 定期更新显示
+        self.updater = Heartbeat(self.update_display, interval=300)
     
     def get_week_number(self):
         """获取周次"""
@@ -514,10 +510,6 @@ class NotificationItemWidget(QWidget):
         """)
         
         # 创建布局和部件
-        self.init_ui()
-    
-    def init_ui(self):
-        """初始化用户界面"""
         layout = QVBoxLayout(self)
         
         # 标题标签
@@ -679,16 +671,6 @@ class NotificationItemWidget(QWidget):
         # 保存状态变化
         self.notification_system.save_notifications()
     
-    def send_system_notification(self):
-        """发送系统弹窗气泡通知"""
-        notif = Notification(
-            app_id=app_name,
-            title=self.title,
-            msg=self.content,
-            icon=self.icon_path
-        ) # TODO: 再次运行改编成打开主窗口后，增加打开app的链接
-        notif.show() 
-        
 class NotificationSystemWidget(CollapsibleContainerWidget):
     """通知系统部件，管理多个通知项"""
     
@@ -741,8 +723,6 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         
         # 插入到标题标签后面
         title_layout.insertWidget(2, self.unread_count_label)
-    
-    # 移除toggle_collapse方法，基类已处理折叠/展开逻辑
     
     def get_unread_count(self):
         """获取未读通知数量"""
@@ -989,10 +969,6 @@ class AppItemWidget(QWidget):
             self.setToolTip(self.description)
         
         # 创建布局和部件
-        self.init_ui()
-    
-    def init_ui(self):
-        """初始化用户界面"""
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(5)
