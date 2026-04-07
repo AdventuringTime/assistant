@@ -367,6 +367,8 @@ class TopStatusWidget(QWidget):
         self.date_week_label.update_display(self.get_week_number())
         self.period_season_label.load_data()
 
+top_status = TopStatusWidget()
+
 
 class CollapsibleTitleWidget(QWidget):
     """可折叠标题部件"""
@@ -1080,3 +1082,5 @@ class AppEntryWidget(CollapsibleContainerWidget):
         """清空应用图标"""
         for i in reversed(range(self.content_layout.count())):
             self.delete_app(i)
+
+app_entry = AppEntryWidget()
