@@ -88,8 +88,6 @@ class MainWindow(BaseWindow):
         # 创建滚动区域
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll_area.setMinimumSize(720, 480)
         
         # 创建内容容器
