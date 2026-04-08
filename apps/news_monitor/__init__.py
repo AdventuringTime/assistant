@@ -7,7 +7,7 @@ import os
 import webbrowser
 from core.widgets import notification_system
 
-from .utils.isFirstToday import is_first_run_today
+from core.functions import is_first_run_today
 
 
 # -------------------------- 配置参数 --------------------------
@@ -18,7 +18,6 @@ TARGETS = [
 ]
 # 2. 检查间隔时间
 CHECK_INTERVAL = 1800  # 检查间隔时间（秒）
-FIRST_RUN_DELAY = 30  # 网络异常时重试时间（秒）
 # 3. 存储文件路径
 STORAGE_FILE = os.path.join(os.path.dirname(__file__), "data", "news_ids.json")
 # 4. 新闻数量配置
@@ -145,7 +144,7 @@ def save_current_ids():
         json.dump(last_news_ids, f, ensure_ascii=False, indent=4)
 
 
-if is_first_run_today():
+if is_first_run_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
     # 每天第一次运行时，打开所有目标网页
     for url, name in TARGETS:
         open_url(url)
