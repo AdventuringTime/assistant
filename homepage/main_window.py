@@ -97,10 +97,14 @@ class MainWindow(BaseWindow):
         
         # 内容部件
         self.top_status_widget = top_status
+        self.test_button = None
+        self.test_button.clicked.connect(self.test_function)
+
         self.notification_system = notification_system
         self.app_entry_widget = app_entry
         self.content_widgets = [
             self.top_status_widget,
+            # self.test_button,
             self.app_entry_widget,
             self.notification_system
         ]
@@ -113,6 +117,9 @@ class MainWindow(BaseWindow):
         # 设置滚动区域的内容部件
         scroll_area.setWidget(container)
         self.setCentralWidget(scroll_area)
+
+    def test_function(self):
+        pass
 
     def init_auto_start(self):
         """初始化自启动程序"""
