@@ -98,16 +98,18 @@ class MainWindow(BaseWindow):
         # 内容部件
         self.top_status_widget = top_status
         self.test_button = None
-        self.test_button.clicked.connect(self.test_function)
+        if self.test_button:
+            self.test_button.clicked.connect(self.test_function)
 
         self.notification_system = notification_system
         self.app_entry_widget = app_entry
         self.content_widgets = [
             self.top_status_widget,
-            # self.test_button,
             self.app_entry_widget,
             self.notification_system
         ]
+        if self.test_button:
+            self.content_widgets.insert(1, self.test_button)
         
         # 组合部件
         for widget in self.content_widgets:
