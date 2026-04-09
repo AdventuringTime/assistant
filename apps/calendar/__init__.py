@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea
 
 from core.base_window import BaseWindow
+from .schedule_editor import ScheduleEditorWindow
 
 
 class ScheduleItemWidget(QWidget):
@@ -32,12 +33,17 @@ class ScheduleItemWidget(QWidget):
             self.layout.addWidget(self.description_label)
 
     def mousePressEvent(self, event):
-        self.show_schedule(self.schedule_item) # TODO: 点击后打开日程窗口
+        # 打开日程编辑窗口
+        editor = ScheduleEditorWindow(self.schedule_item, self)
+        if editor.exec() == ScheduleEditorWindow.DialogCode.Accepted:
+            # 如果日程被保存或删除，通知父窗口更新
+            if hasattr(self.window(), 'refresh_schedules'):
+                self.window().refresh_schedules()
         
 class CalendarWindow(BaseWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.schedules = self.load_schedules() #TODO: 从数据库加载日程
+        self.schedules = self.load_schedules()
         self.init_ui()
 
     def init_ui(self):
@@ -53,5 +59,35 @@ class CalendarWindow(BaseWindow):
         self.scroll_area.setWidget(self.container)
         self.setCentralWidget(self.scroll_area)
 
+        self.refresh_schedules()
+
+    def load_schedules(self):
+        """从文件加载日程数据"""
+        import json
+        import os
+        
+        data_dir = os.path.join(os.path.dirname(__file__), "data")
+        file_path = os.path.join(data_dir, "schedules.json")
+        
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except:
+                return []
+        return []
+
+    def refresh_schedules(self):
+        """刷新日程显示"""
+        # 清空现有布局
+        for i in reversed(range(self.layout.count())):
+            widget = self.layout.itemAt(i).widget()
+            if widget:
+                widget.deleteLater()
+        
+        # 重新加载数据
+        self.schedules = self.load_schedules()
+        
+        # 添加日程项
         for schedule in self.schedules:
             self.layout.addWidget(ScheduleItemWidget(schedule))
