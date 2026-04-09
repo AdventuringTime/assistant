@@ -1,7 +1,8 @@
 from datetime import date
+import os
 
 from core.widgets import notification_system
-from .utils.isFirstToday import is_first_run_today
+from core.functions import is_first_run_today
 
 base_url_format = "https://baike.baidu.com/item/{year}%E5%B9%B4/0"
 
@@ -12,7 +13,7 @@ def get_timedelta(today=None, target_day=None):
         target_day = date(2031, 5, 25)
     return int((target_day - today).days)
 
-if is_first_run_today():
+if is_first_run_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
     year = get_timedelta()
     notification_system.notify(
         title="每日年度事记",

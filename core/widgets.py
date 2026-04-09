@@ -781,7 +781,13 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         self.content_layout.insertWidget(0, notification_item)
         
         # 发送系统弹窗气泡通知
-        notification_item.send_system_notification()
+        notif = Notification(
+            app_id=app_name,
+            title=title,
+            msg=content,
+            icon=icon_path
+        ) # TODO: 再次运行改编成打开主窗口后，增加打开app的链接
+        notif.show()
         
         # 保存通知到文件
         self.save_notifications()

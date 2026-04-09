@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QDialog, QMainWindow
 from PySide6.QtGui import QIcon
 from core.global_constants import icon_path
 
@@ -62,6 +62,29 @@ class BaseWindow(QMainWindow):
     
     def closeEvent(self, event):
         """窗口关闭事件"""
+        # 从窗口管理器注销
+        WindowsManager.unregister_window(self)
+        super().closeEvent(event)
+
+class BaseDialog(QDialog):
+    """
+    基础对话框类，提供统一的对话框样式
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # 设置对话框图标
+        self.icon = QIcon(icon_path)
+        self.setWindowIcon(self.icon)
+        
+        # 设置对话框背景颜色
+        self.setStyleSheet("QDialog { background-color: #2D2D30; }")
+        
+        # 注册对话框到窗口管理器
+        WindowsManager.register_window(self)
+    
+    def closeEvent(self, event):
+        """对话框关闭事件"""
         # 从窗口管理器注销
         WindowsManager.unregister_window(self)
         super().closeEvent(event)
