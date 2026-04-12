@@ -1,3 +1,4 @@
+import time
 from core.base_window import BaseDialog
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                               QLineEdit, QTextEdit, QPushButton, QDialog,
@@ -59,12 +60,17 @@ class ScheduleItemEditor(QWidget):
             self.input_field.setText(value)
 
 
+# 数据文件路径
+data_dir = os.path.join(os.path.dirname(__file__), "data")
+file_path = os.path.join(data_dir, "schedules.json")
+
 class ScheduleEditorWindow(BaseDialog):
     """日程编辑窗口"""
-    
-    def __init__(self, schedule_item=None, parent=None):
+
+    def __init__(self, schedule_item=None, schedule_id=None, parent=None):
         super().__init__(parent)
         self.schedule_item = schedule_item or {} # a if a else b
+        self.schedule_id = schedule_id or None
         self.is_new_schedule = schedule_item is None
         
         self.init_ui()
@@ -174,7 +180,7 @@ class ScheduleEditorWindow(BaseDialog):
             description = None
         
         # 构建日程数据
-        schedule_data = {
+        self.schedule_data = {
             "title": title,
             "start_time": start_time_str,
             "end_time": end_time_str,
@@ -182,15 +188,10 @@ class ScheduleEditorWindow(BaseDialog):
             "description": description
         }
         
-        # 如果是编辑现有日程，保留ID
-        if "id" in self.schedule_item:
-            schedule_data["id"] = self.schedule_item["id"]
-        
         # 保存到文件
-        self.save_to_file(schedule_data)
+        self.save_to_file()
         
         # 发送信号或保存数据
-        self.schedule_data = schedule_data
         self.accept()
     
     def delete_schedule(self):
@@ -203,31 +204,28 @@ class ScheduleEditorWindow(BaseDialog):
             self.delete_from_file()
             self.accept()
     
-    def save_to_file(self, schedule_data):
+    def save_to_file(self):
         """保存日程数据到文件"""
         # 确保数据目录存在
-        data_dir = os.path.join(os.path.dirname(__file__), "data")
         os.makedirs(data_dir, exist_ok=True)
         
-        file_path = os.path.join(data_dir, "schedules.json")
-        
         # 读取现有数据
-        schedules = []
         if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
+            # 若文件存在但读取失败将报错，防止数据丢失
+            with open(file_path, 'r', encoding='utf-8') as f: 
                 schedules = json.load(f)
+        else:
+            schedules = {}
         
         # 更新或添加日程
-        if "id" in schedule_data:
-            # 更新现有日程
-            for i, schedule in enumerate(schedules):
-                if schedule.get("id") == schedule_data["id"]:
-                    schedules[i] = schedule_data
-                    break
-        else:
-            # 添加新日程
-            schedule_data["id"] = len(schedules) + 1
-            schedules.append(schedule_data)
+        if not self.schedule_id:
+            # 初始化ID
+            self.schedule_id = int(time.time())
+            # 去重
+            while self.schedule_id in schedules:
+                self.schedule_id += 1
+
+        schedules[self.schedule_id] = self.schedule_data
         
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -235,23 +233,15 @@ class ScheduleEditorWindow(BaseDialog):
     
     def delete_from_file(self):
         """从文件中删除日程"""
-        if "id" not in self.schedule_item:
+        if not self.schedule_id:
             return
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            schedules = json.load(f)
         
-        data_dir = os.path.join(os.path.dirname(__file__), "data")
-        file_path = os.path.join(data_dir, "schedules.json")
+        # 删除日程
+        del schedules[self.schedule_id]
         
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                schedules = json.load(f)
-            
-            # 过滤掉要删除的日程
-            schedules = [s for s in schedules if s.get("id") != self.schedule_item["id"]]
-            
-            # 保存文件
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(schedules, f, ensure_ascii=False, indent=4)
-    
-    def get_schedule_data(self):
-        """获取编辑后的日程数据"""
-        return getattr(self, 'schedule_data', None)
+        # 保存文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(schedules, f, ensure_ascii=False, indent=4)
