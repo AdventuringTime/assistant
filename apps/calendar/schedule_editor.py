@@ -7,6 +7,7 @@ from PySide6.QtCore import QDateTime, Qt
 from PySide6.QtGui import QFont
 import json
 import os
+from sortedcontainers import SortedDict
 
 
 class ScheduleItemEditor(QWidget):
@@ -216,20 +217,24 @@ class ScheduleEditorWindow(BaseDialog):
                 schedules = json.load(f)
         else:
             schedules = {}
+        schedules = SortedDict(schedules)
         
-        # 更新或添加日程
-        if not self.schedule_id:
+        if self.schedule_id:
+            # 更新日程
+            schedules[self.schedule_id] = self.schedule_data
+        else:
             # 初始化ID
             self.schedule_id = int(time.time())
             # 去重
             while self.schedule_id in schedules:
                 self.schedule_id += 1
 
-        schedules[self.schedule_id] = self.schedule_data
-        
+            # 添加新日程
+            schedules[self.schedule_id] = self.schedule_data
+
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(schedules, f, ensure_ascii=False, indent=4)
+            json.dump(dict(schedules), f, ensure_ascii=False, indent=4, sort_keys=True)
     
     def delete_from_file(self):
         """从文件中删除日程"""
