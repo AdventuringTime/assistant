@@ -1,13 +1,8 @@
-import time
-from core.base_window import BaseDialog
+from core.base_window import BaseWindow
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                              QLineEdit, QTextEdit, QPushButton, QDialog,
+                              QLineEdit, QTextEdit, QPushButton,
                               QDateTimeEdit, QMessageBox)
-from PySide6.QtCore import QDateTime, Qt
-from PySide6.QtGui import QFont
-import json
-import os
-from sortedcontainers import SortedDict
+from PySide6.QtCore import QDateTime
 
 
 class ScheduleItemEditor(QWidget):
@@ -61,14 +56,10 @@ class ScheduleItemEditor(QWidget):
             self.input_field.setText(value)
 
 
-# 数据文件路径
-data_dir = os.path.join(os.path.dirname(__file__), "data")
-file_path = os.path.join(data_dir, "schedules.json")
-
-class ScheduleEditorWindow(BaseDialog):
+class ScheduleEditorWindow(BaseWindow):
     """日程编辑窗口"""
 
-    def __init__(self, schedule_item=None, schedule_id=None, parent=None):
+    def __init__(self, parent, schedule_item=None, schedule_id=None):
         super().__init__(parent)
         self.schedule_item = schedule_item or {} # a if a else b
         self.schedule_id = schedule_id or None
@@ -105,9 +96,6 @@ class ScheduleEditorWindow(BaseDialog):
         self.save_button = QPushButton("保存")
         self.save_button.clicked.connect(self.save_schedule)
         
-        self.cancel_button = QPushButton("取消")
-        self.cancel_button.clicked.connect(self.reject)
-        
         if not self.is_new_schedule:
             self.delete_button = QPushButton("删除")
             self.delete_button.clicked.connect(self.delete_schedule)
@@ -115,7 +103,6 @@ class ScheduleEditorWindow(BaseDialog):
             button_layout.addWidget(self.delete_button)
         
         button_layout.addStretch()
-        button_layout.addWidget(self.cancel_button)
         button_layout.addWidget(self.save_button)
         
         main_layout.addLayout(button_layout)
@@ -189,11 +176,11 @@ class ScheduleEditorWindow(BaseDialog):
             "description": description
         }
         
-        # 保存到文件
-        self.save_to_file()
+        # 调用父窗口的保存方法
+        self.window().save_schedule(self.schedule_id, self.schedule_data)
         
-        # 发送信号或保存数据
-        self.accept()
+        # 关闭窗口
+        self.close()
     
     def delete_schedule(self):
         """删除日程"""
@@ -202,51 +189,8 @@ class ScheduleEditorWindow(BaseDialog):
                                    QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
         
         if reply == QMessageBox.StandardButton.Yes:
-            self.delete_from_file()
-            self.accept()
-    
-    def save_to_file(self):
-        """保存日程数据到文件"""
-        # 确保数据目录存在
-        os.makedirs(data_dir, exist_ok=True)
-        
-        # 读取现有数据
-        if os.path.exists(file_path):
-            # 若文件存在但读取失败将报错，防止数据丢失
-            with open(file_path, 'r', encoding='utf-8') as f: 
-                schedules = json.load(f)
-        else:
-            schedules = {}
-        schedules = SortedDict(schedules)
-        
-        if self.schedule_id:
-            # 更新日程
-            schedules[self.schedule_id] = self.schedule_data
-        else:
-            # 初始化ID
-            self.schedule_id = int(time.time())
-            # 去重
-            while self.schedule_id in schedules:
-                self.schedule_id += 1
-
-            # 添加新日程
-            schedules[self.schedule_id] = self.schedule_data
-
-        # 保存文件
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(dict(schedules), f, ensure_ascii=False, indent=4, sort_keys=True)
-    
-    def delete_from_file(self):
-        """从文件中删除日程"""
-        if not self.schedule_id:
-            return
-
-        with open(file_path, 'r', encoding='utf-8') as f:
-            schedules = json.load(f)
-        
-        # 删除日程
-        del schedules[self.schedule_id]
-        
-        # 保存文件
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(schedules, f, ensure_ascii=False, indent=4)
+            # 调用日历窗口的删除方法
+            self.window().delete_schedule(self.schedule_id)
+            
+            # 关闭窗口
+            self.close()

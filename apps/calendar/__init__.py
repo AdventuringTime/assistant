@@ -1,13 +1,22 @@
+from sortedcontainers import SortedDict
 from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea
 
 from core.base_window import BaseWindow
 from .schedule_editor import ScheduleEditorWindow
 
 
+import json
+import os
+import time
+
+data_dir = os.path.join(os.path.dirname(__file__), "data")
+file_path = os.path.join(data_dir, "schedules.json")
+
 class ScheduleItemWidget(QWidget):
-    def __init__(self, schedule_item, parent=None):
+    def __init__(self, schedule_item, schedule_id=None, parent=None):
         super().__init__(parent)
         self.schedule_item = schedule_item
+        self.schedule_id = schedule_id
 
         self.layout = QVBoxLayout(self)
 
@@ -33,12 +42,9 @@ class ScheduleItemWidget(QWidget):
             self.layout.addWidget(self.description_label)
 
     def mousePressEvent(self, event):
-        # 打开日程编辑窗口
-        editor = ScheduleEditorWindow(self.schedule_item, self)
-        if editor.exec() == ScheduleEditorWindow.DialogCode.Accepted:
-            # 如果日程被保存或删除，通知父窗口更新
-            if hasattr(self.window(), 'refresh_schedules'):
-                self.window().refresh_schedules()
+         # 打开日程编辑窗口
+         editor = ScheduleEditorWindow(self, self.schedule_item, self.schedule_id)
+         editor.show()
         
 class CalendarWindow(BaseWindow):
     def __init__(self, parent=None):
@@ -70,12 +76,10 @@ class CalendarWindow(BaseWindow):
         file_path = os.path.join(data_dir, "schedules.json")
         
         if os.path.exists(file_path):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except:
-                return []
-        return []
+            # 若文件读取失败，应报错
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return SortedDict(json.load(f))
+        return SortedDict()
 
     def refresh_schedules(self):
         """刷新日程显示"""
@@ -89,5 +93,58 @@ class CalendarWindow(BaseWindow):
         self.schedules = self.load_schedules()
         
         # 添加日程项
-        for schedule in self.schedules:
-            self.layout.addWidget(ScheduleItemWidget(schedule))
+        for schedule_id, schedule in self.schedules.items():
+            self.layout.addWidget(ScheduleItemWidget(schedule, schedule_id))
+    
+    def save_schedule(self, schedule_id, schedule_data):
+        """保存日程到文件"""
+        # 确保数据目录存在
+        os.makedirs(data_dir, exist_ok=True)
+        
+        # 读取现有数据
+        if os.path.exists(file_path):
+            # 若文件存在但读取失败将报错，防止数据丢失
+            with open(file_path, 'r', encoding='utf-8') as f: 
+                schedules = json.load(f)
+        else:
+            schedules = {}
+        schedules = SortedDict(schedules)
+        
+        if schedule_id:
+            # 更新日程
+            schedules[schedule_id] = schedule_data
+        else:
+            # 初始化ID
+            schedule_id = int(time.time())
+            # 去重
+            while schedule_id in schedules:
+                schedule_id += 1
+
+            # 添加新日程
+            schedules[schedule_id] = schedule_data
+
+        # 保存文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(dict(schedules), f, ensure_ascii=False, indent=4, sort_keys=True)
+        
+        # 刷新显示
+        self.refresh_schedules()
+    
+    def delete_schedule(self, schedule_id):
+        """从文件中删除日程"""
+        if not schedule_id:
+            return
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            schedules = json.load(f)
+        
+        # 删除日程
+        if schedule_id in schedules:
+            del schedules[schedule_id]
+        
+        # 保存文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(schedules, f, ensure_ascii=False, indent=4)
+        
+        # 刷新显示
+        self.refresh_schedules()
