@@ -1,7 +1,6 @@
 from sortedcontainers import SortedDict
 from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QPushButton
-from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt
 
 from core.base_window import BaseWindow
 from .schedule_editor import ScheduleEditorWindow
@@ -20,26 +19,34 @@ class ScheduleItemWidget(QWidget):
         self.schedule_item = schedule_item
         self.schedule_id = schedule_id
 
+        # 设置悬停效果样式
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setStyleSheet("""
+            ScheduleItemWidget:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+        """)
+        
         self.layout = QVBoxLayout(self)
 
         self.title_label = QLabel(schedule_item["title"])
-        self.title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFFFFF;")
         self.title_label.setWordWrap(True)
         self.layout.addWidget(self.title_label)
 
-        if "start_time" and "end_time" in schedule_item:
+        if "start_time" and "end_time" in schedule_item and schedule_item["start_time"] and schedule_item["end_time"]:
             self.time_label = QLabel(f"{schedule_item['start_time']} - {schedule_item['end_time']}")
-            self.time_label.setStyleSheet("font-size: 14px;")
+            self.time_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
             self.layout.addWidget(self.time_label)
         
-        if "location" in schedule_item:
+        if "location" in schedule_item and schedule_item["location"]:
             self.location_label = QLabel(schedule_item['location'])
-            self.location_label.setStyleSheet("font-size: 14px;")
+            self.location_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
             self.layout.addWidget(self.location_label)
 
-        if "description" in schedule_item:
+        if "description" in schedule_item and schedule_item["description"]:
             self.description_label = QLabel(schedule_item["description"])
-            self.description_label.setStyleSheet("font-size: 14px;")
+            self.description_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
             self.description_label.setWordWrap(True)
             self.layout.addWidget(self.description_label)
 
@@ -67,7 +74,6 @@ class CalendarWindow(BaseWindow):
         self.scroll_area.setWidget(self.container)
         self.setCentralWidget(self.scroll_area)
 
-        # 创建悬浮按钮
         self.create_floating_button()
 
         self.refresh_schedules()
@@ -124,11 +130,11 @@ class CalendarWindow(BaseWindow):
 
     def refresh_schedules(self):
         """刷新日程显示"""
-        # 清空现有布局
-        for i in reversed(range(self.layout.count())):
-            widget = self.layout.itemAt(i).widget()
-            if widget:
-                widget.deleteLater()
+        # 清空现有布局（包括所有widget和stretch）
+        while self.layout.count():
+            item = self.layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
         
         # 重新加载数据
         self.schedules = self.load_schedules()
@@ -136,6 +142,9 @@ class CalendarWindow(BaseWindow):
         # 添加日程项
         for schedule_id, schedule in self.schedules.items():
             self.layout.addWidget(ScheduleItemWidget(schedule, schedule_id))
+
+        # 添加stretch，确保日程项在顶部，空白在底部
+        self.layout.addStretch()
     
     def save_schedule(self, schedule_id, schedule_data):
         """保存日程到文件"""
@@ -144,16 +153,16 @@ class CalendarWindow(BaseWindow):
         
         if schedule_id:
             # 更新日程
-            self.schedules[schedule_id] = schedule_data
+            self.schedules[str(schedule_id)] = schedule_data
         else:
             # 初始化ID
             schedule_id = int(time.time())
             # 去重
-            while schedule_id in self.schedules:
+            while str(schedule_id) in self.schedules:
                 schedule_id += 1
 
             # 添加新日程
-            self.schedules[schedule_id] = schedule_data
+            self.schedules[str(schedule_id)] = schedule_data
 
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
@@ -168,8 +177,8 @@ class CalendarWindow(BaseWindow):
             return
 
         # 删除日程
-        if schedule_id in self.schedules:
-            del self.schedules[schedule_id]
+        if str(schedule_id) in self.schedules:
+            del self.schedules[str(schedule_id)]
         
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:

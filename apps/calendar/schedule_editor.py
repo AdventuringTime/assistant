@@ -181,7 +181,7 @@ class ScheduleEditorWindow(BaseWindow):
         }
         
         # 调用父窗口的保存方法
-        self.window().save_schedule(self.schedule_id, self.schedule_data)
+        self.parent().window().save_schedule(self.schedule_id, self.schedule_data)
         
         # 关闭窗口
         self.close()
@@ -192,9 +192,9 @@ class ScheduleEditorWindow(BaseWindow):
                                    "确认删除？",
                                    QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
         
-        if reply == QMessageBox.StandardButton.Yes:
-            # 调用日历窗口的删除方法
-            self.window().delete_schedule(self.schedule_id)
+        if reply == QMessageBox.StandardButton.Ok:
+            # 调用父窗口的删除方法
+            self.parent().window().delete_schedule(self.schedule_id)
             
             # 关闭窗口
             self.close()
