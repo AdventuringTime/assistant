@@ -1,14 +1,16 @@
+import json
+import os
+import time
+import datetime
+
 from sortedcontainers import SortedDict
 from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QPushButton
 from PySide6.QtCore import Qt
 
 from core.base_window import BaseWindow
+from core.functions import get_today
 from .schedule_editor import ScheduleEditorWindow
 
-
-import json
-import os
-import time
 
 data_dir = os.path.join(os.path.dirname(__file__), "data")
 file_path = os.path.join(data_dir, "schedules.json")
@@ -146,39 +148,76 @@ class CalendarWindow(BaseWindow):
         # 添加stretch，确保日程项在顶部，空白在底部
         self.layout.addStretch()
     
-    def save_schedule(self, schedule_id, schedule_data):
+    def save_schedule(self, schedule_editor):
         """保存日程到文件"""
         # 确保数据目录存在
         os.makedirs(data_dir, exist_ok=True)
+
+        year_old = str(schedule_editor.year).zfill(4) if schedule_editor.year else None
+        month_old = str(schedule_editor.month).zfill(2) if schedule_editor.month else None
+        day_old = str(schedule_editor.day).zfill(2) if schedule_editor.day else None
+        id_old = schedule_editor.id if schedule_editor.id else None
+
+        year_new = str(schedule_editor.year_new).zfill(4)
+        month_new = str(schedule_editor.month_new).zfill(2)
+        day_new = str(schedule_editor.day_new).zfill(2)
+        id_new = schedule_editor.id_new
+
+        # 尝试删除旧日程
+        if (year_old
+                and year_old in self.schedules
+                and month_old in self.schedules[year_old]
+                and day_old in self.schedules[year_old][month_old]
+                and id_old in self.schedules[year_old][month_old][day_old]
+            ):
+            del self.schedules[year_old][month_old][day_old][id_old]
         
-        if schedule_id:
-            # 更新日程
-            self.schedules[str(schedule_id)] = schedule_data
-        else:
-            # 初始化ID
-            schedule_id = int(time.time())
-            # 去重
-            while str(schedule_id) in self.schedules:
-                schedule_id += 1
+        # 初始化数据结构
+        if year_new not in self.schedules:
+            self.schedules[year_new] = {}
+        if month_new not in self.schedules[year_new]:
+            self.schedules[year_new][month_new] = {}
+        if day_new not in self.schedules[year_new][month_new]:
+            self.schedules[year_new][month_new][day_new] = []
+        
+        # 添加日程
+        id_new = str(schedule_editor.id_new)
+        if id_new in self.schedules[year_new][month_new][day_new]:
+            seen = 0
+            while str(f"{id_new}_{seen}") in self.schedules[year_new][month_new][day_new]:
+                seen += 1
+            id_new = f"{id_new}_{seen}"
+        
+        self.schedules[year_new][month_new][day_new][id_new] = schedule_editor.schedule_data
 
-            # 添加新日程
-            self.schedules[str(schedule_id)] = schedule_data
-
+        if not self.schedules[year_old][month_old][day_old]:
+            del self.schedules[year_old][month_old][day_old]
+            if not self.schedules[year_old][month_old]:
+                del self.schedules[year_old][month_old]
+                if not self.schedules[year_old]:
+                    del self.schedules[year_old]        
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(dict(self.schedules), f, ensure_ascii=False, indent=4, sort_keys=True)
+            json.dump(dict(self.schedules), f, ensure_ascii=False, indent=4)
         
         # 刷新显示
         self.refresh_schedules()
     
-    def delete_schedule(self, schedule_id):
+    def delete_schedule(self, schedule_editor):
         """从文件中删除日程"""
-        if not schedule_id:
-            return
+        year_old = str(schedule_editor.year).zfill(4) if schedule_editor.year else None
+        month_old = str(schedule_editor.month).zfill(2) if schedule_editor.month else None
+        day_old = str(schedule_editor.day).zfill(2) if schedule_editor.day else None
+        id_old = schedule_editor.id if schedule_editor.id else None
 
         # 删除日程
-        if str(schedule_id) in self.schedules:
-            del self.schedules[str(schedule_id)]
+        if (year_old and month_old and day_old and id_old and
+                year_old in self.schedules and
+                month_old in self.schedules[year_old] and
+                day_old in self.schedules[year_old][month_old] and
+                id_old in self.schedules[year_old][month_old][day_old]
+        ):
+            del self.schedules[year_old][month_old][day_old][id_old]
         
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:

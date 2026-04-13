@@ -1,9 +1,21 @@
+from datetime import datetime
+
 from core.base_window import BaseWindow
+from core.functions import get_today
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                               QLineEdit, QTextEdit, QPushButton,
                               QDateTimeEdit, QMessageBox)
 from PySide6.QtCore import QDateTime
 
+
+def _get_date(time):
+    schedule_date = get_today(time)
+    
+    year = schedule_date.year
+    month = schedule_date.month
+    day = schedule_date.day
+
+    return year, month, day
 
 class ScheduleItemEditor(QWidget):
     """单个日程项编辑组件"""
@@ -62,12 +74,17 @@ class ScheduleEditorWindow(BaseWindow):
     def __init__(self, parent, schedule_item=None, schedule_id=None):
         super().__init__(parent)
         self.schedule_item = schedule_item or {} # a if a else b
-        self.schedule_id = schedule_id or None
         self.is_new_schedule = schedule_item is None
+
+        if schedule_item:
+            self.year, self.month, self.day = _get_date(datetime.strptime(schedule_item["start_time"], "%Y-%m-%d %H:%M"))
+        else:
+            self.year, self.month, self.day = None, None, None
+        self.id = schedule_id
         
         self.init_ui()
         self.load_schedule_data()
-        
+
     def init_ui(self):
         """初始化UI界面"""
         self.setWindowTitle("日程项")
@@ -143,26 +160,28 @@ class ScheduleEditorWindow(BaseWindow):
             title = "新日程"
         
         start_time = self.start_time_editor.get_value()
-        if start_time:
-            end_time = self.end_time_editor.get_value()
-            # 验证时间
-            if end_time:
-                
-                if start_time > end_time:
-                    reply = QMessageBox.question(self, "保存日程", 
-                                            "结束时间早于开始时间，是否继续保存？",
-                                            QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes)
-                    if reply == QMessageBox.StandardButton.No:
-                        return
-            else:
-                end_time = start_time
-        
-            start_time_str = start_time.toString("yyyy-MM-dd HH:mm")
-            end_time_str = end_time.toString("yyyy-MM-dd HH:mm")
-        else:
-            start_time_str = None
-            end_time_str = None
-        
+        end_time = self.end_time_editor.get_value()
+        if not start_time or not end_time:
+            # 开始时间和结束时间必填
+            QMessageBox.warning(self, "保存日程", "开始时间和结束时间不能为空")
+            return
+        # 验证时间
+        if start_time > end_time:
+            reply = QMessageBox.question(self, "保存日程", 
+                                    "结束时间早于开始时间，是否继续保存？",
+                                    QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes)
+            if reply == QMessageBox.StandardButton.No:
+                return
+            
+        self.year_new, self.month_new, self.day_new = _get_date(start_time.toPython())
+
+        # 计算新的id
+        current_time = start_time.time()
+        self.id_new = int(((current_time.hour() * 60 + current_time.minute()) - 240) % 1440)
+
+        start_time_str = start_time.toString("yyyy-MM-dd HH:mm")
+        end_time_str = end_time.toString("yyyy-MM-dd HH:mm")
+
         location = self.location_editor.get_value().strip()
         if not location:
             location = None
@@ -179,9 +198,9 @@ class ScheduleEditorWindow(BaseWindow):
             "location": location,
             "description": description
         }
-        
+
         # 调用父窗口的保存方法
-        self.parent().window().save_schedule(self.schedule_id, self.schedule_data)
+        self.parent().window().save_schedule(self)
         
         # 关闭窗口
         self.close()
@@ -194,7 +213,7 @@ class ScheduleEditorWindow(BaseWindow):
         
         if reply == QMessageBox.StandardButton.Ok:
             # 调用父窗口的删除方法
-            self.parent().window().delete_schedule(self.schedule_id)
+            self.parent().window().delete_schedule(self)
             
             # 关闭窗口
             self.close()
