@@ -1,5 +1,7 @@
 from sortedcontainers import SortedDict
-from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea
+from PySide6.QtWidgets import QLabel, QWidget, QVBoxLayout, QScrollArea, QPushButton
+from PySide6.QtCore import QPropertyAnimation, QEasingCurve, QTimer
+from PySide6.QtGui import QIcon
 
 from core.base_window import BaseWindow
 from .schedule_editor import ScheduleEditorWindow
@@ -65,7 +67,52 @@ class CalendarWindow(BaseWindow):
         self.scroll_area.setWidget(self.container)
         self.setCentralWidget(self.scroll_area)
 
+        # 创建悬浮按钮
+        self.create_floating_button()
+
         self.refresh_schedules()
+
+    def create_floating_button(self):
+        """创建右下角悬浮按钮"""
+        # 创建悬浮按钮
+        self.floating_button = QPushButton("+", self)
+        self.floating_button.setFixedSize(60, 60)
+        self.floating_button.setStyleSheet("""
+            QPushButton {
+                background-color: #0078D4;
+                color: white;
+                border-radius: 30px;
+                font-size: 24px;
+                font-weight: bold;
+                border: none;
+            }
+            QPushButton:hover {
+                background-color: #106EBE;
+            }
+            QPushButton:pressed {
+                background-color: #005A9E;
+            }
+        """)
+        
+        # 设置按钮位置（右下角，距离边缘20px）
+        self.floating_button.move(self.width() - 80, self.height() - 80)
+        
+        # 连接点击事件
+        self.floating_button.clicked.connect(self.open_new_schedule)
+        
+        # 设置按钮始终在最前面
+        self.floating_button.raise_()
+
+    def resizeEvent(self, event):
+        """窗口大小改变事件，保持按钮在右下角"""
+        super().resizeEvent(event)
+        if hasattr(self, 'floating_button'):
+            self.floating_button.move(self.width() - 80, self.height() - 80)
+
+    def open_new_schedule(self):
+        """打开新增日程窗口"""
+        editor = ScheduleEditorWindow(self)
+        editor.show()
 
     def load_schedules(self):
         """从文件加载日程数据"""

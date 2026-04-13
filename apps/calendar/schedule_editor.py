@@ -73,8 +73,12 @@ class ScheduleEditorWindow(BaseWindow):
         self.setWindowTitle("日程项")
         self.setMinimumSize(500, 400)
         
+        # 创建中央部件
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        
         # 主布局
-        main_layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout(self.central_widget)
         
         # 创建日程项编辑器
         self.title_editor = ScheduleItemEditor("标题", "text", "新日程")
