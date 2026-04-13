@@ -69,12 +69,6 @@ class CalendarWindow(BaseWindow):
 
     def load_schedules(self):
         """从文件加载日程数据"""
-        import json
-        import os
-        
-        data_dir = os.path.join(os.path.dirname(__file__), "data")
-        file_path = os.path.join(data_dir, "schedules.json")
-        
         if os.path.exists(file_path):
             # 若文件读取失败，应报错
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -101,31 +95,22 @@ class CalendarWindow(BaseWindow):
         # 确保数据目录存在
         os.makedirs(data_dir, exist_ok=True)
         
-        # 读取现有数据
-        if os.path.exists(file_path):
-            # 若文件存在但读取失败将报错，防止数据丢失
-            with open(file_path, 'r', encoding='utf-8') as f: 
-                schedules = json.load(f)
-        else:
-            schedules = {}
-        schedules = SortedDict(schedules)
-        
         if schedule_id:
             # 更新日程
-            schedules[schedule_id] = schedule_data
+            self.schedules[schedule_id] = schedule_data
         else:
             # 初始化ID
             schedule_id = int(time.time())
             # 去重
-            while schedule_id in schedules:
+            while schedule_id in self.schedules:
                 schedule_id += 1
 
             # 添加新日程
-            schedules[schedule_id] = schedule_data
+            self.schedules[schedule_id] = schedule_data
 
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(dict(schedules), f, ensure_ascii=False, indent=4, sort_keys=True)
+            json.dump(dict(self.schedules), f, ensure_ascii=False, indent=4, sort_keys=True)
         
         # 刷新显示
         self.refresh_schedules()
@@ -135,16 +120,13 @@ class CalendarWindow(BaseWindow):
         if not schedule_id:
             return
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            schedules = json.load(f)
-        
         # 删除日程
-        if schedule_id in schedules:
-            del schedules[schedule_id]
+        if schedule_id in self.schedules:
+            del self.schedules[schedule_id]
         
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(schedules, f, ensure_ascii=False, indent=4)
+            json.dump(dict(self.schedules), f, ensure_ascii=False, indent=4)
         
         # 刷新显示
         self.refresh_schedules()
