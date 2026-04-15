@@ -37,10 +37,6 @@ def extract_news_id(url):
 
 def get_latest_news(target_url):
     """爬取目标网页，解析前MAX_NEWS_COUNT条新闻的链接并提取ID"""
-    # 可添加浏览器 headers 避免反爬，添加header后在下一行get函数中同步添加headers=headers
-    # headers = {
-    #     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0"
-    # }
     response = requests.get(target_url, timeout=10)
     response.raise_for_status()  # 检查HTTP状态码，有异常则报错
     response.encoding = response.apparent_encoding  # 自动识别编码，避免乱码
@@ -98,29 +94,26 @@ def check_news_update():
             traceback.print_exc()
             continue  # 获取失败则跳过该网页
 
-        # 检查是否有新的新闻ID
-        has_new_id = False
-        first_new_news = None
         # 获取存储的所有历史ID
         stored_ids = last_news_ids[i]
 
         # 检查前CHECK_THRESHOLD条新闻中是否有新ID
+        new_news = []
         for news_id, news_title, news_link in current_news_list[:CHECK_THRESHOLD]:
             if news_id not in set(stored_ids):
-                # 找到第一个未记载的ID
-                first_new_news = (news_id, news_title, news_link)
-                has_new_id = True
+                # 找到所有未记载的ID
+                new_news.append((news_id, news_title, news_link))
                 break
 
         # 如果有新ID，推送通知
-        if has_new_id and first_new_news:
-            news_id, news_title, news_link = first_new_news
-            # 推送系统通知
-            notification_system.notify(
-                title=name+"更新",
-                content=news_title,
-                click_action={"type": "open_url", "value": news_link}
-            )
+        if new_news:
+            for news_id, news_title, news_link in new_news:
+                # 推送系统通知
+                notification_system.notify(
+                    title=name+"更新",
+                    content=news_title,
+                    click_action={"type": "open_url", "value": news_link}
+                )
 
         # 更新记录的ID列表（只保留最新的MAX_NEWS_COUNT个）
         current_ids = [news[0] for news in current_news_list]
