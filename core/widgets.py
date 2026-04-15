@@ -982,7 +982,7 @@ class AppItemWidget(QWidget):
         # 加载并设置图标
         self.svg_widget = QSvgWidget(self.icon_path)
         self.svg_widget.setFixedSize(48, 48)
-        layout.addWidget(self.svg_widget)
+        layout.addWidget(self.svg_widget, alignment=Qt.AlignmentFlag.AlignCenter)
         
         # 应用名称
         self.name_label = QLabel(self.display_name)
