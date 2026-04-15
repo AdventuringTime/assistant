@@ -1,12 +1,10 @@
-from PySide6.QtWidgets import QSpinBox
-from PySide6.QtWidgets import QCheckBox
 from glom import glom, Assign
 import json
 import os
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                              QListWidget, QListWidgetItem, QFrame, QLineEdit,
-                              QScrollArea, QStackedWidget)
+                              QListWidget, QListWidgetItem, QLineEdit,
+                              QScrollArea, QStackedWidget, QSpinBox, QCheckBox)
 
 from core.base_window import BaseWindow
 
@@ -130,7 +128,7 @@ class SettingCategoryWidget(QWidget):
         # 添加类别标题
         category_name = self.category_data[0]
         title_label = QLabel(category_name)
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold; margin-bottom: 10px;")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
         content_layout.addWidget(title_label)
         
         # 子类别
@@ -154,9 +152,9 @@ class SettingsWindow(BaseWindow):
         self.setMinimumSize(600, 400)
         
         # 创建中心widget
-        container = QWidget()
-        self.setCentralWidget(container)
-        container.setStyleSheet("""
+        self.container = QWidget()
+        self.setCentralWidget(self.container)
+        self.container.setStyleSheet("""
             QScrollArea, QListWidget {
                 background-color: transparent;
                 border: none;
@@ -165,7 +163,7 @@ class SettingsWindow(BaseWindow):
         """)
         
         # 主布局
-        main_layout = QHBoxLayout(container)
+        main_layout = QHBoxLayout(self.container)
         
         # 左侧类别列表
         self.category_scroll_area = QScrollArea()
