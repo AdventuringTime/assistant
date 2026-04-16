@@ -22,7 +22,7 @@ class SettingItemWidget(QWidget):
         item_layout = QHBoxLayout(self)
         
         # 项标签
-        label = QLabel(self.item_data["label"] + ":")
+        label = QLabel(self.item_data["label"])
         label.setFixedWidth(80)
         item_layout.addWidget(label)
         
