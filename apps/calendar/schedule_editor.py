@@ -4,7 +4,7 @@ from core.base_window import BaseWindow
 from core.functions import get_today
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                               QLineEdit, QTextEdit, QPushButton,
-                              QDateTimeEdit, QMessageBox)
+                              QDateTimeEdit, QMessageBox, QComboBox)
 from PySide6.QtCore import QDateTime
 
 
@@ -46,6 +46,13 @@ class ScheduleItemEditor(QWidget):
             self.input_field.setPlaceholderText(placeholder)
             self.input_field.setMaximumHeight(100)
             item_layout.addWidget(self.input_field)
+        elif field_type == "type":
+            self.input_field = QComboBox()
+            # 数字-显示内容映射表
+            type_options = ["其他", "会议", "娱乐", "活动", "课程"]
+            for value, text in enumerate(type_options):
+                self.input_field.addItem(text, value)
+            item_layout.addWidget(self.input_field)
         else:
             raise ValueError(f"未知字段类型: {field_type}")
     
@@ -57,6 +64,8 @@ class ScheduleItemEditor(QWidget):
             return self.input_field.dateTime()
         elif self.field_type == "textarea":
             return self.input_field.toPlainText()
+        elif self.field_type == "type":
+            return self.input_field.currentData()
     
     def set_value(self, value):
         """设置输入值"""
@@ -66,6 +75,8 @@ class ScheduleItemEditor(QWidget):
             self.input_field.setDateTime(value)
         elif self.field_type == "textarea":
             self.input_field.setText(value)
+        elif self.field_type == "type":
+            self.input_field.setCurrentIndex(value)
 
 
 class ScheduleEditorWindow(BaseWindow):
@@ -99,6 +110,7 @@ class ScheduleEditorWindow(BaseWindow):
         
         # 创建日程项编辑器
         self.title_editor = ScheduleItemEditor("标题", "text", "新日程")
+        self.type_editor = ScheduleItemEditor("类型", "type")
         self.start_time_editor = ScheduleItemEditor("开始时间", "datetime")
         self.end_time_editor = ScheduleItemEditor("结束时间", "datetime")
         self.location_editor = ScheduleItemEditor("地点", "text")
@@ -106,6 +118,7 @@ class ScheduleEditorWindow(BaseWindow):
         
         # 添加日程项到主布局
         main_layout.addWidget(self.title_editor)
+        main_layout.addWidget(self.type_editor)
         main_layout.addWidget(self.start_time_editor)
         main_layout.addWidget(self.end_time_editor)
         main_layout.addWidget(self.location_editor)
@@ -134,6 +147,9 @@ class ScheduleEditorWindow(BaseWindow):
             title = self.schedule_item.get("title")
             if title:
                 self.title_editor.set_value(title)
+            
+            schedule_type = self.schedule_item.get("type", 0)  # 默认为0（其他）
+            self.type_editor.set_value(schedule_type)
             
             start_time_str = self.schedule_item.get("start_time")
             if start_time_str:
@@ -190,9 +206,13 @@ class ScheduleEditorWindow(BaseWindow):
         if not description:
             description = None
         
+        # 获取类型
+        schedule_type = self.type_editor.get_value()
+        
         # 构建日程数据
         self.schedule_data = {
             "title": title,
+            "type": schedule_type,
             "start_time": start_time_str,
             "end_time": end_time_str,
             "location": location,

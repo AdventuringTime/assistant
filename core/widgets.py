@@ -29,6 +29,18 @@ class ClockWidget(QWidget):
         # 设置组件的尺寸
         self.setFixedSize(128, 128)
         
+        # 初始化日历数据
+        self.current_day = None
+        
+        # 数字-颜色映射表
+        self.type_colors = [
+            QColor(255, 0, 0, 180),   # 其他 - 红色
+            QColor(128, 32, 255, 180),   # 会议 - 紫色
+            QColor(255, 165, 0, 180),     # 娱乐 - 橙色
+            QColor(0, 255, 255, 180),     # 活动 - 青色
+            QColor(100, 255, 100, 180)   # 课程 - 绿色
+        ]
+        
         # 计算初始进度值（创建时计算一次）
         self.calculate_progress()
     
@@ -36,6 +48,11 @@ class ClockWidget(QWidget):
         """计算三个环的进度值"""
         current_time = datetime.datetime.now()
         current_day = get_today(current_time)
+        
+        # 检查日期是否改变，如果改变则重新加载日历数据
+        if self.current_day != current_day:
+            self.current_day = current_day
+            self.load_calendar_data()
         
         # 计算内环：周次进度条（蓝色）
         # 起始时间：2025年9月11日 4:00
@@ -80,6 +97,65 @@ class ClockWidget(QWidget):
         time_in_day = (current_time - day_start_time).total_seconds()
         
         self.outer_progress = np.clip((time_in_day / day_duration), 0, 1)
+    
+    def load_calendar_data(self):
+        """加载当天的日历数据并计算事件圆弧位置"""
+        
+        # 构建日历数据文件路径
+        year = self.current_day.year
+        month = self.current_day.month
+        day = self.current_day.day
+        
+        calendar_file = os.path.join("apps", "calendar", "data", str(year), str(month), f"{day}.json")
+        
+        if os.path.exists(calendar_file):
+            with open(calendar_file, 'r', encoding='utf-8') as f:
+                self.calendar_data = json.load(f)
+        else:
+            self.calendar_data = {}
+            
+        # 计算每个事件的圆弧起终点
+        self.calculate_event_arcs()
+    
+    def calculate_event_arcs(self):
+        """计算日历事件的圆弧起终点"""
+        self.event_arcs = {}
+        
+        # 当天开始时间（凌晨4:00）
+        day_start_time = datetime.datetime.combine(self.current_day, datetime.time(4, 0, 0))
+        
+        for event_id, event in self.calendar_data.items():
+            # 解析开始时间和结束时间
+            start_time_str = event.get("start_time")
+            end_time_str = event.get("end_time")
+            
+            if not start_time_str or not end_time_str:
+                continue
+            
+            # 解析时间格式："2026-04-17 09:45"
+            start_time = datetime.datetime.strptime(start_time_str, "%Y-%m-%d %H:%M")
+            end_time = datetime.datetime.strptime(end_time_str, "%Y-%m-%d %H:%M")
+            
+            if end_time < start_time:
+                continue  # 事件结束时间早于开始时间，跳过处理
+
+            # 计算事件相对于当天开始时间的进度（0-1）
+            start_time_since_start = (start_time - day_start_time).total_seconds()
+            end_time_since_start = (end_time - day_start_time).total_seconds()
+            
+            start_progress = (start_time_since_start / 86400.) % 1.
+            span_progress = ((end_time_since_start - start_time_since_start) / 86400.) % 1.
+            
+            # 计算Qt角度（1度 = 16单位，从顶部开始顺时针）
+            start_angle = int(1440 - start_progress * 5760)  # 1440 = 90度（顶部）
+            span_angle = int(span_progress * 5760)
+            
+            # 存储处理后的数据
+            self.event_arcs[event_id] = {
+                "type": event.get("type"),
+                "start_angle": start_angle,
+                "span_angle": span_angle
+            }
     
     def paintEvent(self, event):
         """绘制三个同心环"""
@@ -166,7 +242,7 @@ class ClockWidget(QWidget):
         painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
     
     def draw_day_ring(self, painter, center_x, center_y, radius, progress):
-        """绘制外环：本日状态（灰色背景 + 黄色圆点）"""
+        """绘制外环：本日状态（灰色背景 + 黄色圆点 + 日历事件标记）"""
         # 计算环的矩形区域
         rect = QRectF(center_x - radius, center_y - radius, 
                      radius * 2, radius * 2)
@@ -178,6 +254,9 @@ class ClockWidget(QWidget):
         painter.setPen(bg_pen)
         painter.drawArc(rect, 0, 5760)  # 完整的背景环
         
+        # 绘制日历事件标记
+        self.draw_calendar_events(painter, rect)
+        
         # 计算黄色圆点的位置
         angle_rad = (90 - progress * 360) * np.pi / 180  # 转换为弧度，从顶部开始顺时针
         dot_x = center_x + radius * np.cos(angle_rad)
@@ -188,6 +267,30 @@ class ClockWidget(QWidget):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.drawEllipse(int(dot_x - self.dot_size / 2), int(dot_y - self.dot_size / 2), 
                           self.dot_size, self.dot_size)
+    
+    def draw_calendar_events(self, painter, rect):
+        """在日圆环上绘制日历事件圆弧"""
+        if not self.event_arcs:
+            return
+        
+        # 遍历所有日历事件，绘制圆弧
+        for event_id, event in self.event_arcs.items():
+            start_angle = event.get("start_angle")
+            span_angle = event.get("span_angle")
+            event_type = event.get("type")
+            
+            if start_angle is not None and span_angle is not None and span_angle > 0:
+                # 根据事件类型获取对应颜色
+                color = self.type_colors[event_type] if event_type else QColor(100, 100, 255, 180)  # 默认使用蓝色
+                
+                # 绘制对应颜色的圆弧（与周环一致的粗细和样式）
+                pen = QPen(color)
+                pen.setWidth(self.ring_width)
+                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                painter.setPen(pen)
+                
+                # 绘制事件圆弧
+                painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
         
 class DateTimeLabel(QLabel):
     """日期时间标签，显示日期和时间"""
