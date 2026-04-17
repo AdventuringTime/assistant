@@ -85,9 +85,6 @@ class ScheduleEditorWindow(BaseWindow):
         # 按钮布局
         button_layout = QHBoxLayout()
         
-        self.save_button = QPushButton("保存")
-        self.save_button.clicked.connect(self.save_schedule)
-        
         if not self.is_new_schedule:
             self.delete_button = QPushButton("删除")
             self.delete_button.clicked.connect(self.delete_schedule)
@@ -95,6 +92,14 @@ class ScheduleEditorWindow(BaseWindow):
             button_layout.addWidget(self.delete_button)
         
         button_layout.addStretch()
+
+        if not self.is_new_schedule:
+            self.saveas_button = QPushButton("保存副本")
+            self.saveas_button.clicked.connect(lambda: self.save_schedule(copy=True))
+            button_layout.addWidget(self.saveas_button)
+
+        self.save_button = QPushButton("保存")
+        self.save_button.clicked.connect(self.save_schedule)
         button_layout.addWidget(self.save_button)
         
         main_layout.addLayout(button_layout)
@@ -151,7 +156,7 @@ class ScheduleEditorWindow(BaseWindow):
         with block_signals([self.end_time_editor.input_field]):
             self.end_time_editor.set_value(self.end_time)
     
-    def save_schedule(self):
+    def save_schedule(self, copy=False):
         """保存日程"""
         title = self.title_editor.get_value().strip()
         if not title:
@@ -196,7 +201,7 @@ class ScheduleEditorWindow(BaseWindow):
         }
 
         # 调用父窗口的保存方法
-        self.parent().window().save_schedule(self)
+        self.parent().window().save_schedule(self, copy=copy)
         
         # 关闭窗口
         self.close()

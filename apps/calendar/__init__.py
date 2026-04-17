@@ -164,7 +164,7 @@ class CalendarWindow(BaseWindow):
         # 添加stretch，确保日程项在顶部，空白在底部
         self.scroll_layout.addStretch()
 
-    def save_schedule(self, schedule_editor):
+    def save_schedule(self, schedule_editor, copy=False):
         """
             保存日程到文件。
 
@@ -188,7 +188,12 @@ class CalendarWindow(BaseWindow):
         id_new = str(schedule_editor.id_new)
         if id_new in schedules:
             seen = 0
-            while str(f"{id_new}_{str(seen).zfill(3)}") in schedules:
+            while (str(f"{id_new}_{str(seen).zfill(3)}") in schedules or
+                   (copy and (schedule_editor.year == year_new
+                    and schedule_editor.month == month_new
+                    and schedule_editor.day == day_new
+                    and schedule_editor.id == id_new
+            ))):
                 seen += 1
             id_new = f"{id_new}_{str(seen).zfill(3)}"
         
@@ -199,7 +204,7 @@ class CalendarWindow(BaseWindow):
             json.dump(dict(schedules), f, ensure_ascii=False, indent=4)
         
         # 如果旧日程与新日程id不同，尝试删除旧日程
-        if (schedule_editor.year != year_new
+        if not copy and (schedule_editor.year != year_new
             or schedule_editor.month != month_new
             or schedule_editor.day != day_new
             or schedule_editor.id != id_new
