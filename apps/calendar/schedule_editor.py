@@ -1,4 +1,6 @@
+from PySide6.QtCore import QTime
 from datetime import datetime
+from contextlib import contextmanager
 
 from core.base_window import BaseWindow
 from core.functions import get_today
@@ -21,6 +23,17 @@ def _get_date(time):
 
     return year, month, day
 
+@contextmanager
+def block_signals(widgets):
+    """临时阻塞多个控件的信号"""
+    for widget in widgets:
+        widget.blockSignals(True)
+    try:
+        yield
+    finally:
+        for widget in widgets:
+            widget.blockSignals(False)
+            
 class ScheduleEditorWindow(BaseWindow):
     """日程编辑窗口"""
 
@@ -37,6 +50,9 @@ class ScheduleEditorWindow(BaseWindow):
         
         self.init_ui()
         self.load_schedule_data()
+
+        self.start_time_editor.input_field.dateTimeChanged.connect(self.on_start_time_changed)
+        self.end_time_editor.input_field.dateTimeChanged.connect(self.on_end_time_changed)
 
     def init_ui(self):
         """初始化UI界面"""
@@ -95,13 +111,16 @@ class ScheduleEditorWindow(BaseWindow):
             
             start_time_str = self.schedule_item.get("start_time")
             if start_time_str:
-                start_time = QDateTime.fromString(start_time_str, "yyyy-MM-dd HH:mm")
-                self.start_time_editor.set_value(start_time)
+                self.start_time = QDateTime.fromString(start_time_str, "yyyy-MM-dd HH:mm")
+                self.start_time_editor.set_value(self.start_time)
             
             end_time_str = self.schedule_item.get("end_time")
             if end_time_str:
-                end_time = QDateTime.fromString(end_time_str, "yyyy-MM-dd HH:mm")
-                self.end_time_editor.set_value(end_time)
+                self.end_time = QDateTime.fromString(end_time_str, "yyyy-MM-dd HH:mm")
+                self.end_time_editor.set_value(self.end_time)
+            
+            if self.start_time and self.end_time:
+                self.duration = self.start_time.secsTo(self.end_time)
             
             location = self.schedule_item.get("location")
             if location:
@@ -110,6 +129,27 @@ class ScheduleEditorWindow(BaseWindow):
             description = self.schedule_item.get("description")
             if description:
                 self.description_editor.set_value(description)
+        
+        else:
+            # 若无日程数据，设置默认开始与结束时间
+            current_time = QDateTime.currentDateTime()
+            self.start_time = QDateTime(current_time.date(), QTime(int((current_time.time().hour() + 1) % 24), 0))
+            self.start_time_editor.set_value(self.start_time)
+            self.end_time = self.start_time.addSecs(3600)
+            self.end_time_editor.set_value(self.end_time)
+            self.duration = self.start_time.secsTo(self.end_time)
+
+    def on_end_time_changed(self, new_end_time):
+        """当结束时间改变时，重新计算时长"""
+        self.end_time = new_end_time
+        self.duration = self.start_time.secsTo(new_end_time)
+    
+    def on_start_time_changed(self, new_start_time):
+        """当开始时间改变时，更新结束时间"""
+        self.start_time = new_start_time
+        self.end_time = new_start_time.addSecs(self.duration)
+        with block_signals([self.end_time_editor.input_field]):
+            self.end_time_editor.set_value(self.end_time)
     
     def save_schedule(self):
         """保存日程"""
@@ -117,28 +157,22 @@ class ScheduleEditorWindow(BaseWindow):
         if not title:
             title = "新日程"
         
-        start_time = self.start_time_editor.get_value()
-        end_time = self.end_time_editor.get_value()
-        if not start_time or not end_time:
-            # 开始时间和结束时间必填
-            QMessageBox.warning(self, "保存日程", "开始时间和结束时间不能为空")
-            return
         # 验证时间
-        if start_time > end_time:
+        if self.duration < 0:
             reply = QMessageBox.question(self, "保存日程", 
                                     "结束时间早于开始时间，是否继续保存？",
                                     QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes)
             if reply == QMessageBox.StandardButton.No:
                 return
             
-        self.year_new, self.month_new, self.day_new = _get_date(start_time.toPython())
+        self.year_new, self.month_new, self.day_new = _get_date(self.start_time.toPython())
 
         # 计算新的id
-        current_time = start_time.time()
+        current_time = self.start_time.time()
         self.id_new = int(((current_time.hour() * 60 + current_time.minute()) - 240) % 1440)
 
-        start_time_str = start_time.toString("yyyy-MM-dd HH:mm")
-        end_time_str = end_time.toString("yyyy-MM-dd HH:mm")
+        start_time_str = self.start_time.toString("yyyy-MM-dd HH:mm")
+        end_time_str = self.end_time.toString("yyyy-MM-dd HH:mm")
 
         location = self.location_editor.get_value().strip()
         if not location:

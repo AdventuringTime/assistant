@@ -44,7 +44,6 @@ class SettingItemWidget(QWidget):
         elif field_type == "datetime":
             self.input_field = QDateTimeEdit()
             self.input_field.setCalendarPopup(True)
-            self.input_field.setDateTime(QDateTime.currentDateTime())
             item_layout.addWidget(self.input_field)
         elif field_type == "type":
             self.input_field = QComboBox()
