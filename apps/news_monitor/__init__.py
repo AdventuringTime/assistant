@@ -17,7 +17,10 @@ TARGETS = [
     ("https://gradschool.ustc.edu.cn/column/9", "研究生院公告通知")
 ]
 # 2. 检查间隔时间
-CHECK_INTERVAL = 1800  # 检查间隔时间（秒）
+with open("apps/news_monitor/data/settings.json", "r") as f:
+    news_monitor_settings = json.load(f)
+CHECK_INTERVAL = news_monitor_settings["interval"]
+DISCONNECT_DELAY = news_monitor_settings["disconnect_delay"]
 # 3. 存储文件路径
 STORAGE_FILE = os.path.join(os.path.dirname(__file__), "data", "news_ids.json")
 # 4. 新闻数量配置
@@ -77,7 +80,7 @@ def open_url(url):
         traceback.print_exc()
 
 def check_news_update():
-    """检查所有目标网页的新闻ID变化，有更新则推送通知"""
+    """检查所有目标网页的新闻ID变化，有更新则推送通知。返回新的检查间隔时间（秒）"""
     global last_news_ids, network_error
     for i, (url, name) in enumerate(TARGETS):
         # 获取当前网页的最新ID和链接
@@ -120,6 +123,11 @@ def check_news_update():
         if stored_ids != current_ids:  # 在ID列表发生变化时更新
             last_news_ids[i] = current_ids
             save_current_ids()
+
+        if network_error:
+            return DISCONNECT_DELAY  # 网络异常时返回延迟时间
+        else:
+            return CHECK_INTERVAL  # 正常情况返回默认间隔时间
 
 def load_saved_ids():
     """从JSON文件加载上次保存的新闻ID记录（直接返回列表形式）"""

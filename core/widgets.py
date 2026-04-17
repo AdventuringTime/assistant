@@ -29,6 +29,7 @@ class SettingItemWidget(QWidget):
         # 项标签
         label_widget = QLabel(label)
         label_widget.setFixedWidth(80)
+        label_widget.setWordWrap(True)
         item_layout.addWidget(label_widget)
         
         # 根据类型创建不同的输入控件

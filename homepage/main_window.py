@@ -1,5 +1,5 @@
+from core.heartbeat import DynamicHeartbeat
 import json
-from core.heartbeat import Heartbeat
 '''
 主窗口类，包含系统托盘和内容部件
 
@@ -131,7 +131,7 @@ class MainWindow(BaseWindow):
         if news_monitor_settings["activated"]:
             from apps import news_monitor
             self.auto_start.append((news_monitor,
-                Heartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])))
+                DynamicHeartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])))
 
         with open("apps/daily_year/data/settings.json", "r") as f:
             daily_year_settings = json.load(f)
