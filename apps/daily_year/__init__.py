@@ -1,7 +1,7 @@
 from datetime import date
 import os
 
-from core.widgets import notification_system
+from homepage.widgets import notification_system
 from core.functions import is_first_run_today
 
 base_url_format = "https://baike.baidu.com/item/{year}%E5%B9%B4/0"

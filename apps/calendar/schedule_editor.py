@@ -3,9 +3,13 @@ from datetime import datetime
 from core.base_window import BaseWindow
 from core.functions import get_today
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                              QLineEdit, QTextEdit, QPushButton,
-                              QDateTimeEdit, QMessageBox, QComboBox)
+                              QPushButton, QMessageBox)
 from PySide6.QtCore import QDateTime
+from core.widgets import SettingItemWidget
+
+
+# 保留 ScheduleItemEditor 作为别名，向后兼容
+ScheduleItemEditor = SettingItemWidget
 
 
 def _get_date(time):
@@ -16,68 +20,6 @@ def _get_date(time):
     day = schedule_date.day
 
     return year, month, day
-
-class ScheduleItemEditor(QWidget):
-    """单个日程项编辑组件"""
-    
-    def __init__(self, label, field_type, placeholder="", parent=None):
-        super().__init__(parent)
-        self.field_type = field_type
-        
-        item_layout = QHBoxLayout(self)
-        
-        # 项标签
-        label_widget = QLabel(label)
-        label_widget.setFixedWidth(80)
-        item_layout.addWidget(label_widget)
-        
-        # 根据类型创建不同的输入控件
-        if field_type == "text":
-            self.input_field = QLineEdit()
-            self.input_field.setPlaceholderText(placeholder)
-            item_layout.addWidget(self.input_field)
-        elif field_type == "datetime":
-            self.input_field = QDateTimeEdit()
-            self.input_field.setCalendarPopup(True)
-            self.input_field.setDateTime(QDateTime.currentDateTime())
-            item_layout.addWidget(self.input_field)
-        elif field_type == "textarea":
-            self.input_field = QTextEdit()
-            self.input_field.setPlaceholderText(placeholder)
-            self.input_field.setMaximumHeight(100)
-            item_layout.addWidget(self.input_field)
-        elif field_type == "type":
-            self.input_field = QComboBox()
-            # 数字-显示内容映射表
-            type_options = ["其他", "会议", "娱乐", "活动", "课程"]
-            for value, text in enumerate(type_options):
-                self.input_field.addItem(text, value)
-            item_layout.addWidget(self.input_field)
-        else:
-            raise ValueError(f"未知字段类型: {field_type}")
-    
-    def get_value(self):
-        """获取输入值"""
-        if self.field_type == "text":
-            return self.input_field.text()
-        elif self.field_type == "datetime":
-            return self.input_field.dateTime()
-        elif self.field_type == "textarea":
-            return self.input_field.toPlainText()
-        elif self.field_type == "type":
-            return self.input_field.currentData()
-    
-    def set_value(self, value):
-        """设置输入值"""
-        if self.field_type == "text":
-            self.input_field.setText(value)
-        elif self.field_type == "datetime":
-            self.input_field.setDateTime(value)
-        elif self.field_type == "textarea":
-            self.input_field.setText(value)
-        elif self.field_type == "type":
-            self.input_field.setCurrentIndex(value)
-
 
 class ScheduleEditorWindow(BaseWindow):
     """日程编辑窗口"""
@@ -110,7 +52,7 @@ class ScheduleEditorWindow(BaseWindow):
         
         # 创建日程项编辑器
         self.title_editor = ScheduleItemEditor("标题", "text", "新日程")
-        self.type_editor = ScheduleItemEditor("类型", "type")
+        self.type_editor = ScheduleItemEditor("类型", "type", ["其他", "会议", "娱乐", "活动", "课程"])
         self.start_time_editor = ScheduleItemEditor("开始时间", "datetime")
         self.end_time_editor = ScheduleItemEditor("结束时间", "datetime")
         self.location_editor = ScheduleItemEditor("地点", "text")

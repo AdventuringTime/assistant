@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 import webbrowser
-from core.widgets import notification_system
+from homepage.widgets import notification_system
 
 from core.functions import is_first_run_today
 
