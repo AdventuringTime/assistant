@@ -10,10 +10,6 @@ from PySide6.QtCore import QDateTime
 from core.widgets import SettingItemWidget
 
 
-# 保留 ScheduleItemEditor 作为别名，向后兼容
-ScheduleItemEditor = SettingItemWidget
-
-
 def _get_date(time):
     schedule_date = get_today(time)
     
@@ -67,12 +63,12 @@ class ScheduleEditorWindow(BaseWindow):
         main_layout = QVBoxLayout(self.central_widget)
         
         # 创建日程项编辑器
-        self.title_editor = ScheduleItemEditor("标题", "text", "新日程")
-        self.type_editor = ScheduleItemEditor("类型", "type", ["其他", "会议", "娱乐", "活动", "课程"])
-        self.start_time_editor = ScheduleItemEditor("开始时间", "datetime")
-        self.end_time_editor = ScheduleItemEditor("结束时间", "datetime")
-        self.location_editor = ScheduleItemEditor("地点", "text")
-        self.description_editor = ScheduleItemEditor("描述", "textarea")
+        self.title_editor = SettingItemWidget("标题", "text", "新日程")
+        self.type_editor = SettingItemWidget("类型", "type", ["其他", "会议", "娱乐", "活动", "课程"])
+        self.start_time_editor = SettingItemWidget("开始时间", "datetime")
+        self.end_time_editor = SettingItemWidget("结束时间", "datetime")
+        self.location_editor = SettingItemWidget("地点", "text")
+        self.description_editor = SettingItemWidget("描述", "textarea")
         
         # 添加日程项到主布局
         main_layout.addWidget(self.title_editor)
@@ -81,6 +77,7 @@ class ScheduleEditorWindow(BaseWindow):
         main_layout.addWidget(self.end_time_editor)
         main_layout.addWidget(self.location_editor)
         main_layout.addWidget(self.description_editor)
+        main_layout.addStretch()
         
         # 按钮布局
         button_layout = QHBoxLayout()

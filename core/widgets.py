@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
                                QLineEdit, QTextEdit, QDateTimeEdit, QComboBox,
-                               QCheckBox, QSpinBox)
-from PySide6.QtCore import QDateTime
+                               QCheckBox, QSpinBox, QTimeEdit)
+from PySide6.QtCore import QDateTime, QTime
 from glom import glom, Assign
 import json
 import os
@@ -16,7 +16,7 @@ class SettingItemWidget(QWidget):
         
         Args:
             label (str): 标签文本
-            field_type (str): 字段类型，支持："text", "textarea", "datetime", "type", "bool", "int"
+            field_type (str): 字段类型，支持："text", "textarea", "datetime", "time", "type", "bool", "int"
             placeholder (str/list of str): 占位符文本；如果为"type"，在这里输入各类型的显示文本
             config_data (dict): 配置数据（用于设置应用）
             parent: 父组件
@@ -46,6 +46,9 @@ class SettingItemWidget(QWidget):
             self.input_field = QDateTimeEdit()
             self.input_field.setCalendarPopup(True)
             item_layout.addWidget(self.input_field)
+        elif field_type == "time":
+            self.input_field = QTimeEdit()
+            item_layout.addWidget(self.input_field)
         elif field_type == "type":
             self.input_field = QComboBox()
             if placeholder:
@@ -69,6 +72,8 @@ class SettingItemWidget(QWidget):
             return self.input_field.toPlainText()
         elif self.field_type == "datetime":
             return self.input_field.dateTime()
+        elif self.field_type == "time":
+            return self.input_field.time()
         elif self.field_type == "type":
             return self.input_field.currentData()
         elif self.field_type == "bool":
@@ -84,6 +89,8 @@ class SettingItemWidget(QWidget):
             self.input_field.setText(value)
         elif self.field_type == "datetime":
             self.input_field.setDateTime(value)
+        elif self.field_type == "time":
+            self.input_field.setTime(value)
         elif self.field_type == "type":
             self.input_field.setCurrentIndex(value)
         elif self.field_type == "bool":
@@ -122,7 +129,16 @@ class SettingItemWidget_Config(SettingItemWidget):
 
             self.input_field.dateTimeChanged.connect(lambda dt: 
                 self.on_setting_changed(config_data, dt.toString("yyyy-MM-dd hh:mm:ss")))
-            
+        
+        elif field_type == "time":
+            current_value = self.get_field_value(config_data)
+            if current_value:
+                current_value = QTime.fromString(current_value, "hh:mm:ss")
+                self.input_field.setTime(current_value)
+
+            self.input_field.timeChanged.connect(lambda time: 
+                self.on_setting_changed(config_data, time.toString("hh:mm:ss")))
+
         elif field_type == "type":
             current_value = self.get_field_value(config_data)
             if current_value:

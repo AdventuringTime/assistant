@@ -16,6 +16,10 @@ APP_LIST = {
         "icon": "apps/calendar/icon.svg",
         "window": lambda: import_module('apps.calendar').CalendarWindow()
     },
+    "worktime": {
+        "display_name": "工作时间",
+        "window": lambda: import_module('apps.worktime').WorktimeWindow()
+    },
     "tokenizer": {
         "display_name": "词元提取器",
         "window": lambda: import_module('apps.tokenizer').TokenizerWindow()
