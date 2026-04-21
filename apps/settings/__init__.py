@@ -50,8 +50,7 @@ class SettingsWindow(BaseWindow):
         self.create_category_pages()
         # 添加类别到列表
         for i, category in enumerate(self.settings_data):
-            item = QListWidgetItem(category[0])  # 类别名称在第一个元素
-            self.category_list.addItem(item)
+            self.category_list.addItem(category[0]) # 类别名称在第一个元素
                 
         # 添加到主布局
         main_layout.addWidget(self.category_scroll_area)
