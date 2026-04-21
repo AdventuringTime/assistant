@@ -134,7 +134,12 @@ class CalendarWindow(BaseWindow):
 
     def open_new_schedule(self):
         """打开新增日程窗口"""
-        editor = ScheduleEditorWindow(self)
+        editor = ScheduleEditorWindow(
+            self,
+            year=self.year_displayed,
+            month=self.month_displayed,
+            day=self.day_displayed
+        )
         editor.show()
 
     def load_schedules(self, year, month, day):

@@ -1,4 +1,3 @@
-from PySide6.QtCore import QTime
 from datetime import datetime
 from contextlib import contextmanager
 
@@ -6,7 +5,7 @@ from core.base_window import BaseWindow
 from core.functions import get_today
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                               QPushButton, QMessageBox)
-from PySide6.QtCore import QDateTime
+from PySide6.QtCore import QDateTime, QDate, QTime
 from core.widgets import SettingItemWidget
 
 
@@ -33,7 +32,7 @@ def block_signals(widgets):
 class ScheduleEditorWindow(BaseWindow):
     """日程编辑窗口"""
 
-    def __init__(self, parent, schedule_item=None, schedule_id=None):
+    def __init__(self, parent, schedule_item=None, schedule_id=None, *, year=None, month=None, day=None):
         super().__init__(parent)
         self.schedule_item = schedule_item or {} # a if a else b
         self.is_new_schedule = schedule_item is None
@@ -41,7 +40,7 @@ class ScheduleEditorWindow(BaseWindow):
         if schedule_item:
             self.year, self.month, self.day = _get_date(datetime.strptime(schedule_item["start_time"], "%Y-%m-%d %H:%M"))
         else:
-            self.year, self.month, self.day = None, None, None
+            self.year, self.month, self.day = year, month, day
         self.id = schedule_id
         
         self.init_ui()
@@ -134,7 +133,16 @@ class ScheduleEditorWindow(BaseWindow):
         
         else:
             # 若无日程数据，设置默认开始与结束时间
-            current_time = QDateTime.currentDateTime()
+            if (self.year is not None
+                and self.month is not None
+                and self.day is not None
+            ):
+                current_time = QDateTime(QDate(self.year, self.month, self.day), QTime.currentTime())
+                # 处理跨天逻辑
+                if current_time.time().hour() < 4:
+                    current_time = current_time.addDays(1)
+            else:
+                current_time = QDateTime.currentDateTime()
             self.start_time = current_time.addSecs(3600)  # 加1小时
             self.start_time.setTime(QTime(self.start_time.time().hour(), 0))  # 分钟归零
             self.start_time_editor.set_value(self.start_time)
