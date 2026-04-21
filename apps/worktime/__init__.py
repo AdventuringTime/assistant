@@ -285,6 +285,7 @@ class WorktimeWindow(BaseWindow):
             self.update_clock_ui()
     
     def init_clock_ui(self):
+        self.clock_layout.setAlignment(Qt.AlignCenter)
         self.clock_layout.addStretch()
 
         # 读取打卡数据
@@ -294,13 +295,12 @@ class WorktimeWindow(BaseWindow):
         self.clock_button = QPushButton()
         self.clock_button.setFixedSize(120, 120)
         self.clock_button.clicked.connect(self.on_clock_clicked)
-        self.update_clock_ui()
-        self.clock_layout.addWidget(self.clock_button)
+        self.clock_layout.addWidget(self.clock_button, alignment=Qt.AlignCenter)
         
         # 创建打卡时间显示标签
         self.clock_status_label = QLabel()
         self.clock_status_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
-        self.clock_layout.addWidget(self.clock_status_label)
+        self.clock_layout.addWidget(self.clock_status_label, alignment=Qt.AlignCenter)
 
         # 创建补卡按钮
         self.backfill_widget = QWidget()
@@ -330,9 +330,11 @@ class WorktimeWindow(BaseWindow):
         """)
         self.backfill_layout.addWidget(self.backfill_button)
 
-        self.clock_layout.addWidget(self.backfill_widget)
+        self.clock_layout.addWidget(self.backfill_widget, alignment=Qt.AlignCenter)
         
         self.clock_layout.addStretch()
+
+        self.update_clock_ui()
         
     def init_worktime_detail_ui(self):
         self.date_selector = QDateEdit(self.worktime_detail_widget)
