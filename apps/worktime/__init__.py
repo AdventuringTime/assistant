@@ -156,11 +156,9 @@ class WorktimeWindow(BaseWindow):
             self.clock_button.setText("下班打卡")
             self.clock_button.setStyleSheet("""
                 QPushButton {
-                    font-size: 18px;
+                    font-size: 20px;
                     font-weight: bold;
-                    border-radius: 10px;
-                    border: 2px solid #D13438;
-                    padding: 10px;
+                    border-radius: 60px;
                     background-color: #D13438;
                     color: white;
                 }
@@ -177,11 +175,9 @@ class WorktimeWindow(BaseWindow):
             self.clock_button.setText("上班打卡")
             self.clock_button.setStyleSheet("""
                 QPushButton {
-                    font-size: 18px;
+                    font-size: 20px;
                     font-weight: bold;
-                    border-radius: 10px;
-                    border: 2px solid #107C10;
-                    padding: 10px;
+                    border-radius: 60px;
                     background-color: #107C10;
                     color: white;
                 }
@@ -289,24 +285,16 @@ class WorktimeWindow(BaseWindow):
             self.update_clock_ui()
     
     def init_clock_ui(self):
+        self.clock_layout.addStretch()
+
         # 读取打卡数据
         self.load_clock_data()
         
         # 创建打卡按钮
         self.clock_button = QPushButton()
-        self.clock_button.setFixedHeight(60)
-        self.clock_button.setStyleSheet("""
-            QPushButton {
-                font-size: 18px;
-                font-weight: bold;
-                border-radius: 10px;
-                border: 2px solid #0078D4;
-                padding: 10px;
-            }
-            QPushButton:hover {
-                background-color: rgba(0, 120, 212, 0.1);
-            }
-        """)
+        self.clock_button.setFixedSize(120, 120)
+        self.clock_button.clicked.connect(self.on_clock_clicked)
+        self.update_clock_ui()
         self.clock_layout.addWidget(self.clock_button)
         
         # 创建打卡时间显示标签
@@ -344,12 +332,8 @@ class WorktimeWindow(BaseWindow):
 
         self.clock_layout.addWidget(self.backfill_widget)
         
-        # 连接点击事件
-        self.clock_button.clicked.connect(self.on_clock_clicked)
+        self.clock_layout.addStretch()
         
-        # 更新UI状态
-        self.update_clock_ui()
-    
     def init_worktime_detail_ui(self):
         self.date_selector = QDateEdit(self.worktime_detail_widget)
         self.date_selector.setFixedHeight(30)
