@@ -135,7 +135,8 @@ class ScheduleEditorWindow(BaseWindow):
         else:
             # 若无日程数据，设置默认开始与结束时间
             current_time = QDateTime.currentDateTime()
-            self.start_time = QDateTime(current_time.date(), QTime(int((current_time.time().hour() + 1) % 24), 0))
+            self.start_time = current_time.addSecs(3600)  # 加1小时
+            self.start_time.setTime(QTime(self.start_time.time().hour(), 0))  # 分钟归零
             self.start_time_editor.set_value(self.start_time)
             self.end_time = self.start_time.addSecs(3600)
             self.end_time_editor.set_value(self.end_time)
