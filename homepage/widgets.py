@@ -286,7 +286,7 @@ class ClockWidget(QWidget):
                 # 绘制对应颜色的圆弧（与周环一致的粗细和样式）
                 pen = QPen(color)
                 pen.setWidth(self.ring_width)
-                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                pen.setCapStyle(Qt.PenCapStyle.FlatCap)
                 painter.setPen(pen)
                 
                 # 绘制事件圆弧
