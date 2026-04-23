@@ -6,7 +6,7 @@ import datetime
 from sortedcontainers import SortedDict
 from PySide6.QtWidgets import (QLabel, QWidget, QVBoxLayout, QScrollArea,
                                QPushButton, QDateEdit)
-from PySide6.QtCore import Qt, QDate
+from PySide6.QtCore import Qt, QDate, QEvent
 
 from core.base_window import BaseWindow
 from core.functions import get_today
@@ -14,6 +14,48 @@ from .schedule_editor import ScheduleEditorWindow
 
 
 data_dir = "apps/calendar/data"
+
+class PlaceLabel(QLabel):
+    def __init__(self, text, parent=None):
+        if text.startswith("https://"):
+            super().__init__(f'<a href="{text}">{text}</a>', parent)
+        else:
+            super().__init__(text, parent)
+        self.setMouseTracking(True)
+        self.is_hovering_link = False
+        self.setOpenExternalLinks(True)
+        self.linkHovered.connect(self.onLinkHovered)
+
+    def onLinkHovered(self, link):
+        """当悬停状态改变时调用"""
+        if link:
+            # 鼠标进入链接
+            self.is_hovering_link = True
+            
+            # 安装事件过滤器到父控件，阻止事件传递
+            if self.parent():
+                self.parent().installEventFilter(self)
+        else:
+            # 鼠标离开链接
+            self.is_hovering_link = False
+            
+            # 移除事件过滤器，恢复事件传递
+            if self.parent():
+                self.parent().removeEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        """事件过滤器：拦截父控件的事件"""
+        if self.is_hovering_link and obj == self.parent():
+            # 当悬停在链接上时，拦截所有鼠标事件
+            if event.type() in [QEvent.Type.MouseButtonPress,
+                               QEvent.Type.MouseButtonRelease,
+                               QEvent.Type.MouseButtonDblClick,
+                               QEvent.Type.MouseMove]:
+                # 将事件转发给当前标签处理
+                self.mousePressEvent(event)
+                return True  # 拦截事件，不让父控件处理
+        
+        return super().eventFilter(obj, event)
 
 class ScheduleItemWidget(QWidget):
     def __init__(self, schedule_item, schedule_id=None, parent=None):
@@ -42,8 +84,9 @@ class ScheduleItemWidget(QWidget):
             self.layout_.addWidget(self.time_label)
         
         if "location" in schedule_item and schedule_item["location"]:
-            self.location_label = QLabel(schedule_item['location'])
+            self.location_label = PlaceLabel(schedule_item['location'])
             self.location_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
+            self.location_label.setWordWrap(True)
             self.layout_.addWidget(self.location_label)
 
         if "description" in schedule_item and schedule_item["description"]:
