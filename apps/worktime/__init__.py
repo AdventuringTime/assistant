@@ -342,12 +342,28 @@ class WorktimeWindow(BaseWindow):
         self.clock_layout.addStretch()
 
         self.update_clock_ui()
+
+    def calculate_day_worktime(self, year, month, day):
+        """计算指定日期的工作时间"""
+        worktime_records = self.get_worktimes_of_month(year, month)
+        total_worktime = 0
+        for record in worktime_records.get(str(day), []):
+            if "total_work" not in record:
+                continue
+            hours, minutes = record["total_work"].split(":")
+            total_worktime += int(hours) * 60 + int(minutes)
+        return divmod(total_worktime, 60)
         
     def init_worktime_detail_ui(self):
         self.date_selector = QDateEdit(self.worktime_detail_widget)
         self.date_selector.setFixedHeight(30)
         self.date_selector.setCalendarPopup(True)
         self.worktime_detail_layout.addWidget(self.date_selector)
+
+        self.total_worktime_label = QLabel()
+        self.total_worktime_label.setStyleSheet("font-size: 14px;")
+        self.total_worktime_label.setFixedHeight(30)
+        self.worktime_detail_layout.addWidget(self.total_worktime_label)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -363,7 +379,7 @@ class WorktimeWindow(BaseWindow):
         self.date_selector.setDate(QDate(today.year, today.month, today.day))
 
     def create_floating_button(self):
-        """创建右下角悬浮按钮（默认隐藏）"""
+        """创建右下角悬浮按钮"""
         # 创建悬浮按钮
         self.floating_button = QPushButton("+", self)
         self.floating_button.setFixedSize(60, 60)
@@ -388,6 +404,10 @@ class WorktimeWindow(BaseWindow):
         
         # 连接点击事件
         self.floating_button.clicked.connect(self.open_new_editor)
+
+        # 显示按钮
+        self.floating_button.show()
+        self.floating_button.raise_()
 
     def resizeEvent(self, event):
         """窗口大小改变事件，保持按钮在右下角"""
@@ -464,6 +484,17 @@ class WorktimeWindow(BaseWindow):
 
         # 添加stretch，确保工作时间记录项在顶部，空白在底部
         self.scroll_layout.addStretch()
+
+        # 更新总工作时间显示
+        hours, minutes = self.calculate_day_worktime(self.year_displayed, self.month_displayed, self.day_displayed)
+        text = "总时长："
+        if hours > 0:
+            text += f"{hours}小时"
+        if minutes > 0:
+            text += f"{minutes}分钟"
+        if hours <= 0 and minutes <= 0:
+            text += "0分钟"
+        self.total_worktime_label.setText(text)
 
     def save_worktime_of_editor(self, worktime_editor, copy=False):
         """
