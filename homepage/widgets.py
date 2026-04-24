@@ -40,11 +40,8 @@ class ClockWidget(QWidget):
             QColor(0, 255, 255, 128),     # 活动 - 青色
             QColor(100, 255, 100, 128)   # 课程 - 绿色
         ]
-        
-        # 计算初始进度值（创建时计算一次）
-        self.calculate_progress()
     
-    def calculate_progress(self):
+    def calculate_progress(self, weeks_collapsed):
         """计算三个环的进度值"""
         current_time = datetime.datetime.now()
         current_day = get_today(current_time)
@@ -54,8 +51,6 @@ class ClockWidget(QWidget):
             self.current_day = current_day
             self.load_calendar_data()
 
-        weeks_collapsed = get_this_week(current_time)
-        
         # 计算内环：周次进度条（蓝色）
         total_weeks = 300
         self.inner_progress = np.clip((weeks_collapsed / total_weeks), 0, 1)
@@ -279,12 +274,11 @@ class ClockWidget(QWidget):
         
 class DateTimeLabel(QLabel):
     """日期时间标签，显示日期和时间"""
-    def __init__(self, week_number, parent=None):
-        super().__init__(parent)
-        self.update_display(week_number)
-
-    def update_display(self, week_number):
+    def update_display(self, weeks_collapsed):
         """更新显示内容"""
+        # 计算周数
+        week_number = int(weeks_collapsed) + 1
+
         # 更新日期周次
         today = get_today()
         date_str = f"{today.month}月{today.day}日"
@@ -408,7 +402,7 @@ class TopStatusWidget(QWidget):
         right_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         
         # 日期周次标签
-        self.date_week_label = DateTimeLabel(self.get_week_number(), self)
+        self.date_week_label = DateTimeLabel(self)
         self.date_week_label.setStyleSheet("""
             font-size: 36px;
             font-weight: bold;
@@ -437,18 +431,17 @@ class TopStatusWidget(QWidget):
         # 定期更新显示
         self.updater = Heartbeat(self.update_display, interval=300)
     
-    def get_week_number(self):
-        """获取周次"""
+    def update_weeks_collapsed(self):
+        """更新自身存储的周次进度"""
         # 获取时钟部件的内环进度（对应周次进度）
-        inner_progress = self.clock_widget.inner_progress
-        # 根据进度计算周次（总300周）
-        return int(inner_progress * 300) + 1
+        self.weeks_collapsed = get_this_week()
     
     def update_display(self):
         """更新所有显示"""
-        self.clock_widget.calculate_progress()
+        self.update_weeks_collapsed()
+        self.clock_widget.calculate_progress(self.weeks_collapsed)
         self.clock_widget.update()  # 刷新时钟显示
-        self.date_week_label.update_display(self.get_week_number())
+        self.date_week_label.update_display(self.weeks_collapsed)
         self.period_season_label.load_data()
 
 top_status = TopStatusWidget()
