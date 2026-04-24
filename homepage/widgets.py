@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
 import webbrowser
 from winotify import Notification
 
-from core.functions import get_today
+from core.functions import get_today, get_this_week
 from core.global_constants import app_name
 from core.heartbeat import Heartbeat
 from apps import APP_LIST
@@ -53,39 +53,15 @@ class ClockWidget(QWidget):
         if self.current_day != current_day:
             self.current_day = current_day
             self.load_calendar_data()
+
+        weeks_collapsed = get_this_week(current_time)
         
         # 计算内环：周次进度条（蓝色）
-        # 起始时间：2025年9月11日 4:00
-        start_date = datetime.datetime(2025, 9, 11, 4, 0, 0)
-        
-        # 计算总周数（300周）
         total_weeks = 300
-        total_duration = datetime.timedelta(weeks=total_weeks).total_seconds()
-        
-        # 计算已过时间（精确到秒）
-        time_passed = (current_time - start_date).total_seconds()
-        
-        # 计算周次进度（0-100%）
-        self.inner_progress = np.clip((time_passed / total_duration), 0, 1)
+        self.inner_progress = np.clip((weeks_collapsed / total_weeks), 0, 1)
         
         # 计算中环：本周进度条（绿色）
-        # 每周四4:00开始新的一周
-        current_weekday = current_day.weekday()  # 使用current_day的星期
-        
-        # 计算本周开始日期（上周四）
-        # 如果当前是周四或之后，本周开始是周四
-        # 如果当前是周三或之前，本周开始是上周四
-        days_since_thursday = (current_weekday - 3) % 7
-        week_start_day = current_day - datetime.timedelta(days=days_since_thursday)
-        
-        # 设置本周开始时间为周四4:00
-        week_start_time = datetime.datetime.combine(week_start_day, datetime.time(4, 0, 0))
-        
-        # 计算本周进度
-        week_duration = 604800.0  # 7天 * 24小时 * 60分钟 * 60秒
-        time_in_week = (current_time - week_start_time).total_seconds()
-        
-        self.middle_progress = np.clip((time_in_week / week_duration), 0, 1)
+        self.middle_progress = weeks_collapsed % 1
         
         # 计算外环：本日状态（灰色虚线 + 黄色圆点）
         # 每日4:00开始新的一天
@@ -255,7 +231,7 @@ class ClockWidget(QWidget):
         painter.drawArc(rect, 0, 5760)  # 完整的背景环
         
         # 绘制日历事件标记
-        self.draw_calendar_events(painter, rect)
+        self.draw_calendar_events(painter, rect, center_x, center_y, radius)
         
         # 计算黄色圆点的位置
         angle_rad = (90 - progress * 360) * np.pi / 180  # 转换为弧度，从顶部开始顺时针
@@ -268,7 +244,7 @@ class ClockWidget(QWidget):
         painter.drawEllipse(int(dot_x - self.dot_size / 2), int(dot_y - self.dot_size / 2), 
                           self.dot_size, self.dot_size)
     
-    def draw_calendar_events(self, painter, rect):
+    def draw_calendar_events(self, painter, rect, center_x, center_y, radius):
         """在日圆环上绘制日历事件圆弧"""
         if not self.event_arcs:
             return
@@ -279,18 +255,27 @@ class ClockWidget(QWidget):
             span_angle = event.get("span_angle")
             event_type = event.get("type")
             
-            if start_angle is not None and span_angle is not None and span_angle > 0:
+            if start_angle is not None and span_angle is not None:
                 # 根据事件类型获取对应颜色
-                color = self.type_colors[event_type] if event_type else QColor(100, 100, 255, 180)  # 默认使用蓝色
-                
-                # 绘制对应颜色的圆弧（与周环一致的粗细和样式）
+                color = self.type_colors[event_type] if event_type is not None else QColor(100, 100, 255, 180)  # 默认使用蓝色
                 pen = QPen(color)
                 pen.setWidth(self.ring_width)
                 pen.setCapStyle(Qt.PenCapStyle.FlatCap)
-                painter.setPen(pen)
+                painter.setBrush(QBrush(color))
+                    
+                if span_angle > 0:
+                    # 绘制对应颜色的圆弧（与周环一致的粗细和样式）
+                    painter.setPen(pen)
+                    painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
                 
-                # 绘制事件圆弧
-                painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
+                else:
+                    # 绘制对应颜色的圆点，位于开始时间处
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    dot_x = center_x + radius * np.cos(start_angle * np.pi / 2880)
+                    dot_y = center_y - radius * np.sin(start_angle * np.pi / 2880)  # Y轴向下为正
+                    painter.drawEllipse(int(dot_x - self.ring_width / 2),
+                                        int(dot_y - self.ring_width / 2), 
+                                        self.ring_width, self.ring_width)
         
 class DateTimeLabel(QLabel):
     """日期时间标签，显示日期和时间"""
