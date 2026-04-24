@@ -493,14 +493,11 @@ class CollapsibleContainerWidget(QWidget):
         title_layout = QHBoxLayout(self.title_widget)
         
         # 折叠箭头
-        self.arrow_label = QLabel("▶" if not self.is_expanded else "▼")
-        self.arrow_label.setFixedSize(20, 20)
-        self.arrow_label.setStyleSheet("""
-            font-size: 16px;
-            color: #FFFFFF;
-            font-weight: bold;
-        """)
-        title_layout.addWidget(self.arrow_label)
+        # 根据展开状态选择不同的SVG图标
+        arrow_svg = "homepage/expanded.svg" if self.is_expanded else "homepage/collapsed.svg"
+        self.arrow_svg = QSvgWidget(arrow_svg)
+        self.arrow_svg.setFixedSize(24, 24)
+        title_layout.addWidget(self.arrow_svg)
         
         # 标题名称
         self.title_label = QLabel(self.title)
@@ -545,11 +542,11 @@ class CollapsibleContainerWidget(QWidget):
         """更新显示状态"""
         # 更新箭头方向
         if self.is_expanded:
-            self.arrow_label.setText("▼")
+            self.arrow_svg.load("homepage/expanded.svg")
             self.content_container.show()
             self.on_expand()
         else:
-            self.arrow_label.setText("▶")
+            self.arrow_svg.load("homepage/collapsed.svg")
             self.content_container.hide()
             self.on_collapse()
     
