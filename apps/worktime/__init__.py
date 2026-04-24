@@ -75,6 +75,7 @@ class WorktimeWindow(BaseWindow):
         super().__init__(parent)
 
         self.worktimes = {}
+        self.loaded_pages = set()
 
         self.setWindowTitle("工作时间记录")
         self.setMinimumSize(600, 400)
@@ -106,15 +107,11 @@ class WorktimeWindow(BaseWindow):
         self.clock_layout = QVBoxLayout(self.clock_widget)
         self.stacked_widget.addWidget(self.clock_widget)
 
-        self.init_clock_ui()
-
         # 工作时间详情
         self.category_list.addItem("工作时间详情")
         self.worktime_detail_widget = QWidget()
         self.worktime_detail_layout = QVBoxLayout(self.worktime_detail_widget)
         self.stacked_widget.addWidget(self.worktime_detail_widget)
-
-        self.init_worktime_detail_ui()
 
         # 默认选择第一个类别
         self.category_list.setCurrentRow(0)
@@ -125,11 +122,21 @@ class WorktimeWindow(BaseWindow):
         if row >= 0:
             self.stacked_widget.setCurrentIndex(row)
 
-        if row == 1: # 工作时间详情
-            self.floating_button.show()
-            self.floating_button.raise_()
-        else:
-            self.floating_button.hide()
+        if row not in self.loaded_pages:
+            if row == 0:
+                self.init_clock_ui()
+            elif row == 1:
+                self.init_worktime_detail_ui()
+            else:
+                raise ValueError("Invalid category index")
+            self.loaded_pages.add(row)
+
+        if hasattr(self, "floating_button"):
+            if row == 1: # 工作时间详情
+                self.floating_button.show()
+                self.floating_button.raise_()
+            else:
+                self.floating_button.hide()
     
     def load_clock_data(self):
         """读取打卡数据"""
