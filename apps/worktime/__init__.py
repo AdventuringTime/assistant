@@ -231,7 +231,8 @@ class WorktimeWindow(BaseWindow):
             worktimes_of_month[str(day)] = []
         worktimes_of_month[str(day)].append(worktime_record)
         self.save_worktimes(year, month, worktimes_of_month)
-        if (self.year_displayed == year
+        if (hasattr(self, "scroll_layout")
+            and self.year_displayed == year
             and self.month_displayed == month
             and self.day_displayed == day
         ):
