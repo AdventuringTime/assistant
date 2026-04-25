@@ -67,6 +67,7 @@ class ScheduleEditorWindow(BaseWindow):
         self.start_time_editor = SettingItemWidget("开始时间", "datetime")
         self.end_time_editor = SettingItemWidget("结束时间", "datetime")
         self.location_editor = SettingItemWidget("地点", "text")
+        self.repetition_editor = SettingItemWidget("重复", "type", ["无", "每天", "每周"])
         self.description_editor = SettingItemWidget("描述", "textarea")
         
         # 添加日程项到主布局
@@ -75,6 +76,7 @@ class ScheduleEditorWindow(BaseWindow):
         main_layout.addWidget(self.start_time_editor)
         main_layout.addWidget(self.end_time_editor)
         main_layout.addWidget(self.location_editor)
+        main_layout.addWidget(self.repetition_editor)
         main_layout.addWidget(self.description_editor)
         main_layout.addStretch()
         
@@ -107,8 +109,9 @@ class ScheduleEditorWindow(BaseWindow):
             if title:
                 self.title_editor.set_value(title)
             
-            schedule_type = self.schedule_item.get("type", 0)  # 默认为0（其他）
-            self.type_editor.set_value(schedule_type)
+            schedule_type = self.schedule_item.get("type")
+            if schedule_type is not None:
+                self.type_editor.set_value(schedule_type)  # 默认为0（其他）
             
             start_time_str = self.schedule_item.get("start_time")
             if start_time_str:
@@ -126,7 +129,11 @@ class ScheduleEditorWindow(BaseWindow):
             location = self.schedule_item.get("location")
             if location:
                 self.location_editor.set_value(location)
-            
+
+            repetition = self.schedule_item.get("repetition")
+            if repetition is not None:
+                self.repetition_editor.set_value(repetition)  # 默认为0（无）
+
             description = self.schedule_item.get("description")
             if description:
                 self.description_editor.set_value(description)
@@ -161,13 +168,13 @@ class ScheduleEditorWindow(BaseWindow):
         self.end_time = new_start_time.addSecs(self.duration)
         with block_signals([self.end_time_editor.input_field]):
             self.end_time_editor.set_value(self.end_time)
-    
+
     def save_schedule(self, copy=False):
         """保存日程"""
         title = self.title_editor.get_value().strip()
         if not title:
             title = "新日程"
-        
+
         # 验证时间
         if self.duration < 0:
             reply = QMessageBox.question(self, "保存日程", 
@@ -175,12 +182,14 @@ class ScheduleEditorWindow(BaseWindow):
                                     QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes)
             if reply == QMessageBox.StandardButton.No:
                 return
-            
+
         self.year_new, self.month_new, self.day_new = _get_date(self.start_time.toPython())
 
         # 计算新的id
-        current_time = self.start_time.time()
-        self.id_new = int(((current_time.hour() * 60 + current_time.minute()) - 240) % 1440)
+        start_time = self.start_time.time()
+        self.id_new = int(((start_time.hour() * 60 + start_time.minute()) - 240) % 1440)
+
+        schedule_type = self.type_editor.get_value()
 
         start_time_str = self.start_time.toString("yyyy-MM-dd HH:mm")
         end_time_str = self.end_time.toString("yyyy-MM-dd HH:mm")
@@ -188,14 +197,13 @@ class ScheduleEditorWindow(BaseWindow):
         location = self.location_editor.get_value().strip()
         if not location:
             location = None
-        
+
+        repetition = self.repetition_editor.get_value()
+
         description = self.description_editor.get_value().strip()
         if not description:
             description = None
-        
-        # 获取类型
-        schedule_type = self.type_editor.get_value()
-        
+
         # 构建日程数据
         self.schedule_data = {
             "title": title,
@@ -203,11 +211,12 @@ class ScheduleEditorWindow(BaseWindow):
             "start_time": start_time_str,
             "end_time": end_time_str,
             "location": location,
+            "repetition": repetition,
             "description": description
         }
 
         # 调用父窗口的保存方法
-        self.parent().window().save_schedule(self, copy=copy)
+        self.parent().window().save_schedule_from_editor(self, copy=copy)
         
         # 关闭窗口
         self.close()
@@ -220,7 +229,7 @@ class ScheduleEditorWindow(BaseWindow):
         
         if reply == QMessageBox.StandardButton.Ok:
             # 调用父窗口的删除方法
-            self.parent().window().delete_schedule(self)
+            self.parent().window().delete_schedule_from_editor(self)
             
             # 关闭窗口
             self.close()

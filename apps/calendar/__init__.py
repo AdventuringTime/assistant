@@ -1,11 +1,10 @@
 import json
 import os
-import time
 import datetime
 
 from sortedcontainers import SortedDict
-from PySide6.QtWidgets import (QLabel, QWidget, QVBoxLayout, QScrollArea,
-                               QPushButton, QDateEdit)
+from PySide6.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout,
+                               QScrollArea, QPushButton, QDateEdit)
 from PySide6.QtCore import Qt, QDate, QEvent
 
 from core.base_window import BaseWindow
@@ -89,6 +88,31 @@ class ScheduleItemWidget(QWidget):
             self.location_label.setWordWrap(True)
             self.layout_.addWidget(self.location_label)
 
+        if "type" in schedule_item or ("repetition" in schedule_item and schedule_item["repetition"] != 0):
+            self.type_repetition_widget = QWidget()
+            self.type_repetition_layout = QHBoxLayout(self.type_repetition_widget)
+            self.layout_.addWidget(self.type_repetition_widget)
+
+        if "type" in schedule_item:
+            self.type_label = QLabel(
+                "类型：{}".format(
+                    ["其他", "会议", "娱乐", "活动", "课程"]
+                    [schedule_item["type"]]
+                )
+            )
+            self.type_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
+            self.type_repetition_layout.addWidget(self.type_label)
+
+        if "repetition" in schedule_item and schedule_item["repetition"] != 0:
+            self.repetition_label = QLabel(
+                "重复：{}".format(
+                    ["无", "每天", "每周"]
+                    [schedule_item["repetition"]]
+                )
+            )
+            self.repetition_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
+            self.type_repetition_layout.addWidget(self.repetition_label)
+
         if "description" in schedule_item and schedule_item["description"]:
             self.description_label = QLabel(schedule_item["description"])
             self.description_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
@@ -129,6 +153,79 @@ class CalendarWindow(BaseWindow):
         self.date_selector.dateChanged.connect(self.on_date_changed)
         today = get_today()
         self.date_selector.setDate(QDate(today.year, today.month, today.day))
+
+        self.init_repeat_events_until_today(today)
+
+    def init_repeat_events_of_date(self, date):
+        """初始化指定日期的重复事件"""
+        # 处理每天重复事件
+        yesterday = date - datetime.timedelta(days=1)
+        events_yesterday = self.load_schedules(yesterday.year, yesterday.month, yesterday.day)
+        for event in events_yesterday.values():
+            if event.get("repetition") == 1: # 每天重复
+                start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
+                start_time_new = start_time_old + datetime.timedelta(days=1)
+                event["start_time"] = start_time_new.strftime('%Y-%m-%d %H:%M')
+
+                end_time_old = datetime.datetime.strptime(event["end_time"], '%Y-%m-%d %H:%M')
+                end_time_new = end_time_old + datetime.timedelta(days=1)
+                event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
+
+                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
+                self.save_schedule(
+                    event,
+                    date.year, date.month, date.day, id_,
+                    copy=True)
+                
+        # 处理每周重复事件
+        lastweek = date - datetime.timedelta(days=7)
+        events_lastweek = self.load_schedules(lastweek.year, lastweek.month, lastweek.day)
+        for event in events_lastweek.values():
+            if event.get("repetition") == 2: # 每周重复
+                start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
+                start_time_new = start_time_old + datetime.timedelta(days=7)
+                event["start_time"] = start_time_new.strftime('%Y-%m-%d %H:%M')
+
+                end_time_old = datetime.datetime.strptime(event["end_time"], '%Y-%m-%d %H:%M')
+                end_time_new = end_time_old + datetime.timedelta(days=7)
+                event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
+
+                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
+                self.save_schedule(
+                    event,
+                    date.year, date.month, date.day, id_,
+                    copy=True)
+
+    def init_repeat_events_until_today(self, today):
+        """初始化从上次到今天的重复事件（要求时间差不多于30天）"""
+        # 获取上次更新的日期
+        last_update_date_file = os.path.join(data_dir, "last_update_date.json")
+        try:
+            with open(last_update_date_file, 'r', encoding='utf-8') as f:
+                last_update_date_str = json.load(f)
+            last_update_date = datetime.datetime.strptime(last_update_date_str, '%Y-%m-%d').date()
+        except Exception:
+            last_update_date = today - datetime.timedelta(days=1)
+        
+        # 如果上次更新在今天或之后，直接返回
+        if last_update_date >= today:
+            return
+        
+        # 如果上次更新在30天之前，警告后返回
+        if last_update_date + datetime.timedelta(days=30) < today:
+            import warnings
+            warnings.warn("上次更新在30天之前，暂不更新重复事件")
+            return
+        
+        # 遍历日期
+        updating_date = last_update_date
+        while updating_date < today:
+            updating_date += datetime.timedelta(days=1)
+            self.init_repeat_events_of_date(updating_date)
+
+        # 保存最新的上次更新时间
+        with open(last_update_date_file, 'w', encoding='utf-8') as f:
+            json.dump(str(today), f, indent=4)
 
     def create_floating_button(self):
         """创建右下角悬浮按钮"""
@@ -212,17 +309,49 @@ class CalendarWindow(BaseWindow):
         # 添加stretch，确保日程项在顶部，空白在底部
         self.scroll_layout.addStretch()
 
-    def save_schedule(self, schedule_editor, copy=False):
+    def save_schedule_from_editor(self, schedule_editor, copy=False):
         """
-            保存日程到文件。
+        从日程编辑器保存日程。
 
-            :param schedule_editor: 日程编辑器窗口实例。
+        Parameters:
+            schedule_editor: 日程编辑器窗口实例。
+            copy: 是否复制旧日程，默认False。
         """
-        year_new = schedule_editor.year_new
-        month_new = schedule_editor.month_new
-        day_new = schedule_editor.day_new
-        id_new = schedule_editor.id_new
-        
+        self.save_schedule(
+            schedule_data=schedule_editor.schedule_data,
+            year_new=schedule_editor.year_new,
+            month_new=schedule_editor.month_new,
+            day_new=schedule_editor.day_new,
+            id_new=schedule_editor.id_new,
+            year_old=schedule_editor.year,
+            month_old=schedule_editor.month,
+            day_old=schedule_editor.day,
+            id_old=schedule_editor.id,
+            copy=copy
+        )
+
+    def save_schedule(
+            self,
+            schedule_data,
+            year_new, month_new, day_new, id_new,
+            year_old=None, month_old=None, day_old=None, id_old=None,
+            copy=False
+        ):
+        """
+        保存日程到文件。
+
+        Parameters:
+            schedule_data: 日程数据字典。
+            year_new: 新日期的年份。
+            month_new: 新日期的月份。
+            day_new: 新日期的日期。
+            id_new: 新日程的id。
+            year_old: 旧日期的年份。
+            month_old: 旧日期的月份。
+            day_old: 旧日期的日期。
+            id_old: 旧日程的id。
+            copy: 是否复制旧日程，默认False。
+        """
         # 读取日程
         file_path = os.path.join(data_dir, str(year_new), str(month_new), str(day_new) + ".json")
         if os.path.exists(file_path):
@@ -232,50 +361,61 @@ class CalendarWindow(BaseWindow):
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             schedules = SortedDict()
         
+        # 尝试删除旧日程
+        if not copy and year_old is not None:
+            if (year_old == year_new
+                and month_old == month_new
+                and day_old == day_new
+            ):
+                if id_old in schedules:
+                    del schedules[id_old]
+            else:
+                self.delete_schedule(year_old, month_old, day_old, id_old)
+
         # 添加日程
-        id_new = str(schedule_editor.id_new)
+        id_new = str(id_new)
         if id_new in schedules:
             seen = 0
-            while (str(f"{id_new}_{str(seen).zfill(3)}") in schedules or
-                   (copy and (schedule_editor.year == year_new
-                    and schedule_editor.month == month_new
-                    and schedule_editor.day == day_new
-                    and schedule_editor.id == id_new
-            ))):
+            while str(f"{id_new}_{str(seen).zfill(3)}") in schedules:
                 seen += 1
             id_new = f"{id_new}_{str(seen).zfill(3)}"
         
-        schedules[id_new] = schedule_editor.schedule_data
+        schedules[id_new] = schedule_data
 
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(dict(schedules), f, ensure_ascii=False, indent=4)
         
-        # 如果旧日程与新日程id不同，尝试删除旧日程
-        if not copy and (schedule_editor.year != year_new
-            or schedule_editor.month != month_new
-            or schedule_editor.day != day_new
-            or schedule_editor.id != id_new
-        ):
-            self.delete_schedule(schedule_editor)
-
         if (self.year_displayed == year_new
             and self.month_displayed == month_new
             and self.day_displayed == day_new
         ):
             self.refresh_schedules()
+
+    def delete_schedule_from_editor(self, schedule_editor):
+        """
+        从日程编辑器删除日程。
+
+        Parameters:
+            schedule_editor: 日程编辑器窗口实例。
+        """
+        self.delete_schedule(
+            schedule_editor.year,
+            schedule_editor.month,
+            schedule_editor.day,
+            schedule_editor.id
+        )
     
-    def delete_schedule(self, schedule_editor):
+    def delete_schedule(self, year_old, month_old, day_old, id_old):
         """
-            从文件中删除日程。
+        从文件中删除日程。
 
-            :param schedule_editor: 日程编辑器窗口实例。
+        Parameters:
+            year_old: 旧日期的年份。
+            month_old: 旧日期的月份。
+            day_old: 旧日期的日期。
+            id_old: 旧日程的id。
         """
-        year_old = schedule_editor.year
-        month_old = schedule_editor.month
-        day_old = schedule_editor.day
-        id_old = schedule_editor.id
-
         # 检查文件是否存在
         if not year_old:
             return
