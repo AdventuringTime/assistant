@@ -478,7 +478,7 @@ class CollapsibleContainerWidget(QWidget):
         
         # 折叠箭头
         # 根据展开状态选择不同的SVG图标
-        arrow_svg = "homepage/expanded.svg" if self.is_expanded else "homepage/collapsed.svg"
+        arrow_svg = "assets/svg/expanded.svg" if self.is_expanded else "assets/svg/collapsed.svg"
         self.arrow_svg = QSvgWidget(arrow_svg)
         self.arrow_svg.setFixedSize(24, 24)
         title_layout.addWidget(self.arrow_svg)
@@ -526,11 +526,11 @@ class CollapsibleContainerWidget(QWidget):
         """更新显示状态"""
         # 更新箭头方向
         if self.is_expanded:
-            self.arrow_svg.load("homepage/expanded.svg")
+            self.arrow_svg.load("assets/svg/expanded.svg")
             self.content_container.show()
             self.on_expand()
         else:
-            self.arrow_svg.load("homepage/collapsed.svg")
+            self.arrow_svg.load("assets/svg/collapsed.svg")
             self.content_container.hide()
             self.on_collapse()
     
@@ -1040,7 +1040,7 @@ class AppItemWidget(QWidget):
         
         # 检查图标文件是否存在，如果不存在则使用默认图标
         if not os.path.exists(self.icon_path):
-            self.icon_path = os.path.join("apps", "default", "icon.svg")
+            self.icon_path = "assets/svg/app.svg"
         
         # 设置组件样式
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)

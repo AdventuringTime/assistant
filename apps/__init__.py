@@ -8,12 +8,10 @@ from importlib import import_module
 APP_LIST = {
     "settings": {
         "display_name": "设置",
-        "icon": "apps/settings/icon.svg",
         "window": lambda: import_module('apps.settings').SettingsWindow()
     },
     "calendar": {
         "display_name": "日程",
-        "icon": "apps/calendar/icon.svg",
         "window": lambda: import_module('apps.calendar').CalendarWindow()
     },
     "worktime": {
