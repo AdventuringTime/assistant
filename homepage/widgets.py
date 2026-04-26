@@ -54,8 +54,8 @@ class ClockWidget(QWidget):
         
         # 检查日期是否改变，如果改变则重新加载日历数据
         if force_update_calendar or self.current_day != current_day:
-            self.load_calendar_data()
             self.current_day = current_day
+            self.load_calendar_data()
 
         # 计算内环：周次进度条（蓝色）
         total_weeks = 300
