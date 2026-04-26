@@ -41,15 +41,21 @@ class ClockWidget(QWidget):
             QColor(100, 255, 100, 128)   # 课程 - 绿色
         ]
     
-    def calculate_progress(self, weeks_collapsed):
-        """计算三个环的进度值"""
+    def calculate_progress(self, weeks_collapsed, force_update_calendar=False):
+        """
+        计算三个环的进度值
+        
+        Parameters:
+            weeks_collapsed (int): 已过周数
+            force_update_calendar (bool, optional): 是否强制更新日历数据，默认False
+        """
         current_time = datetime.datetime.now()
         current_day = get_today(current_time)
         
         # 检查日期是否改变，如果改变则重新加载日历数据
-        if self.current_day != current_day:
-            self.current_day = current_day
+        if force_update_calendar or self.current_day != current_day:
             self.load_calendar_data()
+            self.current_day = current_day
 
         # 计算内环：周次进度条（蓝色）
         total_weeks = 300
@@ -437,16 +443,16 @@ class TopStatusWidget(QWidget):
         # 获取时钟部件的内环进度（对应周次进度）
         self.weeks_collapsed = get_this_week()
 
-    def update_time_display(self):
+    def update_time_display(self, force_update_calendar=False):
         """更新时间显示"""
         self.update_weeks_collapsed()
-        self.clock_widget.calculate_progress(self.weeks_collapsed)
+        self.clock_widget.calculate_progress(self.weeks_collapsed, force_update_calendar)
         self.clock_widget.update()
         self.date_week_label.update_display(self.weeks_collapsed)
 
     def update_display(self):
         """更新所有显示"""
-        self.update_time_display()
+        self.update_time_display(force_update_calendar=True)
         self.period_season_label.load_data()
         self.version_label.load_data()
 
