@@ -429,20 +429,26 @@ class TopStatusWidget(QWidget):
         main_layout.addLayout(right_layout, 1)
     
         # 定期更新显示
-        self.updater = Heartbeat(self.update_display, interval=300)
+        self.updater = Heartbeat(self.update_time_display, interval=300, immediate=False)
+        self.update_display() # 初始化时加载时期季节等数据
     
     def update_weeks_collapsed(self):
         """更新自身存储的周次进度"""
         # 获取时钟部件的内环进度（对应周次进度）
         self.weeks_collapsed = get_this_week()
-    
-    def update_display(self):
-        """更新所有显示"""
+
+    def update_time_display(self):
+        """更新时间显示"""
         self.update_weeks_collapsed()
         self.clock_widget.calculate_progress(self.weeks_collapsed)
-        self.clock_widget.update()  # 刷新时钟显示
+        self.clock_widget.update()
         self.date_week_label.update_display(self.weeks_collapsed)
+
+    def update_display(self):
+        """更新所有显示"""
+        self.update_time_display()
         self.period_season_label.load_data()
+        self.version_label.load_data()
 
 top_status = TopStatusWidget()
 

@@ -8,18 +8,18 @@ class Heartbeat:
     心跳器类，__init__时自动启动线程，__del__时终止线程
     """
     
-    def __init__(self, func, interval=1800, first_run=True):
+    def __init__(self, func, interval=1800, immediate=True):
         """
         初始化心跳器并自动启动线程
         
         参数:
             func: 要定期执行的函数
             interval: 执行间隔时间（秒），默认为1800秒
-            first_run: 是否在初始化时立即执行一次，默认True
+            immediate: 是否在初始化时立即执行一次，默认True
         """
         self.func = func
         self.interval = interval
-        self.first_run = first_run
+        self.immediate = immediate
         self.running = True
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
@@ -32,7 +32,7 @@ class Heartbeat:
     
     def _run(self):
         """心跳器主循环"""
-        if not self.first_run:
+        if not self.immediate:
             sleep(self.interval)
 
         while self.running:
@@ -61,7 +61,7 @@ class DynamicHeartbeat(Heartbeat):
 
     def _run(self):
         """心跳器主循环"""
-        if not self.first_run:
+        if not self.immediate:
             sleep(self.interval)
 
         while self.running:

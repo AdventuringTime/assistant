@@ -39,10 +39,17 @@ class MainWindow(BaseWindow):
         
         # 创建托盘菜单
         tray_menu = QMenu()
+
+        # 更新顶部状态显示
+        update_topstatus_action = QAction("更新顶部状态", self)
+        update_topstatus_action.triggered.connect(lambda: self.top_status_widget.update_display())
+        tray_menu.addAction(update_topstatus_action)
+
+        tray_menu.addSeparator()
         
-        # 添加退出菜单项
+        # 退出
         exit_action = QAction("退出", self)
-        exit_action.triggered.connect(self.quit_application)
+        exit_action.triggered.connect(self.quit_)
         tray_menu.addAction(exit_action)
         
         # 设置托盘菜单
@@ -76,7 +83,7 @@ class MainWindow(BaseWindow):
         event.ignore()  # 忽略关闭事件
         self.hide()     # 隐藏窗口
     
-    def quit_application(self):
+    def quit_(self):
         """退出应用程序，关闭所有窗口"""
         # 关闭所有注册的窗口
         WindowsManager.close_all_windows()
