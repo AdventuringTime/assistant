@@ -1103,7 +1103,7 @@ class AppEntryWidget(CollapsibleContainerWidget):
     """应用入口部件，支持折叠/展开显示应用图标"""
     
     def __init__(self, parent=None):
-        super().__init__("应用", False, parent)
+        super().__init__("应用", True, parent)
         
         # 加载应用列表
         self.load_apps()
