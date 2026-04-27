@@ -123,39 +123,8 @@ class ScheduleItemWidget(QWidget):
          # 打开日程编辑窗口
          editor = ScheduleEditorWindow(self, self.schedule_item, self.schedule_id)
          editor.show()
-        
-class CalendarWindow(BaseWindow):
-    def __init__(self, parent=None):
-        super().__init__(parent)
 
-        self.setWindowTitle("日程")
-        self.setMinimumSize(600, 400)
-
-        self.container = QWidget()
-        self.setCentralWidget(self.container)
-
-        self.container_layout = QVBoxLayout(self.container)
-
-        self.date_selector = QDateEdit(self.container)
-        self.date_selector.setFixedHeight(30)
-        self.date_selector.setCalendarPopup(True)
-        self.container_layout.addWidget(self.date_selector)
-
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_content = QWidget()
-        self.scroll_layout = QVBoxLayout(self.scroll_content)
-        self.scroll_area.setWidget(self.scroll_content)
-        self.container_layout.addWidget(self.scroll_area)
-       
-        self.create_floating_button()
-
-        self.date_selector.dateChanged.connect(self.on_date_changed)
-        today = get_today()
-        self.date_selector.setDate(QDate(today.year, today.month, today.day))
-
-        self.init_repeat_events_until_today(today)
-
+class CalendarSchedulesManager:
     def init_repeat_events_of_date(self, date):
         """初始化指定日期的重复事件"""
         # 处理每天重复事件
@@ -226,6 +195,131 @@ class CalendarWindow(BaseWindow):
         # 保存最新的上次更新时间
         with open(last_update_date_file, 'w', encoding='utf-8') as f:
             json.dump(str(today), f, indent=4)
+        
+    def load_schedules(self, year, month, day):
+        """从文件加载日程数据"""
+        file_path = os.path.join(data_dir, str(year), str(month), str(day) + ".json")
+        if os.path.exists(file_path):
+            # 若文件读取失败，应报错
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+
+    def save_schedule(
+            self,
+            schedule_data,
+            year_new, month_new, day_new, id_new,
+            year_old=None, month_old=None, day_old=None, id_old=None,
+            copy=False
+        ):
+        """
+        保存日程到文件。
+
+        Parameters:
+            schedule_data: 日程数据字典。
+            year_new: 新日期的年份。
+            month_new: 新日期的月份。
+            day_new: 新日期的日期。
+            id_new: 新日程的id。
+            year_old: 旧日期的年份。
+            month_old: 旧日期的月份。
+            day_old: 旧日期的日期。
+            id_old: 旧日程的id。
+            copy: 是否复制旧日程，默认False。
+        """
+        # 读取日程
+        file_path = os.path.join(data_dir, str(year_new), str(month_new), str(day_new) + ".json")
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                schedules = SortedDict(json.load(f))
+        else:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            schedules = SortedDict()
+        
+        # 尝试删除旧日程
+        if not copy and year_old is not None:
+            if (year_old == year_new
+                and month_old == month_new
+                and day_old == day_new
+            ):
+                if id_old in schedules:
+                    del schedules[id_old]
+            else:
+                self.delete_schedule(year_old, month_old, day_old, id_old)
+
+        # 添加日程
+        id_new = str(id_new)
+        if id_new in schedules:
+            seen = 0
+            while str(f"{id_new}_{str(seen).zfill(3)}") in schedules:
+                seen += 1
+            id_new = f"{id_new}_{str(seen).zfill(3)}"
+        
+        schedules[id_new] = schedule_data
+
+        # 保存文件
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(dict(schedules), f, ensure_ascii=False, indent=4)
+        
+    def delete_schedule(self, year_old, month_old, day_old, id_old):
+        """
+        从文件中删除日程。
+
+        Parameters:
+            year_old: 旧日期的年份。
+            month_old: 旧日期的月份。
+            day_old: 旧日期的日期。
+            id_old: 旧日程的id。
+        """
+        # 检查文件是否存在
+        if not year_old:
+            return 1 # 返回flag
+        file_path = os.path.join(data_dir, str(year_old), str(month_old), str(day_old) + ".json")
+        if not os.path.exists(file_path):
+            return 1 # 返回flag
+
+        # 删除日程
+        with open(file_path, 'r', encoding='utf-8') as f:
+            schedules = json.load(f)
+        if id_old in schedules:
+            del schedules[id_old]
+        
+        # 保存文件；如果日程被清空，删除文件
+        if schedules:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(schedules, f, ensure_ascii=False, indent=4)
+        else:
+            os.remove(file_path)
+
+class CalendarWindow(BaseWindow, CalendarSchedulesManager):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle("日程")
+        self.setMinimumSize(600, 400)
+
+        self.container = QWidget()
+        self.setCentralWidget(self.container)
+
+        self.container_layout = QVBoxLayout(self.container)
+
+        self.date_selector = QDateEdit(self.container)
+        self.date_selector.setFixedHeight(30)
+        self.date_selector.setCalendarPopup(True)
+        self.container_layout.addWidget(self.date_selector)
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_content = QWidget()
+        self.scroll_layout = QVBoxLayout(self.scroll_content)
+        self.scroll_area.setWidget(self.scroll_content)
+        self.container_layout.addWidget(self.scroll_area)
+       
+        self.create_floating_button()
+
+        self.date_selector.dateChanged.connect(self.on_date_changed)
+        today = get_today()
+        self.date_selector.setDate(QDate(today.year, today.month, today.day))
 
     def create_floating_button(self):
         """创建右下角悬浮按钮"""
@@ -281,15 +375,6 @@ class CalendarWindow(BaseWindow):
             day=self.day_displayed
         )
         editor.show()
-
-    def load_schedules(self, year, month, day):
-        """从文件加载日程数据"""
-        file_path = os.path.join(data_dir, str(year), str(month), str(day) + ".json")
-        if os.path.exists(file_path):
-            # 若文件读取失败，应报错
-            with open(file_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return {}
 
     def refresh_schedules(self):
         """刷新日程显示"""
@@ -352,40 +437,15 @@ class CalendarWindow(BaseWindow):
             id_old: 旧日程的id。
             copy: 是否复制旧日程，默认False。
         """
-        # 读取日程
-        file_path = os.path.join(data_dir, str(year_new), str(month_new), str(day_new) + ".json")
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                schedules = SortedDict(json.load(f))
-        else:
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            schedules = SortedDict()
-        
-        # 尝试删除旧日程
-        if not copy and year_old is not None:
-            if (year_old == year_new
-                and month_old == month_new
-                and day_old == day_new
-            ):
-                if id_old in schedules:
-                    del schedules[id_old]
-            else:
-                self.delete_schedule(year_old, month_old, day_old, id_old)
+        super().save_schedule(
+            schedule_data,
+            year_new, month_new, day_new, id_new,
+            year_old, month_old,
+            day_old,
+            id_old,
+            copy
+        )
 
-        # 添加日程
-        id_new = str(id_new)
-        if id_new in schedules:
-            seen = 0
-            while str(f"{id_new}_{str(seen).zfill(3)}") in schedules:
-                seen += 1
-            id_new = f"{id_new}_{str(seen).zfill(3)}"
-        
-        schedules[id_new] = schedule_data
-
-        # 保存文件
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(dict(schedules), f, ensure_ascii=False, indent=4)
-        
         if (self.year_displayed == year_new
             and self.month_displayed == month_new
             and self.day_displayed == day_new
@@ -405,7 +465,7 @@ class CalendarWindow(BaseWindow):
             schedule_editor.day,
             schedule_editor.id
         )
-    
+
     def delete_schedule(self, year_old, month_old, day_old, id_old):
         """
         从文件中删除日程。
@@ -416,25 +476,9 @@ class CalendarWindow(BaseWindow):
             day_old: 旧日期的日期。
             id_old: 旧日程的id。
         """
-        # 检查文件是否存在
-        if not year_old:
+        flag = super().delete_schedule(year_old, month_old, day_old, id_old)
+        if flag:
             return
-        file_path = os.path.join(data_dir, str(year_old), str(month_old), str(day_old) + ".json")
-        if not os.path.exists(file_path):
-            return
-
-        # 删除日程
-        with open(file_path, 'r', encoding='utf-8') as f:
-            schedules = json.load(f)
-        if id_old in schedules:
-            del schedules[id_old]
-        
-        # 保存文件；如果日程被清空，删除文件
-        if schedules:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(schedules, f, ensure_ascii=False, indent=4)
-        else:
-            os.remove(file_path)
 
         if (self.year_displayed == year_old
             and self.month_displayed == month_old

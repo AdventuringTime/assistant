@@ -7,11 +7,12 @@ import json
 - content_widgets：要在主窗口显示的内容部件列表。
 '''
 
-from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QScrollArea
+from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QScrollArea
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
 from core.base_window import BaseWindow, WindowsManager
+from core.functions import get_today
 from core.global_constants import app_name
 from homepage.widgets import top_status, app_entry, notification_system
 
@@ -25,11 +26,11 @@ class MainWindow(BaseWindow):
         # 初始化系统托盘
         self.init_system_tray()
     
-        # 初始化窗口内容
-        self.init_content()
-
         # 初始化自启动程序
         self.init_auto_start()
+
+        # 初始化窗口内容
+        self.init_content()
 
     def init_system_tray(self):
         """初始化系统托盘"""
@@ -132,16 +133,27 @@ class MainWindow(BaseWindow):
 
     def init_auto_start(self):
         """初始化自启动程序"""
-        self.auto_start = []
+        self.auto_start = {}
+
+        # news_monitor
         with open("apps/news_monitor/data/settings.json", "r") as f:
             news_monitor_settings = json.load(f)
         if news_monitor_settings["activated"]:
             from apps import news_monitor
-            self.auto_start.append((news_monitor,
-                DynamicHeartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])))
+            self.auto_start["news_monitor"] = (
+                DynamicHeartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])
+            )
 
+        # daily_year
         with open("apps/daily_year/data/settings.json", "r") as f:
             daily_year_settings = json.load(f)
         if daily_year_settings["activated"]:
             from apps import daily_year
-            self.auto_start.append((daily_year,))
+            self.auto_start["daily_year"] = daily_year
+
+        # calendar_repeat_schedules
+        from apps.calendar import CalendarSchedulesManager
+        manager = CalendarSchedulesManager()
+        manager.init_repeat_events_until_today(get_today())
+        top_status.update_time_display(force_update_calendar=True)
+        self.auto_start["calendar_repeat_schedules"] = manager
