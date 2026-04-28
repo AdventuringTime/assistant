@@ -116,7 +116,7 @@ def check_news_update():
                 notification_system.notify(
                     title=name+"更新",
                     content=news_title,
-                    click_action={"type": "open_url", "value": news_link}
+                    click_action={"type": "open_url", "value": url} # 打开主界面
                 )
 
         # 更新记录的ID列表（只保留最新的MAX_NEWS_COUNT个）
@@ -149,7 +149,11 @@ def save_current_ids():
 if is_first_run_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
     # 每天第一次运行时，打开所有目标网页
     for url, name in TARGETS:
-        open_url(url)
+        notification_system.notify(
+            title=name,
+            content="检查一下哦",
+            click_action={"type": "open_url", "value": url} # 打开主界面
+        )
 
 # 存储每个网页的最新新闻ID
 last_news_ids = load_saved_ids()
