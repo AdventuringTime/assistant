@@ -4,6 +4,9 @@ import sys
 from PySide6.QtWidgets import QApplication
 app = QApplication(sys.argv)
 
+# 设置应用程序不在窗口关闭后退出
+app.setQuitOnLastWindowClosed(False)
+
 # 设置全局异常处理
 from core.error_window import excepthook
 sys.excepthook = excepthook
