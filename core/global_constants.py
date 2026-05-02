@@ -2,7 +2,7 @@ import os
 
 
 app_name = "探索酱的小助手"
-icon_path = os.path.join("img", "logo.ico")
+icon_path = "assets/logo.ico"
 
 # 注意：不要在全局常量中直接创建QIcon对象
 # 因为QGuiApplication必须在QIcon之前创建
