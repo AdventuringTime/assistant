@@ -3,7 +3,7 @@ import os
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                QListWidget, QListWidgetItem,
-                               QPushButton, QInputDialog)
+                               QPushButton)
 from PySide6.QtCore import Qt
 
 from core.base_window import BaseWindow
@@ -34,6 +34,7 @@ class SearchWordsWindow(BaseWindow):
                 border-radius: 5px;
                 color: #FFFFFF;
                 font-size: 14px;
+                outline: none;
             }
             QListWidget::item {
                 border-bottom: 1px solid #3D3D40;
@@ -74,7 +75,7 @@ class SearchWordsWindow(BaseWindow):
 
         # 搜索词列表
         self.words_list = QListWidget()
-        self.words_list.itemDoubleClicked.connect(self.on_item_double_clicked)
+        self.words_list.itemChanged.connect(self.on_item_changed)
         main_layout.addWidget(self.words_list)
 
         # 操作按钮区域
@@ -121,47 +122,40 @@ class SearchWordsWindow(BaseWindow):
         self.words_list.clear()
         for word in self.words:
             item = QListWidgetItem(word)
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled)
+            item.setFlags(item.flags() | 
+                         Qt.ItemFlag.ItemIsSelectable | 
+                         Qt.ItemFlag.ItemIsEnabled |
+                         Qt.ItemFlag.ItemIsEditable)
             self.words_list.addItem(item)
 
+    def on_item_changed(self, item):
+        """列表项内容改变时自动保存"""
+        row = self.words_list.row(item)
+        new_text = item.text().strip()
+        
+        self.words[row] = new_text
+        self.save_words()
+
     def on_add_clicked(self):
-        """添加搜索词"""
-        word, ok = QInputDialog.getText(self, "添加搜索词", "输入搜索词：")
-
-        if ok:
-            word = word.strip()
-            self.words.append(word)
-            self.save_words()
-            self.refresh_list()
-
-    def on_item_double_clicked(self, item):
-        """双击列表项进行重命名"""
-        self.rename_item(item)
+        """添加搜索词：在最后加一个空项并触发编辑"""
+        self.words.append("")
+        self.refresh_list()
+        # 编辑最后一项
+        last_item = self.words_list.item(self.words_list.count() - 1)
+        if last_item:
+            self.words_list.editItem(last_item)
 
     def on_rename_clicked(self):
         """重命名选中的搜索词"""
         selected_items = self.words_list.selectedItems()
         if selected_items:
-            self.rename_item(selected_items[0])
-
-    def rename_item(self, item):
-        """重命名指定项"""
-        old_word = item.text()
-        new_word, ok = QInputDialog.getText(self, "重命名", "输入新的搜索词：", text=old_word)
-
-        if ok:
-            new_word = new_word.strip()
-            if new_word != old_word:
-                index = self.words.index(old_word)
-                self.words[index] = new_word
-                self.save_words()
-                self.refresh_list()
+            self.words_list.editItem(selected_items[0])
 
     def on_delete_clicked(self):
         """删除选中的搜索词"""
         selected_items = self.words_list.selectedItems()
         if selected_items:
-            word = selected_items[0].text()
-            self.words.remove(word)
+            row = self.words_list.row(selected_items[0])
+            self.words.pop(row)
             self.save_words()
             self.refresh_list()
