@@ -4,7 +4,7 @@ import os
 from homepage.widgets import notification_system
 from core.functions import is_first_run_today
 
-base_url_format = "https://baike.baidu.com/item/{year}%E5%B9%B4/0"
+base_url_format = "https://baike.baidu.com/item/{year}%E5%B9%B4"
 
 def get_timedelta(today=None, target_day=None):
     if today is None:
