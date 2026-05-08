@@ -113,12 +113,6 @@ class ScheduleItemWidget(QWidget):
             self.repetition_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
             self.type_repetition_layout.addWidget(self.repetition_label)
 
-        if "description" in schedule_item and schedule_item["description"]:
-            self.description_label = QLabel(schedule_item["description"])
-            self.description_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
-            self.description_label.setWordWrap(True)
-            self.layout_.addWidget(self.description_label)
-
     def mousePressEvent(self, event):
          # 打开日程编辑窗口
          editor = ScheduleEditorWindow(self, self.schedule_item, self.schedule_id)
