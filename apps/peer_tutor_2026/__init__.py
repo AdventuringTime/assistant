@@ -1,7 +1,9 @@
 import json
 import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout, 
-                               QScrollArea, QHBoxLayout, QInputDialog)
+                               QScrollArea, QHBoxLayout, QInputDialog, QPushButton)
+from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QUrl
 from PySide6.QtCore import Qt, Signal
 from core.base_window import BaseWindow
 
@@ -48,7 +50,7 @@ class TaskItem(QWidget):
         self.progress_bar.setFixedHeight(20)
 
         self.progress_label = QLabel(self.progress_text)
-        self.progress_label.setStyleSheet("font-size: 16px; color: #888888;")
+        self.progress_label.setStyleSheet("font-size: 14px; color: #888888;")
 
         self.progress_widget = QWidget()
         self.progress_widget.setObjectName('progress_widget')
@@ -92,7 +94,7 @@ class TaskWindow(BaseWindow):
         self.main_layout = QVBoxLayout(self.central_widget)
 
         self.header = QLabel('第1周')
-        self.header.setStyleSheet("font-size: 18px; font-weight: bold; color: #FFFFFF;")
+        self.header.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFFFFF;")
         self.main_layout.addWidget(self.header)
 
         self.scroll_area = QScrollArea()
@@ -121,6 +123,13 @@ class TaskWindow(BaseWindow):
         self.total_progress_layout.addWidget(self.total_progress_bar)
         self.main_layout.addWidget(self.total_progress_widget)
 
+        self.open_folder_button = QPushButton('打开文件夹')
+        self.open_folder_button.clicked.connect(self.open_folder)
+        self.open_folder_layout = QHBoxLayout()
+        self.open_folder_layout.addStretch()
+        self.open_folder_layout.addWidget(self.open_folder_button)
+        self.main_layout.addLayout(self.open_folder_layout)
+
         self.update_total_progress()
 
     def load_tasks(self):
@@ -148,6 +157,10 @@ class TaskWindow(BaseWindow):
             total_percent = total_percent / len(self.task_items)
         
         self.total_progress_bar.setValue(int(total_percent))
+
+    def open_folder(self):
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', '1')
+        QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
 
     def on_task_updated(self):
         self.save_tasks()
