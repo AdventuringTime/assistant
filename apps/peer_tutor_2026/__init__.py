@@ -46,22 +46,18 @@ class TaskItem(QWidget):
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(int(self.progress_percent))
         self.progress_bar.setFixedHeight(20)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar::chunk {
-                background-color: #4D4D50;
-            }
-        """)
 
         self.progress_label = QLabel(self.progress_text)
         self.progress_label.setStyleSheet("font-size: 16px; color: #888888;")
 
         self.progress_widget = QWidget()
+        self.progress_widget.setObjectName('progress_widget')
         self.progress_layout = QHBoxLayout(self.progress_widget)
         self.progress_layout.addWidget(self.progress_bar)
         self.progress_layout.addWidget(self.progress_label)
         
         self.progress_widget.setStyleSheet("""
-            QWidget:hover {
+            #progress_widget:hover {
                 background-color: rgba(255, 255, 255, 0.05);
             }
         """)
@@ -70,18 +66,15 @@ class TaskItem(QWidget):
         self.layout_.addWidget(self.progress_widget)
 
     def on_progress_clicked(self, event):
-        required = self.task.get('required', 1)
-        completed = self.task.get('completed', 0)
-        
-        new_completed, ok = QInputDialog.getInt(self, '修改进度', 
-            f'请输入完成数量（0-{required}）:',
-            value=completed, minValue=0, maxValue=required)
+        self.completed, ok = QInputDialog.getInt(self, '修改进度', 
+            f'请输入完成数量（0-{self.required}）:',
+            value=self.completed, minValue=0, maxValue=self.required)
         
         if ok:
-            self.task['completed'] = new_completed
-            progress_percent = (new_completed / required) * 100 if required > 0 else 100
-            self.progress_bar.setValue(int(progress_percent))
-            self.progress_label.setText(f'{new_completed}/{required}')
+            self.task['completed'] = self.completed
+            self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
+            self.progress_bar.setValue(int(self.progress_percent))
+            self.progress_label.setText(f'{self.completed}/{self.required}')
             self.task_updated.emit()
 
 
@@ -108,9 +101,11 @@ class TaskWindow(BaseWindow):
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
 
+        self.task_items = []
         for task in self.tasks:
             task_item = TaskItem(task)
             task_item.task_updated.connect(self.on_task_updated)
+            self.task_items.append(task_item)
             self.content_layout.addWidget(task_item)
 
         self.content_layout.addStretch()
@@ -119,18 +114,11 @@ class TaskWindow(BaseWindow):
 
         self.total_progress_bar = QProgressBar()
         self.total_progress_bar.setRange(0, 100)
-        self.total_progress_bar.setFixedHeight(24)
-        self.total_progress_bar.setStyleSheet("""
-            QProgressBar::chunk {
-                background-color: #4D4D50;
-            }
-        """)
-        self.total_progress_label = QLabel('总进度: 0%')
-        self.total_progress_label.setStyleSheet("font-size: 14px; color: #AAAAAA;")
+        self.total_progress_bar.setFixedHeight(20)
+
         self.total_progress_widget = QWidget()
         self.total_progress_layout = QHBoxLayout(self.total_progress_widget)
         self.total_progress_layout.addWidget(self.total_progress_bar)
-        self.total_progress_layout.addWidget(self.total_progress_label)
         self.main_layout.addWidget(self.total_progress_widget)
 
         self.update_total_progress()
@@ -152,5 +140,15 @@ class TaskWindow(BaseWindow):
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(self.tasks, f, ensure_ascii=False, indent=4)
 
+    def update_total_progress(self):
+        total_percent = 0
+        if self.task_items:
+            for task in self.task_items:
+                total_percent += task.progress_percent
+            total_percent = total_percent / len(self.task_items)
+        
+        self.total_progress_bar.setValue(int(total_percent))
+
     def on_task_updated(self):
         self.save_tasks()
+        self.update_total_progress()
