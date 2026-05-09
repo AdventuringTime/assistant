@@ -1,15 +1,77 @@
 import json
 import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout, 
-                               QScrollArea, QHBoxLayout, QInputDialog, QPushButton)
+                               QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
+                               QLineEdit, QSpinBox, QMessageBox)
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtCore import QUrl
 from PySide6.QtCore import Qt, Signal
-from core.base_window import BaseWindow
+from core.base_window import BaseWindow, BaseDialog
+
+
+class TaskDialog(BaseDialog):
+    on_save_signal = Signal(dict)
+    on_delete_signal = Signal()
+
+    def __init__(self, task=None, parent=None):
+        super().__init__(parent)
+        self.task = task
+        self.setWindowTitle('任务')
+
+        self.layout_ = QVBoxLayout(self)
+
+        self.name_label = QLabel('任务名称:')
+        self.name_edit = QLineEdit()
+        if task:
+            self.name_edit.setText(task.get('name', ''))
+
+        self.required_label = QLabel('所需次数:')
+        self.required_spin = QSpinBox()
+        self.required_spin.setRange(0, 2147483647)
+        if task:
+            self.required_spin.setValue(task.get('required', 1))
+
+        self.layout_.addWidget(self.name_label)
+        self.layout_.addWidget(self.name_edit)
+        self.layout_.addWidget(self.required_label)
+        self.layout_.addWidget(self.required_spin)
+
+        self.button_layout = QHBoxLayout()
+        self.button_layout.addStretch()
+
+        self.save_button = QPushButton('保存')
+        self.save_button.clicked.connect(self.on_save)
+
+        if task:
+            self.delete_button = QPushButton('删除')
+            self.delete_button.setStyleSheet("background-color: #CC0000; color: #FFFFFF;")
+            self.delete_button.clicked.connect(self.on_delete)
+            self.button_layout.addWidget(self.delete_button)
+    
+        self.button_layout.addWidget(self.save_button)
+        self.layout_.addLayout(self.button_layout)
+
+    def on_save(self):
+        self.on_save_signal.emit(self.get_task_data())
+        self.close()
+
+    def on_delete(self):
+        reply = QMessageBox.question(self, '删除任务', '确认删除任务吗？', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if reply == QMessageBox.Yes:
+            self.on_delete_signal.emit()
+            self.close()
+
+    def get_task_data(self):
+        return {
+            'name': self.name_edit.text(),
+            'completed': self.task.get('completed', 0) if self.task else 0,
+            'required': self.required_spin.value()
+        }
 
 
 class TaskItem(QWidget):
     task_updated = Signal()
+    task_deleted = Signal()
     
     def __init__(self, task, parent=None):
         super().__init__(parent)
@@ -26,6 +88,8 @@ class TaskItem(QWidget):
 
         self.name_label = QLabel(self.task.get('name', ''))
         self.name_label.setWordWrap(True)
+        self.name_label.setStyleSheet("QLabel:hover { background-color: rgba(255, 255, 255, 0.05); }")
+        self.name_label.mousePressEvent = self.on_name_clicked
         self.layout_.addWidget(self.name_label)
 
         self.completed = self.task.get('completed', 0)
@@ -78,7 +142,30 @@ class TaskItem(QWidget):
             self.progress_bar.setValue(int(self.progress_percent))
             self.progress_label.setText(f'{self.completed}/{self.required}')
             self.task_updated.emit()
+    
+    def on_name_clicked(self, event):
+        dialog = TaskDialog(self.task, self)
+        dialog.on_save_signal.connect(self.on_dialog_save)
+        dialog.on_delete_signal.connect(self.on_dialog_delete)
 
+        dialog.show()
+    
+    def on_dialog_delete(self):
+        self.task_deleted.emit()
+    
+    def on_dialog_save(self, data):
+        self.task['name'] = data['name']
+        self.task['required'] = data['required']
+        self.name_label.setText(data['name'])
+        self.required = data['required']
+        if self.completed > self.required:
+            self.completed = self.required
+            self.task['completed'] = self.completed
+        self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
+        self.progress_bar.setValue(int(self.progress_percent))
+        self.progress_label.setText(f'{self.completed}/{self.required}')
+        self.task_updated.emit()
+    
 
 class TaskWindow(BaseWindow):
     def __init__(self, parent=None):
@@ -107,6 +194,7 @@ class TaskWindow(BaseWindow):
         for task in self.tasks:
             task_item = TaskItem(task)
             task_item.task_updated.connect(self.on_task_updated)
+            task_item.task_deleted.connect(self.on_task_deleted)
             self.task_items.append(task_item)
             self.content_layout.addWidget(task_item)
 
@@ -123,12 +211,19 @@ class TaskWindow(BaseWindow):
         self.total_progress_layout.addWidget(self.total_progress_bar)
         self.main_layout.addWidget(self.total_progress_widget)
 
+        self.button_layout = QHBoxLayout()
+
+        self.button_layout.addStretch()
+
+        self.add_button = QPushButton('添加任务')
+        self.add_button.clicked.connect(self.on_add_task)
+        self.button_layout.addWidget(self.add_button)
+
         self.open_folder_button = QPushButton('打开文件夹')
         self.open_folder_button.clicked.connect(self.open_folder)
-        self.open_folder_layout = QHBoxLayout()
-        self.open_folder_layout.addStretch()
-        self.open_folder_layout.addWidget(self.open_folder_button)
-        self.main_layout.addLayout(self.open_folder_layout)
+        self.button_layout.addWidget(self.open_folder_button)
+
+        self.main_layout.addLayout(self.button_layout)
 
         self.update_total_progress()
 
@@ -165,3 +260,29 @@ class TaskWindow(BaseWindow):
     def on_task_updated(self):
         self.save_tasks()
         self.update_total_progress()
+
+    def on_task_deleted(self):
+        sender = self.sender()
+        if sender in self.task_items:
+            index = self.task_items.index(sender)
+            self.task_items.remove(sender)
+            self.tasks.pop(index)
+            sender.deleteLater()
+            self.save_tasks()
+            self.update_total_progress()
+    
+    def on_add_task(self):
+        dialog = TaskDialog(parent=self)
+        dialog.on_save_signal.connect(self.on_dialog_create)
+        dialog.show()
+    
+    def on_dialog_create(self, data):
+        if data['name'].strip():
+            self.tasks.append(data)
+            task_item = TaskItem(data)
+            task_item.task_updated.connect(self.on_task_updated)
+            task_item.task_deleted.connect(self.on_task_deleted)
+            self.task_items.append(task_item)
+            self.content_layout.insertWidget(len(self.task_items), task_item)
+            self.save_tasks()
+            self.update_total_progress()
