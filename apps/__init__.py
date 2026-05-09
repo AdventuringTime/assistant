@@ -22,6 +22,10 @@ APP_LIST = {
         "display_name": "搜索词",
         "window": lambda: import_module('apps.search_words').SearchWordsWindow()
     },
+    "peer_tutor_2026": {
+        "display_name": "朋辈助学",
+        "window": lambda: import_module('apps.peer_tutor_2026').TaskWindow()
+    },
     "tokenizer": {
         "display_name": "词元提取器",
         "window": lambda: import_module('apps.tokenizer').TokenizerWindow()
