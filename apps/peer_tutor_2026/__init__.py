@@ -90,7 +90,14 @@ class TaskItem(QWidget):
 
         self.name_label = QLabel(self.task.get('name', ''))
         self.name_label.setWordWrap(True)
-        self.name_label.setStyleSheet("QLabel:hover { background-color: rgba(255, 255, 255, 0.05); }")
+        self.name_label.setStyleSheet("""
+            QLabel {
+                font-size: 14px;
+            }
+            QLabel:hover {
+                background-color: rgba(255, 255, 255, 0.05); 
+            }
+        """)
         self.name_label.mousePressEvent = self.on_name_clicked
         self.layout_.addWidget(self.name_label)
 
