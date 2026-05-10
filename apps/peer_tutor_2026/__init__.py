@@ -111,8 +111,8 @@ class TaskItem(QWidget):
             self.progress_percent = (self.completed / self.required) * 100
 
         self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(int(self.progress_percent))
+        self.progress_bar.setRange(0, self.required)
+        self.progress_bar.setValue(self.completed)
         self.progress_bar.setFixedHeight(20)
 
         self.progress_label = QLabel(self.progress_text)
@@ -141,7 +141,12 @@ class TaskItem(QWidget):
         if ok:
             self.task['completed'] = self.completed
             self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
-            self.progress_bar.setValue(int(self.progress_percent))
+            progress_value = self.completed
+            if progress_value < 0:
+                progress_value = 0
+            elif progress_value > self.required:
+                progress_value = self.required
+            self.progress_bar.setValue(progress_value)
             self.progress_label.setText(f'{self.completed}/{self.required}')
             self.task_updated.emit()
     
@@ -161,7 +166,13 @@ class TaskItem(QWidget):
         self.name_label.setText(data['name'])
         self.required = data['required']
         self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
-        self.progress_bar.setValue(int(self.progress_percent))
+        self.progress_bar.setRange(0, self.required)
+        progress_value = self.completed
+        if progress_value < 0:
+            progress_value = 0
+        elif progress_value > self.required:
+            progress_value = self.required
+        self.progress_bar.setValue(progress_value)
         self.progress_label.setText(f'{self.completed}/{self.required}')
         self.task_updated.emit()
     
@@ -206,9 +217,13 @@ class TaskWindow(BaseWindow):
         self.total_progress_bar.setRange(0, 100)
         self.total_progress_bar.setFixedHeight(20)
 
+        self.total_progress_label = QLabel('0%')
+        self.total_progress_label.setStyleSheet("font-size: 15px; color: #888888;")
+
         self.total_progress_widget = QWidget()
         self.total_progress_layout = QHBoxLayout(self.total_progress_widget)
         self.total_progress_layout.addWidget(self.total_progress_bar)
+        self.total_progress_layout.addWidget(self.total_progress_label)
         self.main_layout.addWidget(self.total_progress_widget)
 
         self.button_layout = QHBoxLayout()
@@ -251,7 +266,13 @@ class TaskWindow(BaseWindow):
                 total_percent += task.progress_percent
             total_percent = total_percent / len(self.task_items)
         
-        self.total_progress_bar.setValue(int(total_percent))
+        progress_value = int(total_percent)
+        if progress_value < 0:
+            progress_value = 0
+        elif progress_value > 100:
+            progress_value = 100
+        self.total_progress_bar.setValue(progress_value)
+        self.total_progress_label.setText(f'{int(total_percent)}%')
 
     def open_folder(self):
         data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
