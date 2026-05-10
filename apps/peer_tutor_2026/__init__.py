@@ -6,6 +6,9 @@ from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QLineEdit, QSpinBox, QMessageBox)
 from PySide6.QtCore import Qt, Signal
 from core.base_window import BaseWindow, BaseDialog
+from core.functions import get_this_week
+import datetime
+from math import floor
 
 
 class TaskDialog(BaseDialog):
@@ -172,7 +175,7 @@ class TaskWindow(BaseWindow):
         self.setWindowTitle('任务列表')
         self.setMinimumSize(600, 400)
 
-        self.week_displayed = 1
+        self.week_displayed = floor(get_this_week(start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
         self.tasks = []
         self.load_tasks()
 

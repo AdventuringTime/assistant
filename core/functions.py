@@ -67,12 +67,13 @@ def is_first_run_today(data_file, dt=None):
     else:
         return False
     
-def get_this_week(dt=None):
+def get_this_week(dt=None, start_date=None):
     """
     计算当前时间对应的周数（float）
     
     Parameters:
         dt (datetime.datetime, optional): 如果为None则使用当前时间。
+        start_date (datetime.datetime, optional): 起始时间，默认为 datetime.datetime(2025, 9, 11, 4, 0, 0)
     
     Returns:
         周数。例如，如果第二周已过30%，则返回1.3。
@@ -80,8 +81,9 @@ def get_this_week(dt=None):
     if dt is None:
         dt = datetime.datetime.now()
     
-    # 起始时间：2025年9月11日 4:00
-    start_date = datetime.datetime(2025, 9, 11, 4, 0, 0)
+    # 默认起始时间：2025年9月11日 4:00
+    if start_date is None:
+        start_date = datetime.datetime(2025, 9, 11, 4, 0, 0)
     duration_of_a_week = 604800 # 一周的秒数
 
     collapsed = (dt - start_date).total_seconds()
