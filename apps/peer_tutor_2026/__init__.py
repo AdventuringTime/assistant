@@ -135,9 +135,9 @@ class TaskItem(QWidget):
 
     def on_progress_clicked(self, event):
         self.completed, ok = QInputDialog.getInt(self, '修改进度', 
-            f'请输入完成数量（0-{self.required}）:',
-            value=self.completed, minValue=0, maxValue=self.required)
-        
+            f'请输入完成数量:',
+            value=self.completed)
+
         if ok:
             self.task['completed'] = self.completed
             self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
@@ -160,9 +160,6 @@ class TaskItem(QWidget):
         self.task['required'] = data['required']
         self.name_label.setText(data['name'])
         self.required = data['required']
-        if self.completed > self.required:
-            self.completed = self.required
-            self.task['completed'] = self.completed
         self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
         self.progress_bar.setValue(int(self.progress_percent))
         self.progress_label.setText(f'{self.completed}/{self.required}')
