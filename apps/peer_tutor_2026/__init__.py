@@ -3,7 +3,7 @@ import json
 import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout, 
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
-                               QLineEdit, QSpinBox, QMessageBox)
+                               QLineEdit, QDoubleSpinBox, QMessageBox)
 from PySide6.QtCore import Qt, Signal
 from core.base_window import BaseWindow, BaseDialog
 from core.functions import get_this_week
@@ -28,10 +28,10 @@ class TaskDialog(BaseDialog):
             self.name_edit.setText(task.get('name', ''))
 
         self.required_label = QLabel('所需次数:')
-        self.required_spin = QSpinBox()
-        self.required_spin.setRange(0, 2147483647)
+        self.required_spin = QDoubleSpinBox()
+        self.required_spin.setRange(0.0, 1e15)
         if task:
-            self.required_spin.setValue(task.get('required', 1))
+            self.required_spin.setValue(task.get('required', 1.0))
 
         self.layout_.addWidget(self.name_label)
         self.layout_.addWidget(self.name_edit)
@@ -58,7 +58,7 @@ class TaskDialog(BaseDialog):
         self.close()
 
     def on_delete(self):
-        reply = QMessageBox.question(self, '删除任务', '确认删除任务吗？', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        reply = QMessageBox.question(self, '删除任务', '删除任务？', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             self.on_delete_signal.emit()
             self.close()
@@ -66,7 +66,7 @@ class TaskDialog(BaseDialog):
     def get_task_data(self):
         return {
             'name': self.name_edit.text(),
-            'completed': self.task.get('completed', 0) if self.task else 0,
+            'completed': self.task.get('completed', 0.0) if self.task else 0.0,
             'required': self.required_spin.value()
         }
 
@@ -94,14 +94,14 @@ class TaskItem(QWidget):
         self.name_label.mousePressEvent = self.on_name_clicked
         self.layout_.addWidget(self.name_label)
 
-        self.completed = self.task.get('completed', 0)
-        self.required = self.task.get('required', 1)
+        self.completed = self.task.get('completed', 0.0)
+        self.required = self.task.get('required', 1.0)
 
-        if self.required == 0:
+        if self.required == 0.0:
             self.progress_text = '已完成'
             self.progress_percent = 100
-        elif self.required == 1:
-            if self.completed < 1:
+        elif self.required == 1.0:
+            if self.completed < 1.0:
                 self.progress_text = '未完成'
             else:
                 self.progress_text = '已完成'
@@ -111,8 +111,8 @@ class TaskItem(QWidget):
             self.progress_percent = (self.completed / self.required) * 100
 
         self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, self.required)
-        self.progress_bar.setValue(self.completed)
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(int(self.progress_percent))
         self.progress_bar.setFixedHeight(20)
 
         self.progress_label = QLabel(self.progress_text)
@@ -134,18 +134,18 @@ class TaskItem(QWidget):
         self.layout_.addWidget(self.progress_widget)
 
     def on_progress_clicked(self, event):
-        self.completed, ok = QInputDialog.getInt(self, '修改进度', 
+        self.completed, ok = QInputDialog.getDouble(self, '修改进度', 
             f'请输入完成数量:',
             value=self.completed)
 
         if ok:
             self.task['completed'] = self.completed
             self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
-            progress_value = self.completed
+            progress_value = int(self.progress_percent)
             if progress_value < 0:
                 progress_value = 0
-            elif progress_value > self.required:
-                progress_value = self.required
+            elif progress_value > 100:
+                progress_value = 100
             self.progress_bar.setValue(progress_value)
             self.progress_label.setText(f'{self.completed}/{self.required}')
             self.task_updated.emit()
@@ -166,12 +166,12 @@ class TaskItem(QWidget):
         self.name_label.setText(data['name'])
         self.required = data['required']
         self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
-        self.progress_bar.setRange(0, self.required)
-        progress_value = self.completed
+        self.progress_bar.setRange(0, 100)
+        progress_value = int(self.progress_percent)
         if progress_value < 0:
             progress_value = 0
-        elif progress_value > self.required:
-            progress_value = self.required
+        elif progress_value > 100:
+            progress_value = 100
         self.progress_bar.setValue(progress_value)
         self.progress_label.setText(f'{self.completed}/{self.required}')
         self.task_updated.emit()
