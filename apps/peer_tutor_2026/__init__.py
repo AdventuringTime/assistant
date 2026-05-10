@@ -199,7 +199,8 @@ class TaskWindow(BaseWindow):
         self.main_layout = QVBoxLayout(self.central_widget)
 
         self.header = QLabel(f'第{self.week_displayed}周')
-        self.header.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFFFFF;")
+        self.header.setStyleSheet("font-size: 24px; font-weight: bold; color: #FFFFFF;")
+        self.header.setMargin(5)
         self.main_layout.addWidget(self.header)
 
         self.scroll_area = QScrollArea()
