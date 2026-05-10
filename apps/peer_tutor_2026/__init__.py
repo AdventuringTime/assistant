@@ -180,7 +180,7 @@ class TaskItem(QWidget):
 class TaskWindow(BaseWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('任务列表')
+        self.setWindowTitle('朋辈助学')
         self.setMinimumSize(600, 400)
 
         self.week_displayed = floor(get_this_week(start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
