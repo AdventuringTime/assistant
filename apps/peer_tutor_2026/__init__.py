@@ -1,10 +1,9 @@
+import sys
 import json
 import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout, 
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QSpinBox, QMessageBox)
-from PySide6.QtGui import QDesktopServices
-from PySide6.QtCore import QUrl
 from PySide6.QtCore import Qt, Signal
 from core.base_window import BaseWindow, BaseDialog
 
@@ -173,6 +172,7 @@ class TaskWindow(BaseWindow):
         self.setWindowTitle('任务列表')
         self.setMinimumSize(600, 400)
 
+        self.week_displayed = 1
         self.tasks = []
         self.load_tasks()
 
@@ -180,7 +180,7 @@ class TaskWindow(BaseWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
 
-        self.header = QLabel('第1周')
+        self.header = QLabel(f'第{self.week_displayed}周')
         self.header.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFFFFF;")
         self.main_layout.addWidget(self.header)
 
@@ -228,7 +228,7 @@ class TaskWindow(BaseWindow):
         self.update_total_progress()
 
     def load_tasks(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', '1')
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
         json_path = os.path.join(data_dir, 'tasks.json')
 
         if not os.path.exists(json_path):
@@ -238,7 +238,7 @@ class TaskWindow(BaseWindow):
             self.tasks = json.load(f)
 
     def save_tasks(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', '1')
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
         json_path = os.path.join(data_dir, 'tasks.json')
 
         with open(json_path, 'w', encoding='utf-8') as f:
@@ -254,8 +254,14 @@ class TaskWindow(BaseWindow):
         self.total_progress_bar.setValue(int(total_percent))
 
     def open_folder(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', '1')
-        QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
+        os.makedirs(data_dir, exist_ok=True)
+        if sys.platform == 'win32': # 限 Windows
+            os.startfile(data_dir)
+        else:
+            from PySide6.QtGui import QDesktopServices
+            from PySide6.QtCore import QUrl
+            QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
 
     def on_task_updated(self):
         self.save_tasks()
