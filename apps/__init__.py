@@ -25,5 +25,9 @@ APP_LIST = {
     "tokenizer": {
         "display_name": "词元提取器",
         "window": lambda: import_module('apps.tokenizer').TokenizerWindow()
+    },
+    "expenses": {
+        "display_name": "记账",
+        "window": lambda: import_module('apps.expenses').ExpensesWindow()
     }
 }
