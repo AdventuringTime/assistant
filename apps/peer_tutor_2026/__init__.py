@@ -242,6 +242,10 @@ class TaskWindow(BaseWindow):
         self.add_button.clicked.connect(self.on_add_task)
         self.button_layout.addWidget(self.add_button)
 
+        self.open_today_folder_button = QPushButton('打开今日文件夹')
+        self.open_today_folder_button.clicked.connect(self.open_today_folder)
+        self.button_layout.addWidget(self.open_today_folder_button)
+
         self.open_folder_button = QPushButton('打开文件夹')
         self.open_folder_button.clicked.connect(self.open_folder)
         self.button_layout.addWidget(self.open_folder_button)
@@ -282,8 +286,8 @@ class TaskWindow(BaseWindow):
         self.total_progress_bar.setValue(progress_value)
         self.total_progress_label.setText(f'{int(total_percent)}%')
 
-    def open_folder(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
+    @staticmethod
+    def _open_folder_of_dir(data_dir):
         os.makedirs(data_dir, exist_ok=True)
         if sys.platform == 'win32': # 限 Windows
             os.startfile(data_dir)
@@ -291,6 +295,16 @@ class TaskWindow(BaseWindow):
             from PySide6.QtGui import QDesktopServices
             from PySide6.QtCore import QUrl
             QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
+
+    def open_folder(self):
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
+        self._open_folder_of_dir(data_dir)
+
+    def open_today_folder(self):
+        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        day_of_week = datetime.datetime.now().weekday()
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed), days_of_week[day_of_week])
+        self._open_folder_of_dir(data_dir)
 
     def on_task_updated(self):
         self.save_tasks()
