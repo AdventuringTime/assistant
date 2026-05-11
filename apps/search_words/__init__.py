@@ -27,7 +27,6 @@ class SearchWordsWindow(BaseWindow):
         self.container = QWidget()
         self.setCentralWidget(self.container)
         self.container.setStyleSheet("""
-            QWidget { background-color: #1E1E1E; }
             QListWidget {
                 background-color: #2D2D30;
                 border: none;
@@ -37,27 +36,13 @@ class SearchWordsWindow(BaseWindow):
                 outline: none;
             }
             QListWidget::item {
-                border-bottom: 1px solid #3D3D40;
+                border-bottom: 1px solid #3D3D3D;
             }
             QListWidget::item:hover {
-                background-color: #3D3D40;
+                background-color: rgba(255, 255, 255, 0.1);
             }
             QListWidget::item:selected {
-                background-color: #0078D4;
-            }
-            QPushButton {
-                background-color: #0078D4;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                padding: 8px 16px;
-                font-size: 14px;
-            }
-            QPushButton:hover {
-                background-color: #106EBE;
-            }
-            QPushButton:pressed {
-                background-color: #005A9E;
+                background-color: rgba(255, 255, 255, 0.2);
             }
             QPushButton#deleteButton {
                 background-color: #D13438;
