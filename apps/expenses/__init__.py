@@ -10,7 +10,6 @@ from PySide6.QtSvgWidgets import QSvgWidget
 
 from core.base_window import BaseWindow
 
-
 class ConstantRowWidget(QWidget):
     def __init__(self, name, value, parent=None):
         super().__init__(parent)
@@ -35,8 +34,10 @@ class ConstantRowWidget(QWidget):
 
 class ConstantEditWindow(BaseWindow):
     constants_updated = Signal()
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         super().__init__(parent)
+        self.expenses_window = parent.window()
+        assert isinstance(self.expenses_window, ExpensesWindow)
 
         self.setWindowTitle("常量编辑")
         self.setMinimumSize(400, 300)
@@ -54,10 +55,6 @@ class ConstantEditWindow(BaseWindow):
         self.buttons_layout = QHBoxLayout()
         layout.addLayout(self.buttons_layout)
 
-        save_button = QPushButton("保存")
-        save_button.clicked.connect(self.save_constants)
-        self.buttons_layout.addWidget(save_button)
-
         self.buttons_layout.addStretch()
 
         add_button = QPushButton("添加常量")
@@ -68,8 +65,6 @@ class ConstantEditWindow(BaseWindow):
 
     def load_constants(self):
         # 清空当前布局
-        global constants
-
         while self.constants_layout.count() > 0:
             item = self.constants_layout.takeAt(0)
             if item.widget():
@@ -77,41 +72,39 @@ class ConstantEditWindow(BaseWindow):
         self.row_widgets = []
 
         # 添加常量行
-        for name, value in constants.items():
+        for name, value in self.expenses_window.constants.items():
             row_widget = ConstantRowWidget(name, value)
             self.row_widgets.append(row_widget)
-            row_widget.value_edit.valueChanged.connect(self.update_constant)
-            row_widget.delete_button.clicked.connect(self.delete_constant)
+            # 预存 name，防止全部连接到最后一项
+            row_widget.value_edit.valueChanged.connect(
+                lambda value, name=name: self.update_constant(name, value))
+            # 增加一个 checked，因为按钮点击事件会多传一个参数
+            row_widget.delete_button.clicked.connect(
+                lambda checked=False, name=name: self.delete_constant(name))
             self.constants_layout.addWidget(row_widget)
 
     def add_constant(self):
-        global constants
-
         name, ok = QInputDialog.getText(self, "添加常量", "输入常量名称:")
         if ok:
             if not name:
                 QMessageBox.warning(self, "请输入常量名称", "请输入常量名称")
                 return
-            if name in constants:
+            if name in self.expenses_window.constants:
                 QMessageBox.warning(self, "常量名称已存在", "常量名称已存在")
                 return
-            constants[name] = 0
+            self.expenses_window.constants[name] = 0
             self.constants_updated.emit()
             self.load_constants()
 
     def delete_constant(self, name):
-        global constants
-
-        if name in constants:
-            del constants[name]
+        if name in self.expenses_window.constants:
+            del self.expenses_window.constants[name]
             self.constants_updated.emit()
             self.load_constants()
 
     def update_constant(self, name, value):
-        global constants
-
-        if name in constants:
-            constants[name] = value
+        if name in self.expenses_window.constants:
+            self.expenses_window.constants[name] = value
             self.constants_updated.emit()
 
 
@@ -120,9 +113,16 @@ class EstimatedAmount:
         self.expression = expression
         self.parent = parent
 
+    def get_constants(self):
+        if self.parent:
+            window = self.parent.window()
+            assert isinstance(window, ExpensesWindow)
+            return window.constants
+        return {}
+
     def evaluate(self):
         expr = self.expression
-        for name, value in constants.items():
+        for name, value in self.get_constants().items():
             expr = expr.replace(name, str(value))
         if expr.strip() == "":
             return 0.
@@ -163,34 +163,34 @@ class ExpenseItemWidget(QWidget):
 
         self.main_layout.addLayout(top_row)
 
-        bottom_row = QHBoxLayout()
+        self.bottom_row = QHBoxLayout()
 
         self.progress_bar = QProgressBar(minimum=0, maximum=200)
         self.progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        bottom_row.addWidget(self.progress_bar)
+        self.bottom_row.addWidget(self.progress_bar)
 
         self.rename_button = QPushButton("重命名")
         self.rename_button.clicked.connect(self.rename)
         self.rename_button.setFixedSize(24, 24)
-        bottom_row.addWidget(self.rename_button)
+        self.bottom_row.addWidget(self.rename_button)
 
         self.delete_button = QPushButton("删除")
         self.delete_button.clicked.connect(self.delete)
         self.delete_button.setFixedSize(24, 24)
         self.delete_button.setStyleSheet("QPushButton { background-color: #FF4D4F; color: #FFFFFF; }")
-        bottom_row.addWidget(self.delete_button)
+        self.bottom_row.addWidget(self.delete_button)
 
         self.modify_budget_button = QPushButton("修改预算")
         self.modify_budget_button.clicked.connect(self.modify_budget)
         self.modify_budget_button.setFixedSize(24, 24)
-        bottom_row.addWidget(self.modify_budget_button)
+        self.bottom_row.addWidget(self.modify_budget_button)
 
         self.record_button = QPushButton("记账")
         self.record_button.clicked.connect(self.toggle_record)
         self.record_button.setFixedSize(24, 24)
-        bottom_row.addWidget(self.record_button)
+        self.bottom_row.addWidget(self.record_button)
 
-        self.main_layout.addLayout(bottom_row)
+        self.main_layout.addLayout(self.bottom_row)
 
         self.update_progress()
 
@@ -243,8 +243,8 @@ class ExpenseItemWidget(QWidget):
             self.record_input.setPrefix("¥ ")
             self.record_input.setSingleStep(1.0)
 
-            index = self.main_layout.itemAt(1).layout().count() - 1
-            self.main_layout.itemAt(1).layout().insertWidget(index, self.record_input)
+            index = self.bottom_row.count() - 1
+            self.bottom_row.insertWidget(index, self.record_input)
             self.record_button.setText("确认")
         else:
             amount = self.record_input.value()
@@ -254,7 +254,7 @@ class ExpenseItemWidget(QWidget):
                 self.update_progress()
                 self.value_updated.emit(self)
 
-            self.main_layout.itemAt(1).layout().removeWidget(self.record_input)
+            self.bottom_row.removeWidget(self.record_input)
             self.record_input.deleteLater()
             self.record_input = None
             self.recording = False
@@ -484,8 +484,9 @@ class ExpenseTypeWidget(QWidget):
                     'actual_amount': child.actual_amount
                 })
             elif isinstance(child, ExpenseTypeWidget):
-                children_data.append(self.get_type_data(child))
+                children_data.append(child.get_type_data())
         return {
+            'type': 'type',
             'name': self.name,
             'children': children_data
         }
@@ -500,6 +501,8 @@ class ExpensesWindow(BaseWindow):
         self.setMinimumSize(800, 600)
 
         self.current_date = QDate.currentDate()
+        self.constants = {}
+        self.root_children = []
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -575,8 +578,6 @@ class ExpensesWindow(BaseWindow):
         self.load_month_data()
 
     def load_month_data(self):
-        global constants
-
         self.clear_root_items()
 
         year = self.current_date.year()
@@ -588,12 +589,11 @@ class ExpensesWindow(BaseWindow):
             with open(data_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            constants = data['constants']
+            self.constants = data['constants']
 
             self.load_types_from_data(data['children'])
         else:
-            constants = {}
-            self.root_children = []
+            self.constants = {}
 
         self.update_total_display()
 
@@ -612,22 +612,22 @@ class ExpensesWindow(BaseWindow):
         if os.path.exists(last_path):
             import shutil
             shutil.copy(last_path, data_path)
-
-        # TODO: 清空实际花费数据
+            cls.reset_actual(data_path)
 
     @staticmethod
     def reset_actual(data_path):
         """将一个记账数据文件的实际金额全部设为0"""
-        def reset_actual_item(item):
-            if item['type'] == 'item':
-                item['actual_amount'] = 0
-            elif item['type'] == 'type':
-                reset_actual_item(item['children'])
+        def reset_actual_children(data):
+            for child in data.get('children', []):
+                if child['type'] == 'item':
+                    child['actual_amount'] = 0
+                elif child['type'] == 'type':
+                    reset_actual_children(child)
 
         with open(data_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        reset_actual_item(data)
+        reset_actual_children(data)
 
         with open(data_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
@@ -669,7 +669,7 @@ class ExpensesWindow(BaseWindow):
         data_path = self.get_data_path(year, month)
 
         data = {
-            'constants': constants,
+            'constants': self.constants,
             'children': self.get_children_data()
         }
 
@@ -745,7 +745,7 @@ class ExpensesWindow(BaseWindow):
             self.total_progress_bar.setValue(0)
         else:
             progress = actual / estimated
-            ratio = max(min(progress / 2, 0), 1)
+            ratio = min(max(progress / 2, 0), 1)
 
             self.total_progress_bar.setValue(int(ratio * 200))
 
@@ -782,7 +782,7 @@ class ExpensesWindow(BaseWindow):
         return total
 
     def open_constants_window(self):
-        self.constants_window = ConstantEditWindow()
+        self.constants_window = ConstantEditWindow(self)
         self.constants_window.constants_updated.connect(self.on_constants_updated)
         self.constants_window.show()
 
