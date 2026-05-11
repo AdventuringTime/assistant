@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QDialog, QMainWindow
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import Qt, QIcon
 from core.global_constants import icon_path
 
 
@@ -56,6 +56,9 @@ class BaseWindow(QMainWindow):
         
         # 设置窗口背景颜色
         self.setStyleSheet("QMainWindow { background-color: #1E1E1E; }")
+
+        # 设置窗口关闭时自动销毁
+        self.setAttribute(Qt.WA_DeleteOnClose)
         
         # 注册窗口到窗口管理器
         WindowsManager.register_window(self)
