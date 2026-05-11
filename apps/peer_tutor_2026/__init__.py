@@ -29,7 +29,7 @@ class TaskDialog(BaseDialog):
             self.name_edit.setText(task.get('name', ''))
 
         self.required_label = QLabel('所需次数:')
-        self.required_spin = QDoubleSpinBox()
+        self.required_spin = QDoubleSpinBox(decimals=2)
         self.required_spin.setRange(0.0, 1e15)
         if task:
             self.required_spin.setValue(task.get('required', 1.0))
@@ -145,7 +145,8 @@ class TaskItem(QWidget):
     def on_progress_clicked(self, event):
         self.completed, ok = QInputDialog.getDouble(self, '修改进度', 
             f'请输入完成数量:',
-            value=self.completed)
+            value=self.completed,
+            decimals=2)
 
         if ok:
             self.task['completed'] = self.completed
