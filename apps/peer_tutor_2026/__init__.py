@@ -19,6 +19,7 @@ class TaskDialog(BaseDialog):
         super().__init__(parent)
         self.task = task
         self.setWindowTitle('任务')
+        self.setModal(True)
 
         self.layout_ = QVBoxLayout(self)
 
@@ -39,10 +40,8 @@ class TaskDialog(BaseDialog):
         self.layout_.addWidget(self.required_spin)
 
         self.button_layout = QHBoxLayout()
-        self.button_layout.addStretch()
 
-        self.save_button = QPushButton('保存')
-        self.save_button.clicked.connect(self.on_save)
+        self.button_layout.addStretch()
 
         if task:
             self.delete_button = QPushButton('删除')
@@ -50,7 +49,10 @@ class TaskDialog(BaseDialog):
             self.delete_button.clicked.connect(self.on_delete)
             self.button_layout.addWidget(self.delete_button)
     
+        self.save_button = QPushButton('保存')
+        self.save_button.clicked.connect(self.on_save)
         self.button_layout.addWidget(self.save_button)
+
         self.layout_.addLayout(self.button_layout)
 
     def on_save(self):
