@@ -137,7 +137,7 @@ class ExpenseItemWidget(QWidget):
     renamed = Signal(object)
     value_updated = Signal(object)
 
-    def __init__(self, name, estimated_amount="0", actual_amount=0., parent=None):
+    def __init__(self, name, parent, estimated_amount="0", actual_amount=0.):
         super().__init__(parent)
         self.name = name
         self.estimated_amount_object = EstimatedAmount(estimated_amount, parent=self)
@@ -269,7 +269,7 @@ class ExpenseTypeWidget(QWidget):
     child_value_updated = Signal(object)
     child_added = Signal(object)
 
-    def __init__(self, name, parent=None):
+    def __init__(self, name, parent):
         super().__init__(parent)
         self.name = name
         self.children_ = []
@@ -357,7 +357,7 @@ class ExpenseTypeWidget(QWidget):
     def add_item(self):
         name, ok = QInputDialog.getText(self, "添加记账项", "输入记账项名称:")
         if ok and name:
-            item = ExpenseItemWidget(name)
+            item = ExpenseItemWidget(name, self)
             item.removed.connect(self.remove_item)
             item.renamed.connect(lambda i: self.child_renamed.emit(i))
             item.value_updated.connect(self.on_child_value_updated)
@@ -369,7 +369,7 @@ class ExpenseTypeWidget(QWidget):
     def add_subtype(self):
         name, ok = QInputDialog.getText(self, "添加子类型", "输入子类型名称:")
         if ok and name:
-            subtype = ExpenseTypeWidget(name)
+            subtype = ExpenseTypeWidget(name, self)
             subtype.removed.connect(self.remove_child)
             subtype.renamed.connect(lambda s: self.child_renamed.emit(s))
             subtype.child_removed.connect(self.on_child_removed)
@@ -453,6 +453,7 @@ class ExpenseTypeWidget(QWidget):
             if child_data['type'] == 'item':
                 item = ExpenseItemWidget(
                     child_data['name'],
+                    self,
                     child_data['estimated_amount'],
                     child_data.get('actual_amount', 0)
                 )
@@ -462,7 +463,7 @@ class ExpenseTypeWidget(QWidget):
                 self.children_.append(item)
                 self.children_layout.addWidget(item)
             elif child_data['type'] == 'type':
-                subtype = ExpenseTypeWidget(child_data['name'])
+                subtype = ExpenseTypeWidget(child_data['name'], self)
                 subtype.removed.connect(self.remove_child)
                 subtype.renamed.connect(lambda s: self.child_renamed.emit(s))
                 subtype.child_removed.connect(self.on_child_removed)
@@ -638,6 +639,7 @@ class ExpensesWindow(BaseWindow):
             if child_data.get('type') == 'item' or 'children' not in child_data:
                 item = ExpenseItemWidget(
                     child_data['name'],
+                    self,
                     child_data.get('estimated_amount', "0"),
                     child_data.get('actual_amount', 0)
                 )
@@ -647,7 +649,7 @@ class ExpensesWindow(BaseWindow):
                 self.root_children.append(item)
                 self.scroll_layout.addWidget(item)
             else:
-                exp_type = ExpenseTypeWidget(child_data['name'])
+                exp_type = ExpenseTypeWidget(child_data['name'], self)
                 exp_type.removed.connect(self.remove_root_type)
                 exp_type.renamed.connect(self.update_and_save)
                 exp_type.child_removed.connect(self.update_and_save)
@@ -658,6 +660,7 @@ class ExpensesWindow(BaseWindow):
                     exp_type.load_type_children(child_data['children'])
                 self.root_children.append(exp_type)
                 self.scroll_layout.addWidget(exp_type)
+        self.scroll_layout.addStretch()
 
     @classmethod
     def get_data_path(cls, year, month):
@@ -699,7 +702,7 @@ class ExpensesWindow(BaseWindow):
     def add_root_item(self):
         name, ok = QInputDialog.getText(self, "添加记账项", "输入记账项名称:")
         if ok and name:
-            item = ExpenseItemWidget(name, "0")
+            item = ExpenseItemWidget(name, self, "0")
             item.removed.connect(self.remove_root_item)
             item.value_updated.connect(self.update_and_save)
             self.root_children.append(item)
@@ -709,7 +712,7 @@ class ExpensesWindow(BaseWindow):
     def add_root_type(self):
         name, ok = QInputDialog.getText(self, "添加记账类型", "输入记账类型名称:")
         if ok and name:
-            exp_type = ExpenseTypeWidget(name)
+            exp_type = ExpenseTypeWidget(name, self)
             exp_type.removed.connect(self.remove_root_type)
             exp_type.renamed.connect(self.update_and_save)
             exp_type.child_removed.connect(self.update_and_save)
