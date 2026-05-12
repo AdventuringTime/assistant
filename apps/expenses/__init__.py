@@ -42,7 +42,9 @@ class ConstantEditWindow(BaseWindow):
         self.setWindowTitle("常量编辑")
         self.setMinimumSize(400, 300)
 
-        layout = QVBoxLayout(self)
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        layout = QVBoxLayout(central_widget)
 
         self.constants_scroll_area = QScrollArea()
         self.constants_scroll_area.setWidgetResizable(True)
@@ -634,7 +636,6 @@ class ExpensesWindow(BaseWindow):
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     def load_types_from_data(self, types_data):
-        self.root_children = []
         for child_data in types_data:
             if child_data.get('type') == 'item' or 'children' not in child_data:
                 item = ExpenseItemWidget(
@@ -694,9 +695,13 @@ class ExpensesWindow(BaseWindow):
         return children_data
 
     def clear_root_items(self):
-        for item in self.root_children:
-            self.scroll_layout.removeWidget(item)
-            item.deleteLater()
+        for i in reversed(range(self.scroll_layout.count())):
+            item = self.scroll_layout.itemAt(i)
+            if item:
+                widget = item.widget()
+                if widget:
+                    widget.deleteLater()
+                self.scroll_layout.removeItem(item)
         self.root_children = []
 
     def add_root_item(self):
@@ -706,7 +711,7 @@ class ExpensesWindow(BaseWindow):
             item.removed.connect(self.remove_root_item)
             item.value_updated.connect(self.update_and_save)
             self.root_children.append(item)
-            self.scroll_layout.addWidget(item)
+            self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, item)
             self.update_and_save()
 
     def add_root_type(self):
@@ -720,7 +725,7 @@ class ExpensesWindow(BaseWindow):
             exp_type.child_value_updated.connect(self.update_and_save)
             exp_type.child_added.connect(self.update_and_save)
             self.root_children.append(exp_type)
-            self.scroll_layout.addWidget(exp_type)
+            self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, exp_type)
             self.update_and_save()
 
     def remove_root_item(self, item):
