@@ -182,6 +182,7 @@ class TaskItem(QWidget):
     def on_dialog_save(self, data):
         self.task['name'] = data['name']
         self.task['required'] = data['required']
+        self.task['weight'] = data['weight']
         self.name_label.setText(data['name'])
         self.required = data['required']
         self.progress_percent = ((self.completed / self.required) * 100
@@ -294,7 +295,7 @@ class TaskWindow(BaseWindow):
                 total_percent += task.progress_percent * weight
                 total_weight += weight
 
-                total_percent = total_percent / total_weight # 前文代码注意确保 total_weight 不为 0
+            total_percent = total_percent / total_weight # 前文代码注意确保 total_weight 不为 0
         
         progress_value = int(total_percent)
         if progress_value < 0:
