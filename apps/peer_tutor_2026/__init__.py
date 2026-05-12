@@ -60,7 +60,8 @@ class TaskDialog(BaseDialog):
         self.close()
 
     def on_delete(self):
-        reply = QMessageBox.question(self, '删除任务', '删除任务？', QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        reply = QMessageBox.question(self, '删除任务', '删除任务？',
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             self.on_delete_signal.emit()
             self.close()
@@ -175,7 +176,8 @@ class TaskItem(QWidget):
         self.task['required'] = data['required']
         self.name_label.setText(data['name'])
         self.required = data['required']
-        self.progress_percent = (self.completed / self.required) * 100 if self.required > 0 else 100
+        self.progress_percent = ((self.completed / self.required) * 100
+                                 if self.required > 0 else 100)
         self.progress_bar.setRange(0, 100)
         progress_value = int(self.progress_percent)
         if progress_value < 0:
@@ -193,7 +195,8 @@ class TaskWindow(BaseWindow):
         self.setWindowTitle('朋辈助学')
         self.setMinimumSize(600, 400)
 
-        self.week_displayed = floor(get_this_week(start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
+        self.week_displayed = floor(get_this_week(
+            start_date=datetime.datetime(2026, 5, 11, 16, 0, 0))) + 1 # 每天过半刷新
         self.tasks = []
         self.load_tasks()
 
@@ -300,13 +303,21 @@ class TaskWindow(BaseWindow):
             QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
 
     def open_folder(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
+        data_dir = os.path.join(os.path.dirname(__file__), 'data',
+                                str(self.week_displayed))
         self._open_folder_of_dir(data_dir)
 
     def open_today_folder(self):
         days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        day_of_week = datetime.datetime.now().weekday()
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed), days_of_week[day_of_week])
+        now = datetime.datetime.now()
+        day_of_week = now.weekday()
+        if now.hour < 16: # 16 时前为前一天
+            day_of_week -= 1
+            if day_of_week < 0:
+                day_of_week += 7
+
+        data_dir = os.path.join(os.path.dirname(__file__), 'data',
+                                str(self.week_displayed), days_of_week[day_of_week])
         self._open_folder_of_dir(data_dir)
 
     def on_task_updated(self):
