@@ -3,7 +3,7 @@ import json
 import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout, 
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
-                               QLineEdit, QDoubleSpinBox, QMessageBox)
+                               QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox)
 from PySide6.QtCore import Qt, Signal
 from core.base_window import BaseWindow, BaseDialog
 from core.functions import get_this_week
@@ -27,17 +27,24 @@ class TaskDialog(BaseDialog):
         self.name_edit = QLineEdit()
         if task:
             self.name_edit.setText(task.get('name', ''))
+        self.layout_.addWidget(self.name_label)
+        self.layout_.addWidget(self.name_edit)
 
         self.required_label = QLabel('所需次数:')
         self.required_spin = QDoubleSpinBox(decimals=2)
         self.required_spin.setRange(0.0, 1e15)
         if task:
             self.required_spin.setValue(task.get('required', 1.0))
-
-        self.layout_.addWidget(self.name_label)
-        self.layout_.addWidget(self.name_edit)
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
+
+        self.weight_label = QLabel('权重:')
+        self.weight_spin = QSpinBox()
+        self.weight_spin.setRange(1, 2147483647)
+        if task:
+            self.weight_spin.setValue(task.get('weight', 100))
+        self.layout_.addWidget(self.weight_label)
+        self.layout_.addWidget(self.weight_spin)
 
         self.button_layout = QHBoxLayout()
 
@@ -70,7 +77,8 @@ class TaskDialog(BaseDialog):
         return {
             'name': self.name_edit.text(),
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
-            'required': self.required_spin.value()
+            'required': self.required_spin.value(),
+            'weight': self.weight_spin.value()
         }
 
 
@@ -279,10 +287,14 @@ class TaskWindow(BaseWindow):
 
     def update_total_progress(self):
         total_percent = 0
+        total_weight = 0
         if self.task_items:
             for task in self.task_items:
-                total_percent += task.progress_percent
-            total_percent = total_percent / len(self.task_items)
+                weight = task.task.get('weight', 100)
+                total_percent += task.progress_percent * weight
+                total_weight += weight
+
+                total_percent = total_percent / total_weight # 前文代码注意确保 total_weight 不为 0
         
         progress_value = int(total_percent)
         if progress_value < 0:
