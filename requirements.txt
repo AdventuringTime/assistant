@@ -1,2 +1,9 @@
+PySide6
+glom
+sortedcontainers
+pandas
+requests
+beautifulsoup4
+transformers
 numpy
-pyside6
+winotify
