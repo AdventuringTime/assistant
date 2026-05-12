@@ -15,18 +15,19 @@ class ConstantRowWidget(QWidget):
         super().__init__(parent)
         self.name = name
 
-        row_layout = QHBoxLayout(self)
+        self.row_layout = QHBoxLayout(self)
 
-        name_label = QLabel(self.name)
-        name_label.setFixedWidth(30)
-        row_layout.addWidget(name_label)
+        self.name_label = QLabel(self.name)
+        self.name_label.setFixedWidth(30)
+        self.row_layout.addWidget(self.name_label)
 
         self.value_edit = QSpinBox()
         self.value_edit.setValue(value)
-        row_layout.addWidget(self.value_edit)
+        self.row_layout.addWidget(self.value_edit)
 
-        delete_button = QPushButton("删除")
-        row_layout.addWidget(delete_button)
+        self.delete_button = QPushButton("删除")
+        self.delete_button.setFixedWidth(24)
+        self.row_layout.addWidget(self.delete_button)
 
     def get_value(self):
         return self.value_edit.value()
@@ -84,6 +85,8 @@ class ConstantEditWindow(BaseWindow):
             row_widget.delete_button.clicked.connect(
                 lambda checked=False, name=name: self.delete_constant(name))
             self.constants_layout.addWidget(row_widget)
+
+        self.constants_layout.addStretch()
 
     def add_constant(self):
         name, ok = QInputDialog.getText(self, "添加常量", "输入常量名称:")
