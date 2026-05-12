@@ -27,6 +27,7 @@ class ConstantRowWidget(QWidget):
 
         self.delete_button = QPushButton("删除")
         self.delete_button.setFixedWidth(24)
+        self.delete_button.setStyleSheet("QPushButton { background-color: #FF4D4D; color: #FFFFFF; } QPushButton:hover { background-color: #FF3333; } QPushButton:pressed { background-color: #FF2222; }")
         self.row_layout.addWidget(self.delete_button)
 
     def get_value(self):
@@ -182,7 +183,7 @@ class ExpenseItemWidget(QWidget):
         self.delete_button = QPushButton("删除")
         self.delete_button.clicked.connect(self.delete)
         self.delete_button.setFixedSize(24, 24)
-        self.delete_button.setStyleSheet("QPushButton { background-color: #FF4D4F; color: #FFFFFF; }")
+        self.delete_button.setStyleSheet("QPushButton { background-color: #FF4D4D; color: #FFFFFF; } QPushButton:hover { background-color: #FF3333; } QPushButton:pressed { background-color: #FF2222; }")
         self.bottom_row.addWidget(self.delete_button)
 
         self.modify_budget_button = QPushButton("修改预算")
