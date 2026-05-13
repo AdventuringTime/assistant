@@ -5,37 +5,26 @@ from PySide6.QtWidgets import (
     QPushButton, QProgressBar, QScrollArea, QDateEdit, QMessageBox,
     QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox
 )
-from PySide6.QtCore import QDate, Signal
+from PySide6.QtCore import QDate
 from PySide6.QtSvgWidgets import QSvgWidget
 
 from core.base_window import BaseWindow
 
-class ConstantRowWidget(QWidget):
-    def __init__(self, name, value, parent=None):
-        super().__init__(parent)
-        self.name = name
 
-        self.row_layout = QHBoxLayout(self)
-
-        self.name_label = QLabel(self.name)
-        self.name_label.setFixedWidth(30)
-        self.row_layout.addWidget(self.name_label)
-
-        self.value_edit = QSpinBox()
-        self.value_edit.setValue(value)
-        self.row_layout.addWidget(self.value_edit)
-
-        self.delete_button = QPushButton("删除")
-        self.delete_button.setFixedWidth(24)
-        self.delete_button.setStyleSheet("QPushButton { background-color: #FF4D4D; color: #FFFFFF; } QPushButton:hover { background-color: #FF3333; } QPushButton:pressed { background-color: #FF2222; }")
-        self.row_layout.addWidget(self.delete_button)
-
-    def get_value(self):
-        return self.value_edit.value()
+def evaluate_estimated_amount(expression="0", constants=None):
+    constants = constants or {}
+    expr = expression
+    for name, value in constants.items():
+        expr = expr.replace(name, str(value))
+    if expr.strip() == "":
+        return 0.
+    try:
+        return float(eval(expr))
+    except:
+        return "Error"
 
 
 class ConstantEditWindow(BaseWindow):
-    constants_updated = Signal()
     def __init__(self, parent):
         super().__init__(parent)
         self.expenses_window = parent.window()
@@ -68,23 +57,35 @@ class ConstantEditWindow(BaseWindow):
         self.load_constants()
 
     def load_constants(self):
-        # 清空当前布局
         while self.constants_layout.count() > 0:
             item = self.constants_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-        self.row_widgets = []
 
-        # 添加常量行
         for name, value in self.expenses_window.constants.items():
-            row_widget = ConstantRowWidget(name, value)
-            self.row_widgets.append(row_widget)
+            row_widget = QWidget()
+            row_layout = QHBoxLayout(row_widget)
+            
+            name_label = QLabel(name)
+            name_label.setFixedWidth(30)
+            row_layout.addWidget(name_label)
+
+            value_edit = QSpinBox()
+            value_edit.setValue(value)
+            row_layout.addWidget(value_edit)
+
+            delete_button = QPushButton("删除")
+            delete_button.setFixedWidth(24)
+            delete_button.setStyleSheet("QPushButton { background-color: #FF4D4D; color: #FFFFFF; } QPushButton:hover { background-color: #FF3333; } QPushButton:pressed { background-color: #FF2222; }")
+            row_layout.addWidget(delete_button)
+
             # 预存 name，防止全部连接到最后一项
-            row_widget.value_edit.valueChanged.connect(
-                lambda value, name=name: self.update_constant(name, value))
+            value_edit.valueChanged.connect(
+                lambda val, name=name: self.update_constant(name, val))
             # 增加一个 checked，因为按钮点击事件会多传一个参数
-            row_widget.delete_button.clicked.connect(
+            delete_button.clicked.connect(
                 lambda checked=False, name=name: self.delete_constant(name))
+            
             self.constants_layout.addWidget(row_widget)
 
         self.constants_layout.addStretch()
@@ -99,63 +100,33 @@ class ConstantEditWindow(BaseWindow):
                 QMessageBox.warning(self, "常量名称已存在", "常量名称已存在")
                 return
             self.expenses_window.constants[name] = 0
-            self.constants_updated.emit()
+            self.expenses_window.save_and_reload()
             self.load_constants()
 
     def delete_constant(self, name):
         if name in self.expenses_window.constants:
             del self.expenses_window.constants[name]
-            self.constants_updated.emit()
+            self.expenses_window.save_and_reload()
             self.load_constants()
 
     def update_constant(self, name, value):
         if name in self.expenses_window.constants:
             self.expenses_window.constants[name] = value
-            self.constants_updated.emit()
-
-
-class EstimatedAmount:
-    def __init__(self, expression="0", parent=None):
-        self.expression = expression
-        self.parent = parent
-
-    def get_constants(self):
-        if self.parent:
-            window = self.parent.window()
-            assert isinstance(window, ExpensesWindow)
-            return window.constants
-        return {}
-
-    def evaluate(self):
-        expr = self.expression
-        for name, value in self.get_constants().items():
-            expr = expr.replace(name, str(value))
-        if expr.strip() == "":
-            return 0.
-        try:
-            return float(eval(expr))
-        except:
-            return "Error"
+            self.expenses_window.save_and_reload()
 
 
 class ExpenseItemWidget(QWidget):
-    removed = Signal(object)
-    renamed = Signal(object)
-    value_updated = Signal(object)
-
-    def __init__(self, name, parent, estimated_amount="0", actual_amount=0.):
+    def __init__(self, item_data, constants, parent=None):
         super().__init__(parent)
-        self.name = name
-        self.estimated_amount_object = EstimatedAmount(estimated_amount, parent=self)
-        self.actual_amount = actual_amount
+        self.item_data = item_data
+        self.constants = constants
         self.recording = False
-        self.record_input = None
 
         self.main_layout = QVBoxLayout(self)
 
         top_row = QHBoxLayout()
 
-        self.name_label = QLabel(self.name)
+        self.name_label = QLabel(self.item_data['name'])
         top_row.addWidget(self.name_label)
 
         top_row.addStretch()
@@ -164,7 +135,7 @@ class ExpenseItemWidget(QWidget):
         self.estimated_label = QLabel("Error" if estimated_value == "Error" else f"{estimated_value:.2f}")
         top_row.addWidget(self.estimated_label)
 
-        self.actual_label = QLabel(f"{self.actual_amount:.2f}")
+        self.actual_label = QLabel(f"{self.item_data.get('actual_amount', 0.):.2f}")
         top_row.addWidget(self.actual_label)
 
         self.main_layout.addLayout(top_row)
@@ -201,10 +172,11 @@ class ExpenseItemWidget(QWidget):
         self.update_progress()
 
     def get_estimated_value(self):
-        return self.estimated_amount_object.evaluate()
+        return evaluate_estimated_amount(self.item_data.get('estimated_amount', "0"), self.constants)
 
     def update_progress(self):
         estimated = self.get_estimated_value()
+        actual = self.item_data.get('actual_amount', 0.)
         
         if estimated == "Error":
             self.estimated_label.setText("Error")
@@ -214,7 +186,7 @@ class ExpenseItemWidget(QWidget):
         if estimated == 0 or estimated == "Error":
             self.progress_bar.setValue(0)
         else:
-            progress = self.actual_amount / estimated
+            progress = actual / estimated
             ratio = min(max(progress / 2, 0), 1)
             self.progress_bar.setValue(int(ratio * 200))
             r = int(255 * ratio)
@@ -222,23 +194,21 @@ class ExpenseItemWidget(QWidget):
             self.progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
     def rename(self):
-        new_name, ok = QInputDialog.getText(self, "重命名", "输入新名称:", text=self.name)
+        new_name, ok = QInputDialog.getText(self, "重命名", "输入新名称:", text=self.item_data['name'])
         if ok and new_name:
-            self.name = new_name
+            self.item_data['name'] = new_name
             self.name_label.setText(new_name)
-            self.renamed.emit(self)
+            self.window().save_and_reload()
 
     def delete(self):
-        self.removed.emit(self)
+        self.window().remove_item(self.item_data)
 
     def modify_budget(self):
-        new_budget, ok = QInputDialog.getText(self, "修改预算", "输入新预算:", text=self.estimated_amount_object.expression)
-        if ok and new_budget != self.estimated_amount_object.expression:
-            self.estimated_amount_object = EstimatedAmount(new_budget, parent=self)
-            estimated = self.get_estimated_value()
-            self.estimated_label.setText("Error" if estimated == "Error" else f"{estimated:.2f}")
+        new_budget, ok = QInputDialog.getText(self, "修改预算", "输入新预算:", text=self.item_data.get('estimated_amount', "0"))
+        if ok and new_budget != self.item_data.get('estimated_amount'):
+            self.item_data['estimated_amount'] = new_budget
             self.update_progress()
-            self.value_updated.emit(self)
+            self.window().save_and_reload()
 
     def toggle_record(self):
         if not self.recording:
@@ -255,10 +225,10 @@ class ExpenseItemWidget(QWidget):
         else:
             amount = self.record_input.value()
             if amount != 0:
-                self.actual_amount += amount
-                self.actual_label.setText(f"{self.actual_amount:.2f}")
+                self.item_data['actual_amount'] = self.item_data.get('actual_amount', 0) + amount
+                self.actual_label.setText(f"{self.item_data['actual_amount']:.2f}")
                 self.update_progress()
-                self.value_updated.emit(self)
+                self.window().save_and_reload()
 
             self.bottom_row.removeWidget(self.record_input)
             self.record_input.deleteLater()
@@ -268,17 +238,10 @@ class ExpenseItemWidget(QWidget):
 
 
 class ExpenseTypeWidget(QWidget):
-    removed = Signal(object)
-    renamed = Signal(object)
-    child_removed = Signal(object)
-    child_renamed = Signal(object)
-    child_value_updated = Signal(object)
-    child_added = Signal(object)
-
-    def __init__(self, name, parent):
+    def __init__(self, type_data, constants, parent=None):
         super().__init__(parent)
-        self.name = name
-        self.children_ = []
+        self.type_data = type_data
+        self.constants = constants
         self.is_expanded = True
 
         self.main_layout = QVBoxLayout(self)
@@ -292,7 +255,7 @@ class ExpenseTypeWidget(QWidget):
         self.expand_svg.setFixedSize(24, 24)
         top_row.addWidget(self.expand_svg)
 
-        self.name_label = QLabel(self.name)
+        self.name_label = QLabel(self.type_data['name'])
         self.name_label.setStyleSheet("font-weight: bold; font-size: 14px;")
         top_row.addWidget(self.name_label)
 
@@ -345,94 +308,90 @@ class ExpenseTypeWidget(QWidget):
 
         self.header.mousePressEvent = lambda e: self.toggle_expand()
 
+        self.load_children()
+        self.update_totals()
+
     def toggle_expand(self):
         self.is_expanded = not self.is_expanded
         self.expand_svg.load("assets/svg/expanded.svg" if self.is_expanded else "assets/svg/collapsed.svg")
         self.children_container.setVisible(self.is_expanded)
 
     def rename(self):
-        new_name, ok = QInputDialog.getText(self, "重命名", "输入新名称:", text=self.name)
+        new_name, ok = QInputDialog.getText(self, "重命名", "输入新名称:", text=self.type_data['name'])
         if ok and new_name:
-            self.name = new_name
+            self.type_data['name'] = new_name
             self.name_label.setText(new_name)
-            self.renamed.emit(self)
+            self.window().save_and_reload()
 
     def delete(self):
-        self.removed.emit(self)
+        self.window().remove_type(self.type_data)
 
     def add_item(self):
         name, ok = QInputDialog.getText(self, "添加记账项", "输入记账项名称:")
         if ok and name:
-            item = ExpenseItemWidget(name, self)
-            item.removed.connect(self.remove_item)
-            item.renamed.connect(lambda i: self.child_renamed.emit(i))
-            item.value_updated.connect(self.on_child_value_updated)
-            self.children_.append(item)
-            self.children_layout.addWidget(item)
-            self.update_totals()
-            self.child_added.emit(item)
+            if 'children' not in self.type_data:
+                self.type_data['children'] = []
+            self.type_data['children'].append({
+                'type': 'item',
+                'name': name,
+                'estimated_amount': "0",
+                'actual_amount': 0
+            })
+            self.window().save_and_reload()
 
     def add_subtype(self):
         name, ok = QInputDialog.getText(self, "添加子类型", "输入子类型名称:")
         if ok and name:
-            subtype = ExpenseTypeWidget(name, self)
-            subtype.removed.connect(self.remove_child)
-            subtype.renamed.connect(lambda s: self.child_renamed.emit(s))
-            subtype.child_removed.connect(self.on_child_removed)
-            subtype.child_renamed.connect(lambda s: self.child_renamed.emit(s))
-            subtype.child_value_updated.connect(self.on_child_value_updated)
-            subtype.child_added.connect(lambda s: self.child_added.emit(s))
-            self.children_.append(subtype)
-            self.children_layout.addWidget(subtype)
-            self.update_totals()
-            self.child_added.emit(subtype)
+            if 'children' not in self.type_data:
+                self.type_data['children'] = []
+            self.type_data['children'].append({
+                'type': 'type',
+                'name': name,
+                'children': []
+            })
+            self.window().save_and_reload()
 
-    def remove_item(self, item):
-        if item in self.children_:
-            self.children_layout.removeWidget(item)
-            item.deleteLater()
-            self.children_.remove(item)
-            self.update_totals()
-            self.child_removed.emit(item)
+    def load_children(self):
+        while self.children_layout.count() > 0:
+            item = self.children_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
 
-    def remove_child(self, child):
-        if child in self.children_:
-            self.children_layout.removeWidget(child)
-            child.deleteLater()
-            self.children_.remove(child)
-            self.update_totals()
-            self.child_removed.emit(child)
+        children = self.type_data.get('children', [])
+        for child_data in children:
+            if child_data['type'] == 'item':
+                item_widget = ExpenseItemWidget(child_data, self.constants)
+                self.children_layout.addWidget(item_widget)
+            elif child_data['type'] == 'type':
+                type_widget = ExpenseTypeWidget(child_data, self.constants)
+                self.children_layout.addWidget(type_widget)
 
-    def on_child_removed(self, child):
-        self.update_totals()
-        self.child_removed.emit(child)
-
-    def on_child_value_updated(self, child):
-        self.update_totals()
-        self.child_value_updated.emit(child)
-
-    def get_total_estimated(self):
+    def get_total_estimated(self, type_data=None):
+        if type_data is None:
+            type_data = self.type_data
         total = 0.
-        for child in self.children_:
-            if isinstance(child, ExpenseItemWidget):
-                val = child.get_estimated_value()
+        for child in type_data.get('children', []):
+            if child['type'] == 'item':
+                val = evaluate_estimated_amount(child.get('estimated_amount', "0"), self.constants)
                 if val == "Error":
                     return "Error"
                 total += val
-            elif isinstance(child, ExpenseTypeWidget):
-                val = child.get_total_estimated()
+            elif child['type'] == 'type':
+                val = self.get_total_estimated(child)
                 if val == "Error":
                     return "Error"
                 total += val
         return total
 
-    def get_total_actual(self):
+    def get_total_actual(self, type_data=None):
+        if type_data is None:
+            type_data = self.type_data
         total = 0.
-        for child in self.children_:
-            if isinstance(child, ExpenseItemWidget):
-                total += child.actual_amount
-            elif isinstance(child, ExpenseTypeWidget):
-                total += child.get_total_actual()
+        for child in type_data.get('children', []):
+            if child['type'] == 'item':
+                total += child.get('actual_amount', 0)
+            elif child['type'] == 'type':
+                total += self.get_total_actual(child)
         return total
 
     def update_totals(self):
@@ -454,50 +413,6 @@ class ExpenseTypeWidget(QWidget):
             g = int(255 * (1 - ratio))
             self.progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
-    def load_type_children(self, children_data):
-        for child_data in children_data:
-            if child_data['type'] == 'item':
-                item = ExpenseItemWidget(
-                    child_data['name'],
-                    self,
-                    child_data['estimated_amount'],
-                    child_data.get('actual_amount', 0)
-                )
-                item.removed.connect(self.remove_item)
-                item.renamed.connect(lambda i: self.child_renamed.emit(i))
-                item.value_updated.connect(self.on_child_value_updated)
-                self.children_.append(item)
-                self.children_layout.addWidget(item)
-            elif child_data['type'] == 'type':
-                subtype = ExpenseTypeWidget(child_data['name'], self)
-                subtype.removed.connect(self.remove_child)
-                subtype.renamed.connect(lambda s: self.child_renamed.emit(s))
-                subtype.child_removed.connect(self.on_child_removed)
-                subtype.child_renamed.connect(lambda s: self.child_renamed.emit(s))
-                subtype.child_value_updated.connect(self.on_child_value_updated)
-                if 'children' in child_data:
-                    subtype.load_type_children(child_data['children'])
-                self.children_.append(subtype)
-                self.children_layout.addWidget(subtype)
-
-    def get_type_data(self):
-        children_data = []
-        for child in self.children_:
-            if isinstance(child, ExpenseItemWidget):
-                children_data.append({
-                    'type': 'item',
-                    'name': child.name,
-                    'estimated_amount': child.estimated_amount_object.expression,
-                    'actual_amount': child.actual_amount
-                })
-            elif isinstance(child, ExpenseTypeWidget):
-                children_data.append(child.get_type_data())
-        return {
-            'type': 'type',
-            'name': self.name,
-            'children': children_data
-        }
-
 
 class ExpensesWindow(BaseWindow):
     data_dir = "apps/expenses/data"
@@ -509,7 +424,7 @@ class ExpensesWindow(BaseWindow):
 
         self.current_date = QDate.currentDate()
         self.constants = {}
-        self.root_children = []
+        self.children_ = []
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -585,8 +500,6 @@ class ExpensesWindow(BaseWindow):
         self.load_month_data()
 
     def load_month_data(self):
-        self.clear_root_items()
-
         year = self.current_date.year()
         month = self.current_date.month()
 
@@ -595,13 +508,29 @@ class ExpensesWindow(BaseWindow):
         if os.path.exists(data_path):
             with open(data_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-
-            self.constants = data['constants']
-
-            self.load_types_from_data(data['children'])
+                self.constants = data['constants']
+                self.children_ = data['children']
         else:
             self.constants = {}
+            self.children_ = []
 
+        self.render_ui()
+
+    def render_ui(self):
+        while self.scroll_layout.count() > 0:
+            item = self.scroll_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        for child_data in self.children_:
+            if child_data['type'] == 'item':
+                item_widget = ExpenseItemWidget(child_data, self.constants)
+                self.scroll_layout.addWidget(item_widget)
+            elif child_data['type'] == 'type':
+                type_widget = ExpenseTypeWidget(child_data, self.constants)
+                self.scroll_layout.addWidget(type_widget)
+
+        self.scroll_layout.addStretch()
         self.update_total_display()
 
     @classmethod
@@ -639,34 +568,6 @@ class ExpensesWindow(BaseWindow):
         with open(data_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
-    def load_types_from_data(self, types_data):
-        for child_data in types_data:
-            if child_data.get('type') == 'item' or 'children' not in child_data:
-                item = ExpenseItemWidget(
-                    child_data['name'],
-                    self,
-                    child_data.get('estimated_amount', "0"),
-                    child_data.get('actual_amount', 0)
-                )
-                item.removed.connect(self.remove_root_item)
-                item.renamed.connect(self.update_and_save)
-                item.value_updated.connect(self.update_and_save)
-                self.root_children.append(item)
-                self.scroll_layout.addWidget(item)
-            else:
-                exp_type = ExpenseTypeWidget(child_data['name'], self)
-                exp_type.removed.connect(self.remove_root_type)
-                exp_type.renamed.connect(self.update_and_save)
-                exp_type.child_removed.connect(self.update_and_save)
-                exp_type.child_renamed.connect(self.update_and_save)
-                exp_type.child_value_updated.connect(self.update_and_save)
-                exp_type.child_added.connect(self.update_and_save)
-                if 'children' in child_data:
-                    exp_type.load_type_children(child_data['children'])
-                self.root_children.append(exp_type)
-                self.scroll_layout.addWidget(exp_type)
-        self.scroll_layout.addStretch()
-
     @classmethod
     def get_data_path(cls, year, month):
         return os.path.join(cls.data_dir, f"{year}-{month:02d}.json")
@@ -678,73 +579,53 @@ class ExpensesWindow(BaseWindow):
 
         data = {
             'constants': self.constants,
-            'children': self.get_children_data()
+            'children': self.children_
         }
-
         with open(data_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
-    def get_children_data(self):
-        children_data = []
-        for item in self.root_children:
-            if isinstance(item, ExpenseItemWidget):
-                children_data.append({
-                    'type': 'item',
-                    'name': item.name,
-                    'estimated_amount': item.estimated_amount_object.expression,
-                    'actual_amount': item.actual_amount
-                })
-            elif isinstance(item, ExpenseTypeWidget):
-                children_data.append(item.get_type_data())
-        return children_data
-
-    def clear_root_items(self):
-        for i in reversed(range(self.scroll_layout.count())):
-            item = self.scroll_layout.itemAt(i)
-            if item:
-                widget = item.widget()
-                if widget:
-                    widget.deleteLater()
-                self.scroll_layout.removeItem(item)
-        self.root_children = []
+    def save_and_reload(self):
+        self.save_month_data()
+        self.render_ui()
 
     def add_root_item(self):
         name, ok = QInputDialog.getText(self, "添加记账项", "输入记账项名称:")
         if ok and name:
-            item = ExpenseItemWidget(name, self, "0")
-            item.removed.connect(self.remove_root_item)
-            item.value_updated.connect(self.update_and_save)
-            self.root_children.append(item)
-            self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, item)
-            self.update_and_save()
+            self.children_.append({
+                'type': 'item',
+                'name': name,
+                'estimated_amount': "0",
+                'actual_amount': 0
+            })
+            self.save_and_reload()
 
     def add_root_type(self):
         name, ok = QInputDialog.getText(self, "添加记账类型", "输入记账类型名称:")
         if ok and name:
-            exp_type = ExpenseTypeWidget(name, self)
-            exp_type.removed.connect(self.remove_root_type)
-            exp_type.renamed.connect(self.update_and_save)
-            exp_type.child_removed.connect(self.update_and_save)
-            exp_type.child_renamed.connect(self.update_and_save)
-            exp_type.child_value_updated.connect(self.update_and_save)
-            exp_type.child_added.connect(self.update_and_save)
-            self.root_children.append(exp_type)
-            self.scroll_layout.insertWidget(self.scroll_layout.count() - 1, exp_type)
-            self.update_and_save()
+            self.children_.append({
+                'type': 'type',
+                'name': name,
+                'children': []
+            })
+            self.save_and_reload()
 
-    def remove_root_item(self, item):
-        if item in self.root_children:
-            self.root_children.remove(item)
-            self.scroll_layout.removeWidget(item)
-            item.deleteLater()
-            self.update_and_save()
+    def remove_item(self, item_data):
+        self._remove_from_children(self.children_, item_data)
+        self.save_and_reload()
 
-    def remove_root_type(self, exp_type):
-        if exp_type in self.root_children:
-            self.root_children.remove(exp_type)
-            self.scroll_layout.removeWidget(exp_type)
-            exp_type.deleteLater()
-            self.update_and_save()
+    def remove_type(self, type_data):
+        self._remove_from_children(self.children_, type_data)
+        self.save_and_reload()
+
+    def _remove_from_children(self, children_list, target_data):
+        for i, child in enumerate(children_list):
+            if child is target_data:
+                del children_list[i]
+                return True
+            if child.get('children'):
+                if self._remove_from_children(child['children'], target_data):
+                    return True
+        return False
 
     def update_total_display(self):
         estimated = self.get_total_estimated()
@@ -765,39 +646,34 @@ class ExpensesWindow(BaseWindow):
             g = int(255 * (1 - ratio))
             self.total_progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
-    def update_and_save(self):
-        self.update_total_display()
-        self.save_month_data()
-
-    def get_total_estimated(self):
+    def get_total_estimated(self, children_list=None):
+        if children_list is None:
+            children_list = self.children_
         total = 0.
-        for item in self.root_children:
-            if isinstance(item, ExpenseItemWidget):
-                val = item.get_estimated_value()
+        for child in children_list:
+            if child['type'] == 'item':
+                val = evaluate_estimated_amount(child.get('estimated_amount', "0"), self.constants)
                 if val == "Error":
                     return "Error"
                 total += val
-            elif isinstance(item, ExpenseTypeWidget):
-                val = item.get_total_estimated()
+            elif child['type'] == 'type':
+                val = self.get_total_estimated(child.get('children', []))
                 if val == "Error":
                     return "Error"
                 total += val
         return total
 
-    def get_total_actual(self):
+    def get_total_actual(self, children_list=None):
+        if children_list is None:
+            children_list = self.children_
         total = 0.
-        for item in self.root_children:
-            if isinstance(item, ExpenseItemWidget):
-                total += item.actual_amount
-            elif isinstance(item, ExpenseTypeWidget):
-                total += item.get_total_actual()
+        for child in children_list:
+            if child['type'] == 'item':
+                total += child.get('actual_amount', 0)
+            elif child['type'] == 'type':
+                total += self.get_total_actual(child.get('children', []))
         return total
 
     def open_constants_window(self):
         self.constants_window = ConstantEditWindow(self)
-        self.constants_window.constants_updated.connect(self.on_constants_updated)
         self.constants_window.show()
-
-    def on_constants_updated(self):
-        self.update_total_display()
-        self.save_month_data()
