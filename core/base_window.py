@@ -83,6 +83,9 @@ class BaseDialog(QDialog):
         # 设置对话框背景颜色
         self.setStyleSheet("QDialog { background-color: #2D2D30; }")
         
+        # 设置窗口关闭时自动销毁
+        self.setAttribute(Qt.WA_DeleteOnClose)
+
         # 注册对话框到窗口管理器
         WindowsManager.register_window(self)
     
