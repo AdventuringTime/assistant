@@ -271,6 +271,10 @@ class ExpenseItemWidget(QWidget):
             index = self.bottom_row.count() - 1
             self.bottom_row.insertWidget(index, self.record_input)
             self.record_button.setText("确认")
+
+            self.record_input.returnPressed.connect(self.toggle_record)
+            self.record_input.setFocus()
+            self.record_input.selectAll()
         else:
             amount = self.record_input.value()
             if amount != 0:
