@@ -1,14 +1,14 @@
 import os
 import json
 from PySide6.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QLabel,
+    QDialog, QWidget, QHBoxLayout, QVBoxLayout, QLabel,
     QPushButton, QProgressBar, QScrollArea, QDateEdit, QMessageBox,
-    QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox
+    QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox, QListWidget
 )
-from PySide6.QtCore import QDate
+from PySide6.QtCore import QDate, Qt
 from PySide6.QtSvgWidgets import QSvgWidget
 
-from core.base_window import BaseWindow
+from core.base_window import BaseWindow, BaseDialog
 
 
 def evaluate_estimated_amount(expression="0", constants=None):
@@ -22,6 +22,56 @@ def evaluate_estimated_amount(expression="0", constants=None):
         return float(eval(expr))
     except:
         return "Error"
+
+
+class SortDialog(BaseDialog):
+    def __init__(self, parent, children, title="排序"):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setMinimumSize(400, 300)
+        self.children = children
+        
+        layout = QVBoxLayout(self)
+        
+        self.list_widget = QListWidget()
+        self.list_widget.setSelectionMode(QListWidget.SingleSelection)
+        self.list_widget.setDragDropMode(QListWidget.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.MoveAction)
+        layout.addWidget(self.list_widget)
+        
+        for child in self.children:
+            self.list_widget.addItem(child['name'])
+        
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        
+        ok_button = QPushButton("确定")
+        ok_button.clicked.connect(self.accept)
+        button_layout.addWidget(ok_button)
+        
+        cancel_button = QPushButton("取消")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+        
+        layout.addLayout(button_layout)
+        
+        self.result = None
+
+    def accept(self):
+        new_order = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            name = item.text()
+            for child in self.children:
+                if child['name'] == name and child not in new_order:
+                    new_order.append(child)
+                    break
+        self.result = new_order
+        super().accept()
+
+    def reject(self):
+        self.result = None
+        super().reject()
 
 
 class ConstantEditWindow(BaseWindow):
@@ -275,6 +325,11 @@ class ExpenseTypeWidget(QWidget):
         self.progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         bottom_row.addWidget(self.progress_bar)
 
+        self.sort_button = QPushButton("排序")
+        self.sort_button.clicked.connect(self.open_sort_dialog)
+        self.sort_button.setFixedSize(24, 24)
+        bottom_row.addWidget(self.sort_button)
+
         self.rename_button = QPushButton("重命名")
         self.rename_button.clicked.connect(self.rename)
         self.rename_button.setFixedSize(24, 24)
@@ -350,6 +405,21 @@ class ExpenseTypeWidget(QWidget):
                 'children': []
             })
             self.window().save_and_reload()
+
+    def open_sort_dialog(self):
+        children = self.type_data.get('children', [])
+        if not children:
+            return
+        
+        dialog = SortDialog(self, children, f"排序 - {self.type_data['name']}")
+        dialog.show()
+
+        def check_result():
+            if dialog.result is not None:
+                self.type_data['children'] = dialog.result
+                self.window().save_and_reload()
+
+        dialog.destroyed.connect(check_result)
 
     def load_children(self):
         while self.children_layout.count() > 0:
@@ -468,6 +538,11 @@ class ExpensesWindow(BaseWindow):
         self.total_progress_bar.setMaximum(200)
         self.total_progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         total_bottom_row.addWidget(self.total_progress_bar)
+
+        self.sort_button = QPushButton("排序")
+        self.sort_button.clicked.connect(self.open_sort_dialog)
+        self.sort_button.setFixedSize(24, 24)
+        total_bottom_row.addWidget(self.sort_button)
 
         self.modify_constants_button = QPushButton("修改常量")
         self.modify_constants_button.clicked.connect(self.open_constants_window)
@@ -616,6 +691,16 @@ class ExpensesWindow(BaseWindow):
                 'name': name,
                 'children': []
             })
+            self.save_and_reload()
+
+    def open_sort_dialog(self):
+        if not self.children_:
+            return
+        
+        dialog = SortDialog(self, self.children_, "排序")
+        
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.children_ = dialog.result
             self.save_and_reload()
 
     def remove_item(self, item_data):
