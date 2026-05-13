@@ -36,8 +36,6 @@ class SettingsWindow(BaseWindow):
         # 左侧类别列表
         self.category_scroll_area = QScrollArea()
         self.category_scroll_area.setWidgetResizable(True)
-        self.category_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.category_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.category_scroll_area.setFixedWidth(180)
 
         self.category_list = QListWidget()
@@ -73,7 +71,6 @@ class SettingsWindow(BaseWindow):
             # 创建滚动区域和内容窗口
             scroll_area = QScrollArea()
             scroll_area.setWidgetResizable(True)
-            scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
             
             # 使用新的SettingsContentWidget类
             content_widget = SettingCategoryWidget(category)
