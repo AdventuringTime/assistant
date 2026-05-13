@@ -9,6 +9,7 @@ from PySide6.QtCore import QDate, Qt
 from PySide6.QtSvgWidgets import QSvgWidget
 
 from core.base_window import BaseWindow, BaseDialog
+from core.functions import get_today
 
 
 def evaluate_estimated_amount(expression="0", constants=None):
@@ -492,7 +493,8 @@ class ExpensesWindow(BaseWindow):
         self.setWindowTitle("记账")
         self.setMinimumSize(800, 600)
 
-        self.current_date = QDate.currentDate()
+        current_date = get_today()
+        self.current_date = QDate(current_date.year, current_date.month, current_date.day)
         self.constants = {}
         self.children_ = []
 
