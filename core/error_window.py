@@ -4,7 +4,7 @@
 
 import sys
 import traceback
-from PySide6.QtWidgets import (QVBoxLayout, QHBoxLayout, QTextEdit, 
+from PySide6.QtWidgets import (QVBoxLayout, QHBoxLayout, QTextEdit,
                                QPushButton, QLabel, QApplication)
 from PySide6.QtGui import QFont
 
@@ -13,23 +13,23 @@ from core.base_window import BaseDialog
 
 class ErrorWindow(BaseDialog):
     """错误信息显示窗口"""
-    
+
     def __init__(self, error_message, traceback_text, parent=None):
         super().__init__(parent)
-        
+
         # 设置窗口属性
         self.setWindowTitle("发现异常")
-        
+
         # 设置窗口样式
         self.setStyleSheet("""
             QTextEdit {
                 font-family: Consolas, 'Courier New', monospace;
             }
         """)
-        
+
         # 创建布局
         layout = QVBoxLayout()
-        
+
         # 错误标题
         title_label = QLabel("发现异常")
         title_font = QFont()
@@ -37,21 +37,21 @@ class ErrorWindow(BaseDialog):
         title_font.setPointSize(12)
         title_label.setFont(title_font)
         layout.addWidget(title_label)
-        
+
         # 错误消息
         error_label = QLabel(error_message)
         layout.addWidget(error_label)
-        
+
         # 错误详情文本框
         self.traceback_edit = QTextEdit()
         self.traceback_edit.setPlainText(traceback_text)
         self.traceback_edit.setReadOnly(True)
         layout.addWidget(self.traceback_edit)
-        
+
         self.setLayout(layout)
 
         self.resize(400, 300)
-    
+
     def copy_error_info(self):
         """复制错误信息到剪贴板"""
         clipboard = QApplication.clipboard()
@@ -66,7 +66,7 @@ def show_error_dialog(error_message, traceback_text, parent=None):
 
 def excepthook(exc_type, exc_value, exc_traceback):
     """全局异常处理钩子"""
-    
+
     # 调用原始异常处理
     sys.__excepthook__(exc_type, exc_value, exc_traceback)
 

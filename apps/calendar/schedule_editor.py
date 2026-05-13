@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 from core.base_window import BaseWindow
 from core.functions import get_today
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QMessageBox)
 from PySide6.QtCore import QDateTime, QDate, QTime
 from core.widgets import SettingItemWidget
@@ -11,7 +11,7 @@ from core.widgets import SettingItemWidget
 
 def _get_date(time):
     schedule_date = get_today(time)
-    
+
     year = schedule_date.year
     month = schedule_date.month
     day = schedule_date.day
@@ -28,7 +28,7 @@ def block_signals(widgets):
     finally:
         for widget in widgets:
             widget.blockSignals(False)
-            
+
 class ScheduleEditorWindow(BaseWindow):
     """日程编辑窗口"""
 
@@ -42,7 +42,7 @@ class ScheduleEditorWindow(BaseWindow):
         else:
             self.year, self.month, self.day = year, month, day
         self.id = schedule_id
-        
+
         self.init_ui()
         self.load_schedule_data()
 
@@ -53,14 +53,14 @@ class ScheduleEditorWindow(BaseWindow):
         """初始化UI界面"""
         self.setWindowTitle("日程项")
         self.setMinimumSize(500, 400)
-        
+
         # 创建中央部件
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        
+
         # 主布局
         main_layout = QVBoxLayout(self.central_widget)
-        
+
         # 创建日程项编辑器
         self.title_editor = SettingItemWidget("标题", "text", "新日程")
         self.type_editor = SettingItemWidget("类型", "type", ["其他", "会议", "娱乐", "活动", "课程"])
@@ -69,7 +69,7 @@ class ScheduleEditorWindow(BaseWindow):
         self.location_editor = SettingItemWidget("地点", "text")
         self.repetition_editor = SettingItemWidget("重复", "type", ["无", "每天", "每周"])
         self.description_editor = SettingItemWidget("描述", "textarea")
-        
+
         # 添加日程项到主布局
         main_layout.addWidget(self.title_editor)
         main_layout.addWidget(self.type_editor)
@@ -79,16 +79,16 @@ class ScheduleEditorWindow(BaseWindow):
         main_layout.addWidget(self.repetition_editor)
         main_layout.addWidget(self.description_editor)
         main_layout.addStretch()
-        
+
         # 按钮布局
         button_layout = QHBoxLayout()
-        
+
         if not self.is_new_schedule:
             self.delete_button = QPushButton("删除")
             self.delete_button.clicked.connect(self.delete_schedule)
             self.delete_button.setStyleSheet("background-color: #ff6b6b; color: white;")
             button_layout.addWidget(self.delete_button)
-        
+
         button_layout.addStretch()
 
         if not self.is_new_schedule:
@@ -99,33 +99,33 @@ class ScheduleEditorWindow(BaseWindow):
         self.save_button = QPushButton("保存")
         self.save_button.clicked.connect(self.save_schedule)
         button_layout.addWidget(self.save_button)
-        
+
         main_layout.addLayout(button_layout)
-        
+
     def load_schedule_data(self):
         """加载日程数据到表单"""
         if self.schedule_item:
             title = self.schedule_item.get("title")
             if title:
                 self.title_editor.set_value(title)
-            
+
             schedule_type = self.schedule_item.get("type")
             if schedule_type is not None:
                 self.type_editor.set_value(schedule_type)  # 默认为0（其他）
-            
+
             start_time_str = self.schedule_item.get("start_time")
             if start_time_str:
                 self.start_time = QDateTime.fromString(start_time_str, "yyyy-MM-dd HH:mm")
                 self.start_time_editor.set_value(self.start_time)
-            
+
             end_time_str = self.schedule_item.get("end_time")
             if end_time_str:
                 self.end_time = QDateTime.fromString(end_time_str, "yyyy-MM-dd HH:mm")
                 self.end_time_editor.set_value(self.end_time)
-            
+
             if self.start_time and self.end_time:
                 self.duration = self.start_time.secsTo(self.end_time)
-            
+
             location = self.schedule_item.get("location")
             if location:
                 self.location_editor.set_value(location)
@@ -137,7 +137,7 @@ class ScheduleEditorWindow(BaseWindow):
             description = self.schedule_item.get("description")
             if description:
                 self.description_editor.set_value(description)
-        
+
         else:
             # 若无日程数据，设置默认开始与结束时间
             if (self.year is not None
@@ -161,7 +161,7 @@ class ScheduleEditorWindow(BaseWindow):
         """当结束时间改变时，重新计算时长"""
         self.end_time = new_end_time
         self.duration = self.start_time.secsTo(new_end_time)
-    
+
     def on_start_time_changed(self, new_start_time):
         """当开始时间改变时，更新结束时间"""
         self.start_time = new_start_time
@@ -177,7 +177,7 @@ class ScheduleEditorWindow(BaseWindow):
 
         # 验证时间
         if self.duration < 0:
-            reply = QMessageBox.question(self, "保存日程", 
+            reply = QMessageBox.question(self, "保存日程",
                                     "结束时间早于开始时间，是否继续保存？",
                                     QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes)
             if reply == QMessageBox.StandardButton.No:
@@ -217,19 +217,19 @@ class ScheduleEditorWindow(BaseWindow):
 
         # 调用父窗口的保存方法
         self.parent().window().save_schedule_from_editor(self, copy=copy)
-        
+
         # 关闭窗口
         self.close()
-    
+
     def delete_schedule(self):
         """删除日程"""
-        reply = QMessageBox.question(self, "确认删除", 
+        reply = QMessageBox.question(self, "确认删除",
                                    "确认删除？",
                                    QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
-        
+
         if reply == QMessageBox.StandardButton.Ok:
             # 调用父窗口的删除方法
             self.parent().window().delete_schedule_from_editor(self)
-            
+
             # 关闭窗口
             self.close()

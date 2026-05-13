@@ -107,8 +107,8 @@ class SearchWordsWindow(BaseWindow):
         self.words_list.clear()
         for word in self.words:
             item = QListWidgetItem(word)
-            item.setFlags(item.flags() | 
-                         Qt.ItemFlag.ItemIsSelectable | 
+            item.setFlags(item.flags() |
+                         Qt.ItemFlag.ItemIsSelectable |
                          Qt.ItemFlag.ItemIsEnabled |
                          Qt.ItemFlag.ItemIsEditable)
             self.words_list.addItem(item)
@@ -117,7 +117,7 @@ class SearchWordsWindow(BaseWindow):
         """列表项内容改变时自动保存"""
         row = self.words_list.row(item)
         new_text = item.text().strip()
-        
+
         self.words[row] = new_text
         self.save_words()
 

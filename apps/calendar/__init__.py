@@ -30,14 +30,14 @@ class PlaceLabel(QLabel):
         if link:
             # 鼠标进入链接
             self.is_hovering_link = True
-            
+
             # 安装事件过滤器到父控件，阻止事件传递
             if self.parent():
                 self.parent().installEventFilter(self)
         else:
             # 鼠标离开链接
             self.is_hovering_link = False
-            
+
             # 移除事件过滤器，恢复事件传递
             if self.parent():
                 self.parent().removeEventFilter(self)
@@ -53,7 +53,7 @@ class PlaceLabel(QLabel):
                 # 将事件转发给当前标签处理
                 self.mousePressEvent(event)
                 return True  # 拦截事件，不让父控件处理
-        
+
         return super().eventFilter(obj, event)
 
 class ScheduleItemWidget(QWidget):
@@ -69,7 +69,7 @@ class ScheduleItemWidget(QWidget):
                 background-color: rgba(255, 255, 255, 0.1);
             }
         """)
-        
+
         self.layout_ = QVBoxLayout(self)
 
         self.title_label = QLabel(schedule_item["title"])
@@ -81,7 +81,7 @@ class ScheduleItemWidget(QWidget):
             self.time_label = QLabel(f"{schedule_item['start_time']} - {schedule_item['end_time']}")
             self.time_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
             self.layout_.addWidget(self.time_label)
-        
+
         if "location" in schedule_item and schedule_item["location"]:
             self.location_label = PlaceLabel(schedule_item['location'])
             self.location_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
@@ -139,7 +139,7 @@ class CalendarSchedulesManager:
                     event,
                     date.year, date.month, date.day, id_,
                     copy=True)
-                
+
         # 处理每周重复事件
         lastweek = date - datetime.timedelta(days=7)
         events_lastweek = self.load_schedules(lastweek.year, lastweek.month, lastweek.day)
@@ -169,17 +169,17 @@ class CalendarSchedulesManager:
             last_update_date = datetime.datetime.strptime(last_update_date_str, '%Y-%m-%d').date()
         except Exception:
             last_update_date = today - datetime.timedelta(days=1)
-        
+
         # 如果上次更新在今天或之后，直接返回
         if last_update_date >= today:
             return
-        
+
         # 如果上次更新在30天之前，警告后返回
         if last_update_date + datetime.timedelta(days=30) < today:
             import warnings
             warnings.warn("上次更新在30天之前，暂不更新重复事件")
             return
-        
+
         # 遍历日期
         updating_date = last_update_date
         while updating_date < today:
@@ -189,7 +189,7 @@ class CalendarSchedulesManager:
         # 保存最新的上次更新时间
         with open(last_update_date_file, 'w', encoding='utf-8') as f:
             json.dump(str(today), f, indent=4)
-        
+
     def load_schedules(self, year, month, day):
         """从文件加载日程数据"""
         file_path = os.path.join(data_dir, str(year), str(month), str(day) + ".json")
@@ -229,7 +229,7 @@ class CalendarSchedulesManager:
         else:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             schedules = SortedDict()
-        
+
         # 尝试删除旧日程
         if not copy and year_old is not None:
             if (year_old == year_new
@@ -248,13 +248,13 @@ class CalendarSchedulesManager:
             while str(f"{id_new}_{str(seen).zfill(3)}") in schedules:
                 seen += 1
             id_new = f"{id_new}_{str(seen).zfill(3)}"
-        
+
         schedules[id_new] = schedule_data
 
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(dict(schedules), f, ensure_ascii=False, indent=4)
-        
+
     def delete_schedule(self, year_old, month_old, day_old, id_old):
         """
         从文件中删除日程。
@@ -277,7 +277,7 @@ class CalendarSchedulesManager:
             schedules = json.load(f)
         if id_old in schedules:
             del schedules[id_old]
-        
+
         # 保存文件；如果日程被清空，删除文件
         if schedules:
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -308,7 +308,7 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
         self.scroll_layout = QVBoxLayout(self.scroll_content)
         self.scroll_area.setWidget(self.scroll_content)
         self.container_layout.addWidget(self.scroll_area)
-       
+
         self.create_floating_button()
 
         self.date_selector.dateChanged.connect(self.on_date_changed)
@@ -336,13 +336,13 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
                 background-color: #005A9E;
             }
         """)
-        
+
         # 设置按钮位置（右下角，距离边缘20px）
         self.floating_button.move(self.width() - 80, self.height() - 80)
-        
+
         # 连接点击事件
         self.floating_button.clicked.connect(self.open_new_schedule)
-        
+
         # 设置按钮始终在最前面
         self.floating_button.raise_()
 
@@ -380,7 +380,7 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
 
         # 重新加载数据
         self.schedules = self.load_schedules(self.year_displayed, self.month_displayed, self.day_displayed)
-        
+
         # 添加日程项
         for schedule_id, schedule in self.schedules.items():
             self.scroll_layout.addWidget(ScheduleItemWidget(schedule, schedule_id))

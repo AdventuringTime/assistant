@@ -1,7 +1,7 @@
 import sys
 import json
 import os
-from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout, 
+from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox)
 from PySide6.QtCore import Qt, Signal
@@ -55,7 +55,7 @@ class TaskDialog(BaseDialog):
             self.delete_button.setStyleSheet("background-color: #CC0000; color: #FFFFFF;")
             self.delete_button.clicked.connect(self.on_delete)
             self.button_layout.addWidget(self.delete_button)
-    
+
         self.save_button = QPushButton('保存')
         self.save_button.clicked.connect(self.on_save)
         self.button_layout.addWidget(self.save_button)
@@ -85,18 +85,18 @@ class TaskDialog(BaseDialog):
 class TaskItem(QWidget):
     task_updated = Signal()
     task_deleted = Signal()
-    
+
     def __init__(self, task, parent=None):
         super().__init__(parent)
         self.task = task
-        
+
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet("""
             TaskItem:hover {
                 background-color: rgba(255, 255, 255, 0.1);
             }
         """)
-        
+
         self.layout_ = QVBoxLayout(self)
 
         self.name_label = QLabel(self.task.get('name', ''))
@@ -106,7 +106,7 @@ class TaskItem(QWidget):
                 font-size: 14px;
             }
             QLabel:hover {
-                background-color: rgba(255, 255, 255, 0.05); 
+                background-color: rgba(255, 255, 255, 0.05);
             }
         """)
         self.name_label.mousePressEvent = self.on_name_clicked
@@ -141,7 +141,7 @@ class TaskItem(QWidget):
         self.progress_layout = QHBoxLayout(self.progress_widget)
         self.progress_layout.addWidget(self.progress_bar)
         self.progress_layout.addWidget(self.progress_label)
-        
+
         self.progress_widget.setStyleSheet("""
             #progress_widget:hover {
                 background-color: rgba(255, 255, 255, 0.05);
@@ -152,7 +152,7 @@ class TaskItem(QWidget):
         self.layout_.addWidget(self.progress_widget)
 
     def on_progress_clicked(self, event):
-        self.completed, ok = QInputDialog.getDouble(self, '修改进度', 
+        self.completed, ok = QInputDialog.getDouble(self, '修改进度',
             f'请输入完成数量:',
             value=self.completed,
             decimals=2)
@@ -168,17 +168,17 @@ class TaskItem(QWidget):
             self.progress_bar.setValue(progress_value)
             self.progress_label.setText(f'{self.completed}/{self.required}')
             self.task_updated.emit()
-    
+
     def on_name_clicked(self, event):
         dialog = TaskDialog(self.task, self)
         dialog.on_save_signal.connect(self.on_dialog_save)
         dialog.on_delete_signal.connect(self.on_dialog_delete)
 
         dialog.show()
-    
+
     def on_dialog_delete(self):
         self.task_deleted.emit()
-    
+
     def on_dialog_save(self, data):
         self.task['name'] = data['name']
         self.task['required'] = data['required']
@@ -196,7 +196,7 @@ class TaskItem(QWidget):
         self.progress_bar.setValue(progress_value)
         self.progress_label.setText(f'{self.completed}/{self.required}')
         self.task_updated.emit()
-    
+
 
 class TaskWindow(BaseWindow):
     def __init__(self, parent=None):
@@ -296,7 +296,7 @@ class TaskWindow(BaseWindow):
                 total_weight += weight
 
             total_percent = total_percent / total_weight # 前文代码注意确保 total_weight 不为 0
-        
+
         progress_value = int(total_percent)
         if progress_value < 0:
             progress_value = 0
@@ -346,12 +346,12 @@ class TaskWindow(BaseWindow):
             sender.deleteLater()
             self.save_tasks()
             self.update_total_progress()
-    
+
     def on_add_task(self):
         dialog = TaskDialog(parent=self)
         dialog.on_save_signal.connect(self.on_dialog_create)
         dialog.show()
-    
+
     def on_dialog_create(self, data):
         if data['name'].strip():
             self.tasks.append(data)

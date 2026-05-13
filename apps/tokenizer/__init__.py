@@ -14,7 +14,7 @@ class TokenizerWindow(BaseWindow):
         self.container = QWidget()
         self.setCentralWidget(self.container)
         self.layout = QHBoxLayout(self.container)
-        
+
         self.left_widget = QWidget()
         self.layout.addWidget(self.left_widget)
         self.left_layout = QVBoxLayout(self.left_widget)

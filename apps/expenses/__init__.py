@@ -30,31 +30,31 @@ class SortDialog(BaseDialog):
         self.setWindowTitle(title)
         self.setMinimumSize(400, 300)
         self.children = children
-        
+
         layout = QVBoxLayout(self)
-        
+
         self.list_widget = QListWidget()
         self.list_widget.setSelectionMode(QListWidget.SingleSelection)
         self.list_widget.setDragDropMode(QListWidget.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.MoveAction)
         layout.addWidget(self.list_widget)
-        
+
         for child in self.children:
             self.list_widget.addItem(child['name'])
-        
+
         button_layout = QHBoxLayout()
         button_layout.addStretch()
-        
+
         ok_button = QPushButton("确定")
         ok_button.clicked.connect(self.accept)
         button_layout.addWidget(ok_button)
-        
+
         cancel_button = QPushButton("取消")
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
-        
+
         layout.addLayout(button_layout)
-        
+
         self.result = None
 
     def accept(self):
@@ -115,7 +115,7 @@ class ConstantEditWindow(BaseWindow):
         for name, value in self.expenses_window.constants.items():
             row_widget = QWidget()
             row_layout = QHBoxLayout(row_widget)
-            
+
             name_label = QLabel(name)
             name_label.setFixedWidth(30)
             row_layout.addWidget(name_label)
@@ -135,7 +135,7 @@ class ConstantEditWindow(BaseWindow):
             # 增加一个 checked，因为按钮点击事件会多传一个参数
             delete_button.clicked.connect(
                 lambda checked=False, name=name: self.delete_constant(name))
-            
+
             self.constants_layout.addWidget(row_widget)
 
         self.constants_layout.addStretch()
@@ -227,12 +227,12 @@ class ExpenseItemWidget(QWidget):
     def update_progress(self):
         estimated = self.get_estimated_value()
         actual = self.item_data.get('actual_amount', 0.)
-        
+
         if estimated == "Error":
             self.estimated_label.setText("Error")
         else:
             self.estimated_label.setText(f"{estimated:.2f}")
-        
+
         if estimated == 0 or estimated == "Error":
             self.progress_bar.setValue(0)
         else:
@@ -410,7 +410,7 @@ class ExpenseTypeWidget(QWidget):
         children = self.type_data.get('children', [])
         if not children:
             return
-        
+
         dialog = SortDialog(self, children, f"排序 - {self.type_data['name']}")
         dialog.show()
 
@@ -616,7 +616,7 @@ class ExpensesWindow(BaseWindow):
         if last_month == 0:
             last_month = 12
             last_year -= 1
-        
+
         data_path = cls.get_data_path(year, month)
         last_path = cls.get_data_path(last_year, last_month)
 
@@ -696,9 +696,9 @@ class ExpensesWindow(BaseWindow):
     def open_sort_dialog(self):
         if not self.children_:
             return
-        
+
         dialog = SortDialog(self, self.children_, "排序")
-        
+
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.children_ = dialog.result
             self.save_and_reload()

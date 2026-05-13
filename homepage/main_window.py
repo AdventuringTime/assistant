@@ -19,13 +19,13 @@ from homepage.widgets import top_status, app_entry, notification_system
 class MainWindow(BaseWindow):
     def __init__(self):
         super().__init__()
-        
+
         # 设置窗口标题
         self.setWindowTitle(app_name)
-        
+
         # 初始化系统托盘
         self.init_system_tray()
-    
+
         # 初始化自启动程序
         self.init_auto_start()
 
@@ -37,7 +37,7 @@ class MainWindow(BaseWindow):
         # 创建系统托盘图标
         self.tray = QSystemTrayIcon(self.icon, self)
         self.tray.setToolTip(app_name)
-        
+
         # 创建托盘菜单
         tray_menu = QMenu()
 
@@ -47,62 +47,62 @@ class MainWindow(BaseWindow):
         tray_menu.addAction(update_topstatus_action)
 
         tray_menu.addSeparator()
-        
+
         # 退出
         exit_action = QAction("退出", self)
         exit_action.triggered.connect(self.quit_)
         tray_menu.addAction(exit_action)
-        
+
         # 设置托盘菜单
         self.tray.setContextMenu(tray_menu)
-        
+
         # 连接托盘图标点击事件
         self.tray.activated.connect(self.on_tray_activated)
-        
+
         # 显示托盘图标
         self.tray.show()
-    
+
     def show_window(self):
         """显示窗口"""
         # 如果窗口是最小化状态，先解除最小化
         if self.isMinimized():
             self.showNormal()
-        
+
         # 显示窗口并激活
         self.show()
         self.activateWindow()
         self.raise_()
-    
+
     def on_tray_activated(self, reason):
         """托盘图标激活事件"""
         # 如果是左键点击或双击托盘图标，显示窗口
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.show_window()
-    
+
     def closeEvent(self, event):
         """关闭窗口不会退出程序"""
         event.ignore()  # 忽略关闭事件
         self.hide()     # 隐藏窗口
-    
+
     def quit_(self):
         """退出应用程序，关闭所有窗口"""
         # 关闭所有注册的窗口
         WindowsManager.close_all_windows()
         # 退出应用程序
         QApplication.quit()
-    
+
     def init_content(self):
         """初始化窗口内容"""
         # 创建滚动区域
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setMinimumSize(720, 480)
-        
+
         # 创建内容容器
         container = QWidget()
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        
+
         # 内容部件
         self.top_status_widget = top_status
         self.test_button = None
@@ -118,12 +118,12 @@ class MainWindow(BaseWindow):
         ]
         if self.test_button:
             self.content_widgets.insert(1, self.test_button)
-        
+
         # 组合部件
         for widget in self.content_widgets:
             layout.addWidget(widget)
         container.setLayout(layout)
-        
+
         # 设置滚动区域的内容部件
         scroll_area.setWidget(container)
         self.setCentralWidget(scroll_area)
