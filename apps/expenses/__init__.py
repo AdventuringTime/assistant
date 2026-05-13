@@ -240,7 +240,7 @@ class ExpenseTypeWidget(QWidget):
         super().__init__(parent)
         self.type_data = type_data
         self.constants = constants
-        self.is_expanded = True
+        self.is_expanded = type_data.get('expanded', True)
 
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
@@ -312,6 +312,7 @@ class ExpenseTypeWidget(QWidget):
 
     def toggle_expand(self):
         self.is_expanded = not self.is_expanded
+        self.type_data['expanded'] = self.is_expanded
         self.expand_svg.load("assets/svg/expanded.svg" if self.is_expanded else "assets/svg/collapsed.svg")
         self.children_container.setVisible(self.is_expanded)
 
@@ -575,6 +576,15 @@ class ExpensesWindow(BaseWindow):
         year = self.current_date.year()
         month = self.current_date.month()
         data_path = self.get_data_path(year, month)
+
+        def remove_expanded_field(children):
+            for child in children:
+                if 'expanded' in child:
+                    del child['expanded']
+                if child.get('children'):
+                    remove_expanded_field(child['children'])
+
+        remove_expanded_field(self.children_)
 
         data = {
             'constants': self.constants,
