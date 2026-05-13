@@ -216,8 +216,6 @@ class ExpenseItemWidget(QWidget):
             self.record_input = QDoubleSpinBox()
             self.record_input.setRange(-1e18, 1e18)
             self.record_input.setDecimals(2)
-            self.record_input.setPrefix("¥ ")
-            self.record_input.setSingleStep(1.0)
 
             index = self.bottom_row.count() - 1
             self.bottom_row.insertWidget(index, self.record_input)
@@ -245,6 +243,7 @@ class ExpenseTypeWidget(QWidget):
         self.is_expanded = True
 
         self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 0)
 
         self.header = QWidget()
         header_layout = QVBoxLayout(self.header)
