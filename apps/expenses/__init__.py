@@ -117,7 +117,7 @@ class ConstantEditWindow(BaseWindow):
             row_layout = QHBoxLayout(row_widget)
 
             name_label = QLabel(name)
-            name_label.setFixedWidth(30)
+            name_label.setFixedWidth(40)
             row_layout.addWidget(name_label)
 
             value_edit = QSpinBox()
