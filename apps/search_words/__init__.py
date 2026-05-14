@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                QListWidget, QListWidgetItem,
                                QPushButton)
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
 
 from core.base_window import BaseWindow
 
@@ -72,6 +73,10 @@ class SearchWordsWindow(BaseWindow):
         self.add_button.clicked.connect(self.on_add_clicked)
         buttons_layout.addWidget(self.add_button)
 
+        self.copy_button = QPushButton("复制")
+        self.copy_button.clicked.connect(self.on_copy_clicked)
+        buttons_layout.addWidget(self.copy_button)
+
         self.rename_button = QPushButton("重命名")
         self.rename_button.clicked.connect(self.on_rename_clicked)
         buttons_layout.addWidget(self.rename_button)
@@ -129,6 +134,13 @@ class SearchWordsWindow(BaseWindow):
         last_item = self.words_list.item(self.words_list.count() - 1)
         if last_item:
             self.words_list.editItem(last_item)
+
+    def on_copy_clicked(self):
+        """复制选中的搜索词到剪贴板"""
+        selected_items = self.words_list.selectedItems()
+        if selected_items:
+            text = selected_items[0].text()
+            QGuiApplication.clipboard().setText(text)
 
     def on_rename_clicked(self):
         """重命名选中的搜索词"""
