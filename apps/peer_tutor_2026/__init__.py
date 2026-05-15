@@ -208,7 +208,7 @@ class TaskItem(QWidget):
 class TaskWindow(BaseWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('朋辈助学')
+        self.setWindowTitle('芙芙伴学')
         self.setWindowIcon(icon)
         self.setMinimumSize(600, 400)
 

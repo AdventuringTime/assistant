@@ -27,7 +27,7 @@ APP_LIST = {
         "window": lambda: import_module('apps.expenses').ExpensesWindow()
     },
     "peer_tutor_2026": {
-        "display_name": "朋辈助学",
+        "display_name": "芙芙伴学",
         "window": lambda: import_module('apps.peer_tutor_2026').TaskWindow()
     },
     "tokenizer": {
