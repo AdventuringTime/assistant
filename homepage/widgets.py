@@ -480,14 +480,14 @@ class CollapsibleContainerWidget(QWidget):
 
         # 标题行：可点击的标题和折叠箭头
         self.title_widget = CollapsibleTitleWidget()
-        title_layout = QHBoxLayout(self.title_widget)
+        self.title_layout = QHBoxLayout(self.title_widget)
 
         # 折叠箭头
         # 根据展开状态选择不同的SVG图标
         arrow_svg = "assets/svg/expanded.svg" if self.is_expanded else "assets/svg/collapsed.svg"
         self.arrow_svg = QSvgWidget(arrow_svg)
         self.arrow_svg.setFixedSize(24, 24)
-        title_layout.addWidget(self.arrow_svg)
+        self.title_layout.addWidget(self.arrow_svg)
 
         # 标题名称
         self.title_label = QLabel(self.title)
@@ -496,10 +496,10 @@ class CollapsibleContainerWidget(QWidget):
             color: #FFFFFF;
             font-weight: bold;
         """)
-        title_layout.addWidget(self.title_label)
+        self.title_layout.addWidget(self.title_label)
 
         # 右侧伸缩空间
-        title_layout.addStretch()
+        self.title_layout.addStretch()
 
         # 设置标题悬停高亮提示
         self.title_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
@@ -783,6 +783,11 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         # 添加未读消息计数标签到标题
         self.add_unread_count_label()
 
+        # 添加清空通知按钮
+        self.clear_button = QPushButton("清空通知")
+        self.title_layout.addWidget(self.clear_button)
+        self.clear_button.clicked.connect(self.clear_notifications)
+
         # 设置通知布局（垂直布局）
         self.content_layout = QVBoxLayout(self.content_container)
         self.content_layout.setSpacing(0)  # 通知项之间紧挨
@@ -793,9 +798,6 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
 
     def add_unread_count_label(self):
         """添加未读消息计数标签到标题"""
-        # 获取标题布局
-        title_layout = self.title_widget.layout()
-
         # 未读消息计数标签
         self.unread_count_label = QLabel()
         self.unread_count_label.setFixedSize(24, 24)
@@ -812,7 +814,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         self.unread_count_label.hide()  # 初始隐藏
 
         # 插入到标题标签后面
-        title_layout.insertWidget(2, self.unread_count_label)
+        self.title_layout.insertWidget(2, self.unread_count_label)
 
     def get_unread_count(self):
         """获取未读通知数量"""
@@ -941,6 +943,11 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
             self.update_unread_count()
 
     def clear_notifications(self):
+        """清空所有通知并保存"""
+        self._clear_notifications()
+        self.save_notifications()
+
+    def _clear_notifications(self):
         """清空所有通知"""
         # 清空布局中的所有部件
         for i in reversed(range(self.content_layout.count())):
@@ -992,7 +999,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
             notifications_data = json.load(f)
 
         # 清空现有通知
-        self.clear_notifications()
+        self._clear_notifications()
 
         # 直接创建通知项（不使用add_notification方法）
         for i, notification_data in enumerate(notifications_data):
