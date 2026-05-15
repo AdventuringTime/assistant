@@ -193,7 +193,8 @@ class ExpenseItemWidget(QWidget):
 
         self.bottom_row = QHBoxLayout()
 
-        self.progress_bar = QProgressBar(minimum=0, maximum=200)
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximum(100)
         self.progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.bottom_row.addWidget(self.progress_bar)
 
@@ -238,10 +239,12 @@ class ExpenseItemWidget(QWidget):
             self.progress_bar.setValue(0)
         else:
             progress = actual / estimated
-            ratio = min(max(progress / 2, 0), 1)
-            self.progress_bar.setValue(int(ratio * 200))
-            r = int(255 * ratio)
-            g = int(255 * (1 - ratio))
+            ratio = min(max(progress, 0), 1)
+            self.progress_bar.setValue(int(ratio * 100))
+
+            ratio2 = min(max(progress / 2, 0), 1)
+            r = int(255 * ratio2)
+            g = int(255 * (1 - ratio2))
             self.progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
     def rename(self):
@@ -326,7 +329,7 @@ class ExpenseTypeWidget(QWidget):
         bottom_row = QHBoxLayout()
 
         self.progress_bar = QProgressBar()
-        self.progress_bar.setMaximum(200)
+        self.progress_bar.setMaximum(100)
         self.progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         bottom_row.addWidget(self.progress_bar)
 
@@ -480,12 +483,13 @@ class ExpenseTypeWidget(QWidget):
             self.progress_bar.setValue(0)
         else:
             progress = actual / estimated
-            ratio = min(max(progress / 2, 0), 1)
+            ratio = min(max(progress, 0), 1)
 
-            self.progress_bar.setValue(int(ratio * 200))
+            self.progress_bar.setValue(int(ratio * 100))
 
-            r = int(255 * ratio)
-            g = int(255 * (1 - ratio))
+            ratio2 = min(max(progress / 2, 0), 1)
+            r = int(255 * ratio2)
+            g = int(255 * (1 - ratio2))
             self.progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
 
@@ -541,7 +545,7 @@ class ExpensesWindow(BaseWindow):
         total_bottom_row = QHBoxLayout()
 
         self.total_progress_bar = QProgressBar()
-        self.total_progress_bar.setMaximum(200)
+        self.total_progress_bar.setMaximum(100)
         self.total_progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         total_bottom_row.addWidget(self.total_progress_bar)
 
@@ -738,12 +742,13 @@ class ExpensesWindow(BaseWindow):
             self.total_progress_bar.setValue(0)
         else:
             progress = actual / estimated
-            ratio = min(max(progress / 2, 0), 1)
+            ratio = min(max(progress, 0), 1)
 
-            self.total_progress_bar.setValue(int(ratio * 200))
+            self.total_progress_bar.setValue(int(ratio * 100))
 
-            r = int(255 * ratio)
-            g = int(255 * (1 - ratio))
+            ratio2 = min(max(progress / 2, 0), 1)
+            r = int(255 * ratio2)
+            g = int(255 * (1 - ratio2))
             self.total_progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
     def get_total_estimated(self, children_list=None):
