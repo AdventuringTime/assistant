@@ -5,11 +5,15 @@ from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox)
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon
+
 from core.base_window import BaseWindow, BaseDialog
 from core.functions import get_this_week
 import datetime
 from math import floor
 
+
+icon = QIcon('apps/peer_tutor_2026/assets/icon.ico')
 
 class TaskDialog(BaseDialog):
     on_save_signal = Signal(dict)
@@ -19,6 +23,7 @@ class TaskDialog(BaseDialog):
         super().__init__(parent)
         self.task = task
         self.setWindowTitle('任务')
+        self.setWindowIcon(icon)
         self.setModal(True)
 
         self.layout_ = QVBoxLayout(self)
@@ -202,6 +207,7 @@ class TaskWindow(BaseWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('朋辈助学')
+        self.setWindowIcon(icon)
         self.setMinimumSize(600, 400)
 
         self.week_displayed = floor(get_this_week(
