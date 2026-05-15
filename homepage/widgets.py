@@ -3,10 +3,10 @@ import json
 import numpy as np
 import os
 from PySide6.QtCore import QRectF, Qt, Signal, QThread
-from PySide6.QtGui import QPainter, QPen, QBrush, QColor
+from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap, QIcon
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
-    QLabel, QPushButton)
+    QLabel, QPushButton, QApplication)
 import webbrowser
 from winotify import Notification
 
@@ -1077,9 +1077,21 @@ class AppItemWidget(QWidget):
         layout.setSpacing(5)
 
         # 加载并设置图标
-        self.svg_widget = QSvgWidget(self.icon_path)
-        self.svg_widget.setFixedSize(48, 48)
-        layout.addWidget(self.svg_widget, alignment=Qt.AlignmentFlag.AlignCenter)
+        if self.icon_path.endswith(".svg"):
+            self.icon_widget = QSvgWidget(self.icon_path)
+        else:
+            self.icon_widget = QLabel()
+            dpr = QApplication.instance().devicePixelRatio()
+            if self.icon_path.endswith(".ico"):
+                icon = QIcon(self.icon_path)
+                pixmap = icon.pixmap(48 * dpr, 48 * dpr)
+            else:
+                pixmap = QPixmap(self.icon_path)
+            pixmap = pixmap.scaled(48 * dpr, 48 * dpr, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            pixmap.setDevicePixelRatio(dpr)
+            self.icon_widget.setPixmap(pixmap)
+        self.icon_widget.setFixedSize(48, 48)
+        layout.addWidget(self.icon_widget, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # 应用名称
         self.name_label = QLabel(self.display_name)
