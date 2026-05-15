@@ -5,8 +5,9 @@ from PySide6.QtWidgets import (
     QPushButton, QProgressBar, QScrollArea, QDateEdit, QMessageBox,
     QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox, QListWidget
 )
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate, Qt, QUrl
 from PySide6.QtSvgWidgets import QSvgWidget
+from PySide6.QtGui import QDesktopServices
 
 from core.base_window import BaseWindow, BaseDialog
 from core.functions import get_today
@@ -572,6 +573,16 @@ class ExpensesWindow(BaseWindow):
         total_layout.addLayout(total_bottom_row)
         main_layout.addWidget(self.total_widget)
 
+        self.bottom_buttons_layout = QHBoxLayout()
+
+        self.bottom_buttons_layout.addStretch()
+
+        open_ecard_paylist_button = QPushButton("打开交易明细")
+        open_ecard_paylist_button.clicked.connect(self.open_ecard_paylist)
+        self.bottom_buttons_layout.addWidget(open_ecard_paylist_button)
+
+        main_layout.addLayout(self.bottom_buttons_layout)
+
         os.makedirs(self.data_dir, exist_ok=True)
 
         data_path = self.get_data_path(self.current_date.year(), self.current_date.month())
@@ -579,6 +590,10 @@ class ExpensesWindow(BaseWindow):
             self.try_init_from_last_month(self.current_date.year(), self.current_date.month())
 
         self.load_month_data()
+
+    @staticmethod
+    def open_ecard_paylist():
+        QDesktopServices.openUrl(QUrl("https://ecard.ustc.edu.cn/paylist"))
 
     def on_date_changed(self, date):
         self.current_date = date
