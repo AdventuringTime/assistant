@@ -48,6 +48,8 @@ class TaskDialog(BaseDialog):
         self.weight_spin.setRange(1, 2147483647)
         if task:
             self.weight_spin.setValue(task.get('weight', 100))
+        else:
+            self.weight_spin.setValue(100)
         self.layout_.addWidget(self.weight_label)
         self.layout_.addWidget(self.weight_spin)
 
