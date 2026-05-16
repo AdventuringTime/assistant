@@ -113,8 +113,8 @@ class MainWindow(BaseWindow):
         self.app_entry_widget = app_entry
         self.content_widgets = [
             self.top_status_widget,
-            self.app_entry_widget,
-            self.notification_system
+            self.notification_system,
+            self.app_entry_widget
         ]
         if self.test_button:
             self.content_widgets.insert(1, self.test_button)
