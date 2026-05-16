@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QFont
 
 from core.base_window import BaseWindow, BaseDialog
 
@@ -117,18 +117,16 @@ class TaskItem(QWidget):
 
         self.name_label = QLabel(self.task.get('name', ''))
         self.name_label.setWordWrap(True)
-        self.name_label.setStyleSheet("""
-            QLabel {
-                font-size: 14px;
-            }
-            QLabel:hover {
-                background-color: rgba(255, 255, 255, 0.05);
-            }
-        """)
-        self.name_label.mousePressEvent = self.on_name_clicked
+        font = QFont()
+        font.setPointSize(14)
+        self.name_label.setFont(font)
         self.top_layout.addWidget(self.name_label)
 
         self.top_layout.addStretch()
+
+        self.edit_button = QPushButton('编辑')
+        self.edit_button.clicked.connect(self.on_edit_clicked)
+        self.top_layout.addWidget(self.edit_button)
 
         self.track_button = QPushButton('开始追踪' if not is_tracking else '停止追踪')
         self.track_button.clicked.connect(self.on_track_clicked)
@@ -222,7 +220,7 @@ class TaskItem(QWidget):
             self.update_progress_percent()
             self.task_updated.emit()
 
-    def on_name_clicked(self, event):
+    def on_edit_clicked(self, event):
         dialog = TaskDialog(self.task, self)
         dialog.on_save_signal.connect(self.on_dialog_save)
         dialog.on_delete_signal.connect(self.on_dialog_delete)
