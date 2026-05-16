@@ -86,19 +86,34 @@ class TaskDialog(BaseDialog):
 class TaskItem(QWidget):
     task_updated = Signal()
     task_deleted = Signal()
+    tracking_changed = Signal(int)
 
-    def __init__(self, task, parent=None):
+    def __init__(self, task, id_, is_tracking=False, parent=None):
         super().__init__(parent)
         self.task = task
+        self.id_ = id_
+        self.is_tracking = is_tracking
 
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("""
-            TaskItem:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-            }
-        """)
+        if is_tracking:
+            self.setStyleSheet("""
+                TaskItem {
+                    background-color: rgba(255, 255, 255, 0.2);
+                }
+                TaskItem:hover {
+                    background-color: rgba(255, 255, 255, 0.28);
+                }
+            """)
+        else:
+            self.setStyleSheet("""
+                TaskItem:hover {
+                    background-color: rgba(255, 255, 255, 0.1);
+                }
+            """)
 
         self.layout_ = QVBoxLayout(self)
+
+        self.top_layout = QHBoxLayout()
 
         self.name_label = QLabel(self.task.get('name', ''))
         self.name_label.setWordWrap(True)
@@ -111,7 +126,15 @@ class TaskItem(QWidget):
             }
         """)
         self.name_label.mousePressEvent = self.on_name_clicked
-        self.layout_.addWidget(self.name_label)
+        self.top_layout.addWidget(self.name_label)
+
+        self.top_layout.addStretch()
+
+        self.track_button = QPushButton('开始追踪' if not is_tracking else '停止追踪')
+        self.track_button.clicked.connect(self.on_track_clicked)
+        self.top_layout.addWidget(self.track_button)
+
+        self.layout_.addLayout(self.top_layout)
 
         self.completed = self.task.get('completed', 0.0)
         self.required = self.task.get('required', 1.0)
@@ -139,6 +162,29 @@ class TaskItem(QWidget):
         self.layout_.addWidget(self.progress_widget)
 
         self.update_progress_percent()
+
+    def set_tracking(self, is_tracking):
+        self.is_tracking = is_tracking
+        if is_tracking:
+            self.track_button.setText('停止追踪')
+            self.setStyleSheet("""
+                TaskItem {
+                    background-color: rgba(255, 255, 255, 0.2);
+                }
+                TaskItem:hover {
+                    background-color: rgba(255, 255, 255, 0.3);
+                }
+            """)
+        else:
+            self.track_button.setText('开始追踪')
+            self.setStyleSheet("""
+                TaskItem:hover {
+                    background-color: rgba(255, 255, 255, 0.1);
+                }
+            """)
+
+    def on_track_clicked(self):
+        self.tracking_changed.emit(self.id_)
 
     def update_progress_percent(self):
         """更新进度条和进度标签"""
@@ -203,6 +249,7 @@ class TaskWindow(BaseWindow):
         self.setMinimumSize(600, 400)
 
         self.tasks = []
+        self.tracking_task_id = None
         self.load_tasks()
 
         self.central_widget = QWidget()
@@ -221,13 +268,6 @@ class TaskWindow(BaseWindow):
         self.content_layout = QVBoxLayout(self.content_widget)
 
         self.task_items = []
-        for task in self.tasks:
-            task_item = TaskItem(task)
-            task_item.task_updated.connect(self.on_task_updated)
-            task_item.task_deleted.connect(self.on_task_deleted)
-            self.task_items.append(task_item)
-            self.content_layout.addWidget(task_item)
-
         self.content_layout.addStretch()
         self.scroll_area.setWidget(self.content_widget)
         self.main_layout.addWidget(self.scroll_area)
@@ -255,7 +295,7 @@ class TaskWindow(BaseWindow):
 
         self.main_layout.addLayout(self.button_layout)
 
-        self.update_total_progress()
+        self.refresh_ui()
 
     def load_tasks(self):
         data_dir = os.path.join(os.path.dirname(__file__), 'data')
@@ -265,15 +305,39 @@ class TaskWindow(BaseWindow):
             return
 
         with open(json_path, 'r', encoding='utf-8') as f:
-            self.tasks = json.load(f)
+            data = json.load(f)
+
+            self.tasks = data['tasks']
+            self.tracking_task_id = data.get('tracking_task_id', None)
 
     def save_tasks(self):
         data_dir = os.path.join(os.path.dirname(__file__), 'data')
         os.makedirs(data_dir, exist_ok=True)
         json_path = os.path.join(data_dir, 'tasks.json')
 
+        data = {
+            'tasks': self.tasks,
+            'tracking_task_id': self.tracking_task_id
+        }
+
         with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(self.tasks, f, ensure_ascii=False, indent=4)
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+    def refresh_ui(self):
+        for item in self.task_items:
+            item.deleteLater()
+        self.task_items.clear()
+
+        for id_, task in enumerate(self.tasks):
+            is_tracking = (self.tracking_task_id == id_)
+            task_item = TaskItem(task, id_, is_tracking)
+            task_item.task_updated.connect(self.on_task_updated)
+            task_item.task_deleted.connect(self.on_task_deleted)
+            task_item.tracking_changed.connect(self.on_tracking_changed)
+            self.task_items.append(task_item)
+            self.content_layout.insertWidget(id_, task_item)
+
+        self.update_total_progress()
 
     def update_total_progress(self):
         total_percent = 0
@@ -302,11 +366,13 @@ class TaskWindow(BaseWindow):
         sender = self.sender()
         if sender in self.task_items:
             index = self.task_items.index(sender)
-            self.task_items.remove(sender)
-            self.tasks.pop(index)
-            sender.deleteLater()
+            if self.tracking_task_id == index:
+                self.tracking_task_id = None
+            elif self.tracking_task_id is not None and self.tracking_task_id > index:
+                self.tracking_task_id -= 1
+            del self.tasks[index]
             self.save_tasks()
-            self.update_total_progress()
+            self.refresh_ui()
 
     def on_add_task(self):
         dialog = TaskDialog(parent=self)
@@ -316,10 +382,13 @@ class TaskWindow(BaseWindow):
     def on_dialog_create(self, data):
         if data['name'].strip():
             self.tasks.append(data)
-            task_item = TaskItem(data)
-            task_item.task_updated.connect(self.on_task_updated)
-            task_item.task_deleted.connect(self.on_task_deleted)
-            self.task_items.append(task_item)
-            self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
             self.save_tasks()
-            self.update_total_progress()
+            self.refresh_ui()
+
+    def on_tracking_changed(self, index):
+        if self.tracking_task_id == index:
+            self.tracking_task_id = None
+        else:
+            self.tracking_task_id = index
+        self.save_tasks()
+        self.refresh_ui()
