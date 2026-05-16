@@ -37,15 +37,7 @@ class TaskDialog(BaseDialog):
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
-        self.weight_label = QLabel('权重:')
-        self.weight_spin = QSpinBox()
-        self.weight_spin.setRange(1, 2147483647)
-        if task:
-            self.weight_spin.setValue(task.get('weight', 100))
-        else:
-            self.weight_spin.setValue(100)
-        self.layout_.addWidget(self.weight_label)
-        self.layout_.addWidget(self.weight_spin)
+
 
         self.button_layout = QHBoxLayout()
 
@@ -78,8 +70,7 @@ class TaskDialog(BaseDialog):
         return {
             'name': self.name_edit.text(),
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
-            'required': self.required_spin.value(),
-            'weight': self.weight_spin.value()
+            'required': self.required_spin.value()
         }
 
 
@@ -233,7 +224,6 @@ class TaskItem(QWidget):
     def on_dialog_save(self, data):
         self.task['name'] = data['name']
         self.task['required'] = data['required']
-        self.task['weight'] = data['weight']
         self.name_label.setText(data['name'])
         self.required = data['required']
         self.update_progress_percent()
@@ -270,18 +260,7 @@ class TaskWindow(BaseWindow):
         self.scroll_area.setWidget(self.content_widget)
         self.main_layout.addWidget(self.scroll_area)
 
-        self.total_progress_bar = QProgressBar()
-        self.total_progress_bar.setRange(0, 100)
-        self.total_progress_bar.setFixedHeight(20)
 
-        self.total_progress_label = QLabel('0%')
-        self.total_progress_label.setStyleSheet("font-size: 15px; color: #888888;")
-
-        self.total_progress_widget = QWidget()
-        self.total_progress_layout = QHBoxLayout(self.total_progress_widget)
-        self.total_progress_layout.addWidget(self.total_progress_bar)
-        self.total_progress_layout.addWidget(self.total_progress_label)
-        self.main_layout.addWidget(self.total_progress_widget)
 
         self.button_layout = QHBoxLayout()
 
@@ -335,30 +314,8 @@ class TaskWindow(BaseWindow):
             self.task_items.append(task_item)
             self.content_layout.insertWidget(id_, task_item)
 
-        self.update_total_progress()
-
-    def update_total_progress(self):
-        total_percent = 0
-        total_weight = 0
-        if self.task_items:
-            for task in self.task_items:
-                weight = task.task.get('weight', 100)
-                total_percent += task.progress_percent * weight
-                total_weight += weight
-
-            total_percent = total_percent / total_weight # 前文代码注意确保 total_weight 不为 0
-
-        progress_value = int(total_percent)
-        if progress_value < 0:
-            progress_value = 0
-        elif progress_value > 100:
-            progress_value = 100
-        self.total_progress_bar.setValue(progress_value)
-        self.total_progress_label.setText(f'{int(total_percent)}%')
-
     def on_task_updated(self):
         self.save_tasks()
-        self.update_total_progress()
 
     def on_task_deleted(self):
         sender = self.sender()
