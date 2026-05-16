@@ -193,7 +193,7 @@ class TaskItem(QWidget):
             self.progress_percent = 100
         elif self.required == 1.0:
             self.progress_percent = self.completed * 100
-            if self.completed == 1.0:
+            if self.completed == 0.0:
                 self.progress_label.setText('未完成')
             elif self.completed == 1.0:
                 self.progress_label.setText('已完成')
