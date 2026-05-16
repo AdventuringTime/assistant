@@ -13,6 +13,7 @@ from winotify import Notification
 from core.functions import get_today, get_this_week
 from core.global_constants import app_name
 from core.heartbeat import Heartbeat
+from core.user_interface import QFlowLayout
 from apps import APP_LIST
 
 
@@ -1127,9 +1128,11 @@ class AppEntryWidget(CollapsibleContainerWidget):
         # 加载应用列表
         self.load_apps()
 
-        # 应用图标容器（水平布局）
-        self.content_layout = QHBoxLayout(self.content_container)
+        # 应用图标容器（使用流式布局实现自动换行）
+        self.content_layout = QFlowLayout(self.content_container)
         self.content_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.content_layout.setContentsMargins(5, 5, 5, 5)
+        self.content_layout.setSpacing(10)
 
         # 填充应用图标
         self.populate_apps()
@@ -1167,7 +1170,6 @@ class AppEntryWidget(CollapsibleContainerWidget):
                 self.content_layout.removeWidget(widget)
                 widget.setParent(None)
                 widget.deleteLater()
-
 
     def clear_apps(self):
         """清空应用图标"""
