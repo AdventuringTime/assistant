@@ -14,6 +14,10 @@ APP_LIST = {
         "display_name": "日程",
         "window": lambda: import_module('apps.calendar').CalendarWindow()
     },
+    "tasks": {
+        "display_name": "任务",
+        "window": lambda: import_module('apps.tasks').TaskWindow()
+    },
     "worktime": {
         "display_name": "工作时间",
         "window": lambda: import_module('apps.worktime').WorktimeWindow()

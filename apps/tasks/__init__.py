@@ -8,12 +8,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
 from core.base_window import BaseWindow, BaseDialog
-from core.functions import get_this_week, get_today
-import datetime
-from math import floor
 
-
-icon = QIcon('apps/peer_tutor_2026/assets/icon.ico')
 
 class TaskDialog(BaseDialog):
     on_save_signal = Signal(dict)
@@ -23,7 +18,6 @@ class TaskDialog(BaseDialog):
         super().__init__(parent)
         self.task = task
         self.setWindowTitle('任务')
-        self.setWindowIcon(icon)
         self.setModal(True)
 
         self.layout_ = QVBoxLayout(self)
@@ -124,10 +118,9 @@ class TaskItem(QWidget):
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(int(self.progress_percent))
         self.progress_bar.setFixedHeight(20)
 
-        self.progress_label = QLabel(self.progress_text)
+        self.progress_label = QLabel()
         self.progress_label.setStyleSheet("font-size: 14px; color: #888888;")
 
         self.progress_widget = QWidget()
@@ -163,6 +156,7 @@ class TaskItem(QWidget):
         else:
             self.progress_label.setText(f'{self.completed}/{self.required}')
             self.progress_percent = (self.completed / self.required) * 100
+        self.progress_bar.setValue(int(self.progress_percent))
 
         progress_value = int(self.progress_percent)
         if progress_value < 0:
@@ -205,12 +199,9 @@ class TaskItem(QWidget):
 class TaskWindow(BaseWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('芙芙伴学')
-        self.setWindowIcon(icon)
+        self.setWindowTitle('任务')
         self.setMinimumSize(600, 400)
 
-        self.week_displayed = floor(get_this_week(
-            start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
         self.tasks = []
         self.load_tasks()
 
@@ -218,7 +209,7 @@ class TaskWindow(BaseWindow):
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
 
-        self.header = QLabel(f'第{self.week_displayed}周')
+        self.header = QLabel('任务')
         self.header.setStyleSheet("font-size: 24px; font-weight: bold; color: #FFFFFF;")
         self.header.setMargin(5)
         self.main_layout.addWidget(self.header)
@@ -262,24 +253,12 @@ class TaskWindow(BaseWindow):
         self.add_button.clicked.connect(self.on_add_task)
         self.button_layout.addWidget(self.add_button)
 
-        self.open_yesterday_folder_button = QPushButton('打开昨日文件夹')
-        self.open_yesterday_folder_button.clicked.connect(self.open_yesterday_folder)
-        self.button_layout.addWidget(self.open_yesterday_folder_button)
-
-        self.open_today_folder_button = QPushButton('打开今日文件夹')
-        self.open_today_folder_button.clicked.connect(self.open_today_folder)
-        self.button_layout.addWidget(self.open_today_folder_button)
-
-        self.open_folder_button = QPushButton('打开本周文件夹')
-        self.open_folder_button.clicked.connect(self.open_this_week_folder)
-        self.button_layout.addWidget(self.open_folder_button)
-
         self.main_layout.addLayout(self.button_layout)
 
         self.update_total_progress()
 
     def load_tasks(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
         json_path = os.path.join(data_dir, 'tasks.json')
 
         if not os.path.exists(json_path):
@@ -289,7 +268,8 @@ class TaskWindow(BaseWindow):
             self.tasks = json.load(f)
 
     def save_tasks(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        os.makedirs(data_dir, exist_ok=True)
         json_path = os.path.join(data_dir, 'tasks.json')
 
         with open(json_path, 'w', encoding='utf-8') as f:
@@ -313,40 +293,6 @@ class TaskWindow(BaseWindow):
             progress_value = 100
         self.total_progress_bar.setValue(progress_value)
         self.total_progress_label.setText(f'{int(total_percent)}%')
-
-    @staticmethod
-    def _open_folder_of_dir(data_dir):
-        os.makedirs(data_dir, exist_ok=True)
-        if sys.platform == 'win32': # 限 Windows
-            os.startfile(data_dir)
-        else:
-            from PySide6.QtGui import QDesktopServices
-            from PySide6.QtCore import QUrl
-            QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
-
-    def open_this_week_folder(self):
-        data_dir = os.path.join(os.path.dirname(__file__), 'data',
-                                str(self.week_displayed))
-        self._open_folder_of_dir(data_dir)
-
-    @staticmethod
-    def open_folder_of_the_day(dt: datetime.datetime):
-        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        week = floor(get_this_week(dt=dt,
-            start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
-        dt_date = get_today(dt) # 处理跨天问题
-
-        data_dir = os.path.join(os.path.dirname(__file__), 'data',
-                                str(week), days_of_week[dt_date.weekday()])
-        TaskWindow._open_folder_of_dir(data_dir)
-
-    @staticmethod
-    def open_today_folder():
-        TaskWindow.open_folder_of_the_day(datetime.datetime.now())
-
-    @staticmethod
-    def open_yesterday_folder():
-        TaskWindow.open_folder_of_the_day(datetime.datetime.now() - datetime.timedelta(days=1))
 
     def on_task_updated(self):
         self.save_tasks()
