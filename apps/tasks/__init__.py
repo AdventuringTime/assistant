@@ -365,9 +365,15 @@ class TaskWindow(BaseWindow):
             self.refresh_ui()
 
     def on_tracking_changed(self, index):
+        old_index = self.tracking_task_id
+
         if self.tracking_task_id == index:
             self.tracking_task_id = None
+            self.task_items[index].set_tracking(False)
         else:
             self.tracking_task_id = index
+            if old_index is not None:
+                self.task_items[old_index].set_tracking(False)
+            self.task_items[index].set_tracking(True)
+
         self.save_tasks()
-        self.refresh_ui()
