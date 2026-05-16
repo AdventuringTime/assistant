@@ -5,7 +5,7 @@ import os
 # 模块级别的缓存字典，用于存储不同模块的调用状态
 _cached_dates = {}
 
-def get_today(dt=None):
+def get_today(dt: datetime.datetime=None) -> datetime.date:
     """
     给定一个datetime，返回一个date为今天的日期，以凌晨四点为界
 
@@ -26,7 +26,7 @@ def get_today(dt=None):
 
     return today
 
-def is_first_run_today(data_file, dt=None):
+def is_first_run_today(data_file: str, dt: datetime.datetime=None) -> bool:
     """
     判断指定模块是否为今天首次调用
     使用内部缓存减少重复读取文件操作
@@ -67,7 +67,7 @@ def is_first_run_today(data_file, dt=None):
     else:
         return False
 
-def get_this_week(dt=None, start_date=None):
+def get_this_week(dt: datetime.datetime=None, start_date: datetime.datetime=None) -> float:
     """
     计算当前时间对应的周数（float）
 

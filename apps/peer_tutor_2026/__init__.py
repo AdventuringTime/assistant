@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon
 
 from core.base_window import BaseWindow, BaseDialog
-from core.functions import get_this_week
+from core.functions import get_this_week, get_today
 import datetime
 from math import floor
 
@@ -213,7 +213,7 @@ class TaskWindow(BaseWindow):
         self.setMinimumSize(600, 400)
 
         self.week_displayed = floor(get_this_week(
-            start_date=datetime.datetime(2026, 5, 11, 16, 0, 0))) + 1 # 每天过半刷新
+            start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
         self.tasks = []
         self.load_tasks()
 
@@ -265,12 +265,16 @@ class TaskWindow(BaseWindow):
         self.add_button.clicked.connect(self.on_add_task)
         self.button_layout.addWidget(self.add_button)
 
+        self.open_yesterday_folder_button = QPushButton('打开昨日文件夹')
+        self.open_yesterday_folder_button.clicked.connect(self.open_yesterday_folder)
+        self.button_layout.addWidget(self.open_yesterday_folder_button)
+
         self.open_today_folder_button = QPushButton('打开今日文件夹')
         self.open_today_folder_button.clicked.connect(self.open_today_folder)
         self.button_layout.addWidget(self.open_today_folder_button)
 
-        self.open_folder_button = QPushButton('打开文件夹')
-        self.open_folder_button.clicked.connect(self.open_folder)
+        self.open_folder_button = QPushButton('打开本周文件夹')
+        self.open_folder_button.clicked.connect(self.open_this_week_folder)
         self.button_layout.addWidget(self.open_folder_button)
 
         self.main_layout.addLayout(self.button_layout)
@@ -323,23 +327,29 @@ class TaskWindow(BaseWindow):
             from PySide6.QtCore import QUrl
             QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
 
-    def open_folder(self):
+    def open_this_week_folder(self):
         data_dir = os.path.join(os.path.dirname(__file__), 'data',
                                 str(self.week_displayed))
         self._open_folder_of_dir(data_dir)
 
-    def open_today_folder(self):
+    @staticmethod
+    def open_folder_of_the_day(dt: datetime.datetime):
         days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        now = datetime.datetime.now()
-        day_of_week = now.weekday()
-        if now.hour < 16: # 16 时前为前一天
-            day_of_week -= 1
-            if day_of_week < 0:
-                day_of_week += 7
+        week = floor(get_this_week(dt=dt,
+            start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
+        dt_date = get_today(dt) # 处理跨天问题
 
         data_dir = os.path.join(os.path.dirname(__file__), 'data',
-                                str(self.week_displayed), days_of_week[day_of_week])
-        self._open_folder_of_dir(data_dir)
+                                str(week), days_of_week[dt_date.weekday()])
+        TaskWindow._open_folder_of_dir(data_dir)
+
+    @staticmethod
+    def open_today_folder():
+        TaskWindow.open_folder_of_the_day(datetime.datetime.now())
+
+    @staticmethod
+    def open_yesterday_folder():
+        TaskWindow.open_folder_of_the_day(datetime.datetime.now() - datetime.timedelta(days=1))
 
     def on_task_updated(self):
         self.save_tasks()
