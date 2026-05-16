@@ -3,7 +3,8 @@ import json
 import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
-                               QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox)
+                               QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
+                               QTextEdit, QSizePolicy)
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 
@@ -28,6 +29,14 @@ class TaskDialog(BaseDialog):
             self.name_edit.setText(task.get('name', ''))
         self.layout_.addWidget(self.name_label)
         self.layout_.addWidget(self.name_edit)
+
+        self.description_label = QLabel('任务描述:')
+        self.description_edit = QTextEdit()
+        self.description_edit.setFixedHeight(80)
+        if task:
+            self.description_edit.setPlainText(task.get('description', ''))
+        self.layout_.addWidget(self.description_label)
+        self.layout_.addWidget(self.description_edit)
 
         self.required_label = QLabel('所需次数:')
         self.required_spin = QDoubleSpinBox(decimals=2)
@@ -69,6 +78,7 @@ class TaskDialog(BaseDialog):
     def get_task_data(self):
         return {
             'name': self.name_edit.text(),
+            'description': self.description_edit.toPlainText(),
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
             'required': self.required_spin.value()
         }
@@ -108,12 +118,11 @@ class TaskItem(QWidget):
 
         self.name_label = QLabel(self.task.get('name', ''))
         self.name_label.setWordWrap(True)
+        self.name_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         font = QFont()
         font.setPointSize(14)
         self.name_label.setFont(font)
         self.top_layout.addWidget(self.name_label)
-
-        self.top_layout.addStretch()
 
         self.edit_button = QPushButton('编辑')
         self.edit_button.clicked.connect(self.on_edit_clicked)
@@ -124,6 +133,13 @@ class TaskItem(QWidget):
         self.top_layout.addWidget(self.track_button)
 
         self.layout_.addLayout(self.top_layout)
+
+        self.description_label = QLabel(self.task.get('description', ''))
+        self.description_label.setWordWrap(True)
+        self.description_label.setStyleSheet("font-size: 12px; color: #AAAAAA;")
+        self.layout_.addWidget(self.description_label)
+        if not self.description_label.text():
+            self.description_label.hide()
 
         self.completed = self.task.get('completed', 0.0)
         self.required = self.task.get('required', 1.0)
@@ -223,8 +239,14 @@ class TaskItem(QWidget):
 
     def on_dialog_save(self, data):
         self.task['name'] = data['name']
+        self.task['description'] = data['description']
         self.task['required'] = data['required']
         self.name_label.setText(data['name'])
+        self.description_label.setText(data['description'])
+        if self.description_label.text():
+            self.description_label.show()
+        else:
+            self.description_label.hide()
         self.required = data['required']
         self.update_progress_percent()
         self.task_updated.emit()
