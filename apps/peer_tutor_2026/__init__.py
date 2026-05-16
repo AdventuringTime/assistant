@@ -124,10 +124,9 @@ class TaskItem(QWidget):
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(int(self.progress_percent))
         self.progress_bar.setFixedHeight(20)
 
-        self.progress_label = QLabel(self.progress_text)
+        self.progress_label = QLabel()
         self.progress_label.setStyleSheet("font-size: 14px; color: #888888;")
 
         self.progress_widget = QWidget()
