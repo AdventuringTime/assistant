@@ -43,6 +43,8 @@ class TaskDialog(BaseDialog):
         self.required_spin.setRange(0.0, 1e15)
         if task:
             self.required_spin.setValue(task.get('required', 1.0))
+        else:
+            self.required_spin.setValue(1.0)
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
@@ -136,7 +138,7 @@ class TaskItem(QWidget):
 
         self.description_label = QLabel(self.task.get('description', ''))
         self.description_label.setWordWrap(True)
-        self.description_label.setStyleSheet("font-size: 12px; color: #AAAAAA;")
+        self.description_label.setStyleSheet("font-size: 15px; color: #AAAAAA;")
         self.layout_.addWidget(self.description_label)
         if not self.description_label.text():
             self.description_label.hide()
