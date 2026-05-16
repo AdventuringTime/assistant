@@ -246,6 +246,7 @@ class ExpenseItemWidget(QWidget):
 
         if estimated == 0 or estimated == "Error":
             self.progress_bar.setValue(0)
+            self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #00FF00; };")
         else:
             progress = actual / estimated
             ratio = min(max(progress, 0), 1)
@@ -502,6 +503,7 @@ class ExpenseTypeWidget(QWidget):
 
         if estimated == 0 or estimated == "Error":
             self.progress_bar.setValue(0)
+            self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #00FF00; };")
         else:
             progress = actual / estimated
             ratio = min(max(progress, 0), 1)
@@ -783,6 +785,7 @@ class ExpensesWindow(BaseWindow):
 
         if estimated == 0 or estimated == "Error":
             self.total_progress_bar.setValue(0)
+            self.total_progress_bar.setStyleSheet("QProgressBar::chunk { background-color: #00FF00; };")
         else:
             progress = actual / estimated
             ratio = min(max(progress, 0), 1)
