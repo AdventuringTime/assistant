@@ -4,11 +4,59 @@ import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
-                               QTextEdit, QSizePolicy)
+                               QTextEdit, QSizePolicy, QListWidget, QDialog)
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 
 from core.base_window import BaseWindow, BaseDialog
+
+
+class SortDialog(BaseDialog):
+    def __init__(self, parent, children, title="排序"):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.children = children
+
+        layout = QVBoxLayout(self)
+
+        self.list_widget = QListWidget()
+        self.list_widget.setDragDropMode(QListWidget.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.MoveAction)
+        layout.addWidget(self.list_widget)
+
+        for child in self.children:
+            self.list_widget.addItem(child['name'])
+
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        cancel_button = QPushButton("取消")
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(cancel_button)
+
+        ok_button = QPushButton("确定")
+        ok_button.clicked.connect(self.accept)
+        button_layout.addWidget(ok_button)
+
+        layout.addLayout(button_layout)
+
+        self.result = None
+
+    def accept(self):
+        new_order = []
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            name = item.text()
+            for child in self.children:
+                if child['name'] == name and child not in new_order:
+                    new_order.append(child)
+                    break
+        self.result = new_order
+        super().accept()
+
+    def reject(self):
+        self.result = None
+        super().reject()
 
 
 class TaskDialog(BaseDialog):
@@ -290,6 +338,10 @@ class TaskWindow(BaseWindow):
 
         self.button_layout.addStretch()
 
+        self.sort_button = QPushButton("排序")
+        self.sort_button.clicked.connect(self.open_sort_dialog)
+        self.button_layout.addWidget(self.sort_button)
+
         self.add_button = QPushButton('添加任务')
         self.add_button.clicked.connect(self.on_add_task)
         self.button_layout.addWidget(self.add_button)
@@ -297,6 +349,18 @@ class TaskWindow(BaseWindow):
         self.main_layout.addLayout(self.button_layout)
 
         self.refresh_ui()
+
+    def open_sort_dialog(self):
+        if not self.tasks:
+            return
+
+        dialog = SortDialog(self, self.tasks, "排序")
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.tracking_task_id = None # 排序后暂时移除追踪
+            self.tasks = dialog.result
+            self.save_tasks()
+            self.refresh_ui()
 
     def load_tasks(self):
         data_dir = os.path.join(os.path.dirname(__file__), 'data')

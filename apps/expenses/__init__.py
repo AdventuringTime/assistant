@@ -30,13 +30,11 @@ class SortDialog(BaseDialog):
     def __init__(self, parent, children, title="排序"):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.setMinimumSize(400, 300)
         self.children = children
 
         layout = QVBoxLayout(self)
 
         self.list_widget = QListWidget()
-        self.list_widget.setSelectionMode(QListWidget.SingleSelection)
         self.list_widget.setDragDropMode(QListWidget.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.MoveAction)
         layout.addWidget(self.list_widget)
@@ -47,13 +45,13 @@ class SortDialog(BaseDialog):
         button_layout = QHBoxLayout()
         button_layout.addStretch()
 
-        ok_button = QPushButton("确定")
-        ok_button.clicked.connect(self.accept)
-        button_layout.addWidget(ok_button)
-
         cancel_button = QPushButton("取消")
         cancel_button.clicked.connect(self.reject)
         button_layout.addWidget(cancel_button)
+
+        ok_button = QPushButton("确定")
+        ok_button.clicked.connect(self.accept)
+        button_layout.addWidget(ok_button)
 
         layout.addLayout(button_layout)
 
