@@ -216,16 +216,18 @@ class TaskWindow(BaseWindow):
         self.setWindowIcon(icon)
         self.setMinimumSize(600, 400)
 
-        self.week_displayed = floor(get_this_week(
+        self.this_week_num = floor(get_this_week(
             start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
+        self.week_displayed = self.this_week_num
+        self.is_showing_this_week = True
         self.tasks = []
-        self.load_tasks()
+        self.task_items = []
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
 
-        self.header = QLabel(f'第{self.week_displayed}周')
+        self.header = QLabel()
         self.header.setStyleSheet("font-size: 24px; font-weight: bold; color: #FFFFFF;")
         self.header.setMargin(5)
         self.main_layout.addWidget(self.header)
@@ -235,14 +237,6 @@ class TaskWindow(BaseWindow):
 
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
-
-        self.task_items = []
-        for task in self.tasks:
-            task_item = TaskItem(task)
-            task_item.task_updated.connect(self.on_task_updated)
-            task_item.task_deleted.connect(self.on_task_deleted)
-            self.task_items.append(task_item)
-            self.content_layout.addWidget(task_item)
 
         self.content_layout.addStretch()
         self.scroll_area.setWidget(self.content_widget)
@@ -263,6 +257,10 @@ class TaskWindow(BaseWindow):
 
         self.button_layout = QHBoxLayout()
 
+        self.week_switch_button = QPushButton('上周')
+        self.week_switch_button.clicked.connect(self.toggle_week)
+        self.button_layout.addWidget(self.week_switch_button)
+
         self.button_layout.addStretch()
 
         self.add_button = QPushButton('添加任务')
@@ -277,13 +275,13 @@ class TaskWindow(BaseWindow):
         self.open_today_folder_button.clicked.connect(self.open_today_folder)
         self.button_layout.addWidget(self.open_today_folder_button)
 
-        self.open_folder_button = QPushButton('打开本周文件夹')
+        self.open_folder_button = QPushButton('打开此周文件夹')
         self.open_folder_button.clicked.connect(self.open_this_week_folder)
         self.button_layout.addWidget(self.open_folder_button)
 
         self.main_layout.addLayout(self.button_layout)
 
-        self.update_total_progress()
+        self.load_and_display_tasks()
 
     def load_tasks(self):
         data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
@@ -384,3 +382,28 @@ class TaskWindow(BaseWindow):
             self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
             self.save_tasks()
             self.update_total_progress()
+
+    def toggle_week(self):
+        if self.is_showing_this_week:
+            self.week_displayed = self.this_week_num - 1
+            self.week_switch_button.setText('本周')
+        else:
+            self.week_displayed = self.this_week_num
+            self.week_switch_button.setText('上周')
+        self.is_showing_this_week = not self.is_showing_this_week
+        self.load_and_display_tasks()
+
+    def load_and_display_tasks(self):
+        for item in self.task_items:
+            item.deleteLater()
+        self.task_items.clear()
+        self.tasks.clear()
+        self.load_tasks()
+        for task in self.tasks:
+            task_item = TaskItem(task)
+            task_item.task_updated.connect(self.on_task_updated)
+            task_item.task_deleted.connect(self.on_task_deleted)
+            self.task_items.append(task_item)
+            self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
+        self.header.setText(f'第{self.week_displayed}周')
+        self.update_total_progress()
