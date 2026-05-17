@@ -307,6 +307,7 @@ class TaskWindow(BaseWindow):
         super().__init__(parent)
         self.setWindowTitle('任务')
         self.setMinimumSize(600, 400)
+        self.resize(1000, 800)
 
         self.tasks = []
         self.tracking_task_id = None
