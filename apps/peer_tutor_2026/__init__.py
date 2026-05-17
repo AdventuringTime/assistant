@@ -4,7 +4,7 @@ import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox)
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QEvent, QTimer
 from PySide6.QtGui import QIcon
 
 from core.base_window import BaseWindow, BaseDialog
@@ -40,6 +40,7 @@ class TaskDialog(BaseDialog):
         self.required_spin.setRange(0.0, 1e15)
         if task:
             self.required_spin.setValue(task.get('required', 1.0))
+        self.required_spin.lineEdit().installEventFilter(self)
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
@@ -88,6 +89,12 @@ class TaskDialog(BaseDialog):
             'required': self.required_spin.value(),
             'weight': self.weight_spin.value()
         }
+
+    def eventFilter(self, obj, event):
+        if obj == self.required_spin and event.type() == QEvent.Type.FocusIn:
+            QTimer.singleShot(0, self.required_spin.selectAll)
+            return False
+        return super().eventFilter(obj, event)
 
 
 class TaskItem(QWidget):
