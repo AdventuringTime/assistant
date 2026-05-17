@@ -65,6 +65,7 @@ class TaskDialog(BaseDialog):
 
         self.save_button = QPushButton('保存')
         self.save_button.clicked.connect(self.on_save)
+        self.save_button.setDefault(True)
         self.button_layout.addWidget(self.save_button)
 
         self.layout_.addLayout(self.button_layout)

@@ -36,6 +36,7 @@ class SortDialog(BaseDialog):
 
         ok_button = QPushButton("确定")
         ok_button.clicked.connect(self.accept)
+        ok_button.setDefault(True)
         button_layout.addWidget(ok_button)
 
         layout.addLayout(button_layout)
@@ -96,8 +97,6 @@ class TaskDialog(BaseDialog):
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
-
-
         self.button_layout = QHBoxLayout()
 
         self.button_layout.addStretch()
@@ -110,6 +109,7 @@ class TaskDialog(BaseDialog):
 
         self.save_button = QPushButton('保存')
         self.save_button.clicked.connect(self.on_save)
+        self.save_button.setDefault(True)
         self.button_layout.addWidget(self.save_button)
 
         self.layout_.addLayout(self.button_layout)

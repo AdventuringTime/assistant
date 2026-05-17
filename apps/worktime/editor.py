@@ -7,7 +7,6 @@ from core.widgets import SettingItemWidget
 
 class EditorWindow(BaseDialog):
     """编辑窗口"""
-
     def __init__(self, parent, year, month, day, item=None, id_=None):
         super().__init__(parent)
         self.item = item or {} # a if a else b
@@ -62,6 +61,7 @@ class EditorWindow(BaseDialog):
 
         self.save_button = QPushButton("保存")
         self.save_button.clicked.connect(self.save)
+        self.save_button.setDefault(True)
         button_layout.addWidget(self.save_button)
 
         main_layout.addLayout(button_layout)

@@ -51,6 +51,7 @@ class SortDialog(BaseDialog):
 
         ok_button = QPushButton("确定")
         ok_button.clicked.connect(self.accept)
+        ok_button.setDefault(True)
         button_layout.addWidget(ok_button)
 
         layout.addLayout(button_layout)
