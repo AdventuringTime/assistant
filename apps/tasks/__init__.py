@@ -5,8 +5,9 @@ from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
                                QTextEdit, QSizePolicy, QListWidget, QDialog)
-from PySide6.QtCore import Qt, Signal, QEvent, QTimer
+from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl
 from PySide6.QtGui import QFont
+from PySide6.QtGui import QDesktopServices
 
 from core.base_window import BaseWindow, BaseDialog
 
@@ -98,6 +99,13 @@ class TaskDialog(BaseDialog):
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
+        self.link_label = QLabel('链接:')
+        self.link_edit = QLineEdit()
+        if task:
+            self.link_edit.setText(task.get('link', ''))
+        self.layout_.addWidget(self.link_label)
+        self.layout_.addWidget(self.link_edit)
+
         self.button_layout = QHBoxLayout()
 
         self.button_layout.addStretch()
@@ -127,12 +135,16 @@ class TaskDialog(BaseDialog):
             self.close()
 
     def get_task_data(self):
-        return {
+        data = {
             'name': self.name_edit.text(),
             'description': self.description_edit.toPlainText(),
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
             'required': self.required_spin.value()
         }
+        link = self.link_edit.text().strip()
+        if link:
+            data['link'] = link
+        return data
 
     def eventFilter(self, obj, event):
         if obj == self.required_spin and event.type() == QEvent.Type.FocusIn:
@@ -180,6 +192,11 @@ class TaskItem(QWidget):
         font.setPointSize(14)
         self.name_label.setFont(font)
         self.top_layout.addWidget(self.name_label)
+
+        self.go_button = QPushButton('前往')
+        self.go_button.clicked.connect(self.on_go_clicked)
+        self.top_layout.addWidget(self.go_button)
+        self.go_button.setVisible(is_tracking and bool(self.task.get('link')))
 
         self.edit_button = QPushButton('编辑')
         self.edit_button.clicked.connect(self.on_edit_clicked)
@@ -244,6 +261,14 @@ class TaskItem(QWidget):
                     background-color: rgba(255, 255, 255, 0.1);
                 }
             """)
+        self.go_button.setVisible(is_tracking and bool(self.task.get('link')))
+
+    def on_go_clicked(self):
+        link = self.task.get('link', '')
+        if not link:
+            return
+        url = QUrl(link)
+        QDesktopServices.openUrl(url) # 执行失败无异常抛出，无需 try-except
 
     def on_track_clicked(self):
         self.tracking_changed.emit(self.id_)
@@ -295,9 +320,7 @@ class TaskItem(QWidget):
         self.task_deleted.emit()
 
     def on_dialog_save(self, data):
-        self.task['name'] = data['name']
-        self.task['description'] = data['description']
-        self.task['required'] = data['required']
+        self.task = data
         self.name_label.setText(data['name'])
         self.description_label.setText(data['description'])
         if self.description_label.text():
@@ -306,6 +329,7 @@ class TaskItem(QWidget):
             self.description_label.hide()
         self.required = data['required']
         self.update_progress_percent()
+        self.go_button.setVisible(self.is_tracking and bool(self.task.get('link')))
         self.task_updated.emit()
 
 
