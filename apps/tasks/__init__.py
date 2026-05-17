@@ -320,7 +320,8 @@ class TaskItem(QWidget):
         self.task_deleted.emit()
 
     def on_dialog_save(self, data):
-        self.task = data
+        self.task.clear()
+        self.task.update(data)
         self.name_label.setText(data['name'])
         self.description_label.setText(data['description'])
         if self.description_label.text():
