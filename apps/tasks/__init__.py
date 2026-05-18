@@ -6,10 +6,15 @@ from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
                                QTextEdit, QSizePolicy, QListWidget, QDialog, QComboBox)
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtGui import QDesktopServices
 
 from core.base_window import BaseWindow, BaseDialog
+
+
+def _hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
 
 class SortDialog(BaseDialog):
@@ -110,14 +115,14 @@ class TaskDialog(BaseDialog):
         self.link_edit = QLineEdit()
         if task:
             self.link_edit.setText(task.get('link', ''))
-        
+
         self.link_layout = QHBoxLayout()
         self.link_layout.addWidget(self.link_edit)
-        
+
         self.convert_button = QPushButton('识别路径')
         self.convert_button.clicked.connect(self.on_convert_path)
         self.link_layout.addWidget(self.convert_button)
-        
+
         self.layout_.addWidget(self.link_label)
         self.layout_.addLayout(self.link_layout)
 
@@ -165,7 +170,7 @@ class TaskDialog(BaseDialog):
                 path = '/' + path
             file_url = 'file://' + path
             self.link_edit.setText(file_url)
-    
+
     def get_task_data(self):
         data = {
             'name': self.name_edit.text(),
@@ -199,7 +204,7 @@ class TaskItem(QWidget):
         self.id_ = id_
         self.is_tracking = is_tracking
         self.task_type = task.get('type', 0)
-        
+
         self.color_main = '#FFCC00'
         self.color_branch = '#00CC66'
         if self.task_type == 0:
@@ -211,7 +216,7 @@ class TaskItem(QWidget):
         self.update_style()
 
         self.layout_ = QHBoxLayout(self)
-        
+
         self.line_widget = QWidget()
         self.line_widget.setFixedWidth(4)
         self.line_widget.setStyleSheet(f"background-color: {self.current_color};")
@@ -276,13 +281,13 @@ class TaskItem(QWidget):
         self.progress_widget.mousePressEvent = self.on_progress_clicked
 
         self.content_layout.addWidget(self.progress_widget)
-        
+
         self.layout_.addWidget(self.content_widget)
 
         self.update_progress_percent()
-    
+
     def update_style(self):
-        r, g, b = self.hex_to_rgb(self.current_color)
+        r, g, b = _hex_to_rgb(self.current_color)
         if self.is_tracking:
             self.setStyleSheet(f"""
                 TaskItem {{
@@ -298,10 +303,6 @@ class TaskItem(QWidget):
                     background-color: rgba({r}, {g}, {b}, 0.08);
                 }}
             """)
-    
-    def hex_to_rgb(self, hex_color):
-        hex_color = hex_color.lstrip('#')
-        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     def set_tracking(self, is_tracking):
         self.is_tracking = is_tracking
@@ -372,7 +373,7 @@ class TaskItem(QWidget):
         self.task.clear()
         self.task.update(data)
         self.name_label.setText(data['name'])
-        
+
         new_type = data.get('type', 0)
         if new_type != self.task_type:
             self.task_type = new_type
@@ -382,7 +383,7 @@ class TaskItem(QWidget):
                 self.current_color = self.color_main
             self.line_widget.setStyleSheet(f"background-color: {self.current_color};")
             self.update_style()
-        
+
         self.description_label.setText(data['description'])
         if self.description_label.text():
             self.description_label.show()
@@ -394,6 +395,53 @@ class TaskItem(QWidget):
         self.task_updated.emit()
 
 
+class FloatingWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint |
+                           Qt.WindowType.WindowStaysOnBottomHint |
+                           Qt.WindowType.Tool |
+                           Qt.WindowType.WindowTransparentForInput)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+
+        self.layout_ = QVBoxLayout(self)
+        self.layout_.setContentsMargins(0, 0, 0, 0)
+
+        self.background_widget = QWidget()
+        self.background_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.background_widget.setObjectName("FloatingBackground")
+
+        self.content_layout = QVBoxLayout(self.background_widget)
+        self.content_layout.setContentsMargins(24, 24, 24, 24)
+
+        self.top_label = QLabel()
+        self.top_label.setStyleSheet("font-size: 36px; color: #FFFFFF;")
+        self.top_label.setWordWrap(True)
+        self.content_layout.addWidget(self.top_label)
+
+        self.bottom_label = QLabel()
+        self.bottom_label.setStyleSheet("font-size: 24px; color: #DDDDDD;")
+        self.bottom_label.setWordWrap(True)
+        self.content_layout.addWidget(self.bottom_label)
+
+        self.layout_.addWidget(self.background_widget)
+
+        self.adjustSize()
+
+    def set_content(self, name, progress, description, color):
+        self.top_label.setText(f"{name} - {progress}")
+        self.bottom_label.setText(description)
+
+        r, g, b = _hex_to_rgb(color)
+        self.background_widget.setStyleSheet(f"""
+            #FloatingBackground {{
+                background-color: rgba({r}, {g}, {b}, 0.5);
+                border-radius: 20px;
+            }}
+        """)
+        self.adjustSize()
+
+
 class TaskWindow(BaseWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -403,6 +451,7 @@ class TaskWindow(BaseWindow):
 
         self.tasks = []
         self.tracking_task_id = None
+        self.floating_widget = None
         self.load_tasks()
 
         self.central_widget = QWidget()
@@ -425,8 +474,6 @@ class TaskWindow(BaseWindow):
         self.scroll_area.setWidget(self.content_widget)
         self.main_layout.addWidget(self.scroll_area)
 
-
-
         self.button_layout = QHBoxLayout()
 
         self.button_layout.addStretch()
@@ -442,6 +489,7 @@ class TaskWindow(BaseWindow):
         self.main_layout.addLayout(self.button_layout)
 
         self.refresh_ui()
+        self.update_floating_widget()
 
     def open_sort_dialog(self):
         if not self.tasks:
@@ -497,6 +545,7 @@ class TaskWindow(BaseWindow):
 
     def on_task_updated(self):
         self.save_tasks()
+        self.update_floating_widget()
 
     def on_task_deleted(self):
         sender = self.sender()
@@ -509,6 +558,7 @@ class TaskWindow(BaseWindow):
             del self.tasks[index]
             self.save_tasks()
             self.refresh_ui()
+            self.update_floating_widget()
 
     def on_add_task(self):
         dialog = TaskDialog(parent=self)
@@ -520,6 +570,47 @@ class TaskWindow(BaseWindow):
             self.tasks.append(data)
             self.save_tasks()
             self.refresh_ui()
+
+    def update_floating_widget(self):
+        if self.tracking_task_id is not None and 0 <= self.tracking_task_id < len(self.tasks):
+            task = self.tasks[self.tracking_task_id]
+            task_type = task.get('type', 0)
+            color = '#00CC66' if task_type == 0 else '#FFCC00'
+
+            completed = task.get('completed', 0.0)
+            required = task.get('required', 1.0)
+
+            if required == 0.0:
+                progress = '已完成'
+            elif required == 1.0:
+                if completed == 0.0:
+                    progress = '未完成'
+                elif completed == 1.0:
+                    progress = '已完成'
+                else:
+                    progress = f'{completed}/{required}'
+            else:
+                progress = f'{completed}/{required}'
+
+            name = task.get('name', '')
+            description = task.get('description', '')
+
+            if not self.floating_widget:
+                self.floating_widget = FloatingWidget()
+
+            self.floating_widget.set_content(name, progress, description, color)
+            self.set_floating_position()
+            self.floating_widget.show()
+        else:
+            if self.floating_widget:
+                self.floating_widget.hide()
+
+    def set_floating_position(self):
+        if self.floating_widget:
+            screen_geometry = QGuiApplication.primaryScreen().availableGeometry()
+            x = screen_geometry.width() - self.floating_widget.width() - 50
+            y = 50
+            self.floating_widget.move(x, y)
 
     def on_tracking_changed(self, index):
         old_index = self.tracking_task_id
@@ -534,3 +625,9 @@ class TaskWindow(BaseWindow):
             self.task_items[index].set_tracking(True)
 
         self.save_tasks()
+        self.update_floating_widget()
+
+    def closeEvent(self, event):
+        if self.floating_widget:
+            self.floating_widget.close()
+        super().closeEvent(event)
