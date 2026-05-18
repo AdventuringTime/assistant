@@ -103,8 +103,16 @@ class TaskDialog(BaseDialog):
         self.link_edit = QLineEdit()
         if task:
             self.link_edit.setText(task.get('link', ''))
+        
+        self.link_layout = QHBoxLayout()
+        self.link_layout.addWidget(self.link_edit)
+        
+        self.convert_button = QPushButton('识别路径')
+        self.convert_button.clicked.connect(self.on_convert_path)
+        self.link_layout.addWidget(self.convert_button)
+        
         self.layout_.addWidget(self.link_label)
-        self.layout_.addWidget(self.link_edit)
+        self.layout_.addLayout(self.link_layout)
 
         self.button_layout = QHBoxLayout()
 
@@ -134,6 +142,20 @@ class TaskDialog(BaseDialog):
             self.on_delete_signal.emit()
             self.close()
 
+    def on_convert_path(self):
+        """将文件路径转换为file://链接"""
+        path = self.link_edit.text().strip()
+
+        if ((not '://' in path) and # 这种已经是链接了
+            ('\\' in path or '/' in path)):
+            # 转换为file://链接
+            # 处理Windows路径
+            path = path.replace('\\', '/')
+            if not path.startswith('/'):
+                path = '/' + path
+            file_url = 'file://' + path
+            self.link_edit.setText(file_url)
+    
     def get_task_data(self):
         data = {
             'name': self.name_edit.text(),
