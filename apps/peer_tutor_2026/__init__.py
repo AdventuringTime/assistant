@@ -42,7 +42,6 @@ class TaskDialog(BaseDialog):
             self.required_spin.setValue(task.get('required', 1.0))
         else:
             self.required_spin.setValue(1.0)
-        self.required_spin.installEventFilter(self)
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
@@ -53,7 +52,6 @@ class TaskDialog(BaseDialog):
             self.weight_spin.setValue(task.get('weight', 100))
         else:
             self.weight_spin.setValue(100)
-        self.weight_spin.installEventFilter(self)
         self.layout_.addWidget(self.weight_label)
         self.layout_.addWidget(self.weight_spin)
 
@@ -73,6 +71,9 @@ class TaskDialog(BaseDialog):
         self.button_layout.addWidget(self.save_button)
 
         self.layout_.addLayout(self.button_layout)
+
+        self.required_spin.installEventFilter(self)
+        self.weight_spin.installEventFilter(self)
 
     def on_save(self):
         self.on_save_signal.emit(self.get_task_data())
