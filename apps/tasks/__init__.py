@@ -95,7 +95,6 @@ class TaskDialog(BaseDialog):
             self.required_spin.setValue(task.get('required', 1.0))
         else:
             self.required_spin.setValue(1.0)
-        self.required_spin.installEventFilter(self)
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
@@ -131,14 +130,17 @@ class TaskDialog(BaseDialog):
 
         self.layout_.addLayout(self.button_layout)
 
+        self.required_spin.installEventFilter(self)
+        self.link_edit.installEventFilter(self)
+
     def on_save(self):
         self.on_save_signal.emit(self.get_task_data())
         self.close()
 
     def on_delete(self):
         reply = QMessageBox.question(self, '删除任务', '删除任务？',
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-        if reply == QMessageBox.Yes:
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
             self.on_delete_signal.emit()
             self.close()
 
@@ -169,9 +171,11 @@ class TaskDialog(BaseDialog):
         return data
 
     def eventFilter(self, obj, event):
-        if obj == self.required_spin and event.type() == QEvent.Type.FocusIn:
-            QTimer.singleShot(0, self.required_spin.selectAll)
-            return False
+        if event.type() == QEvent.Type.FocusIn:
+            if obj == self.required_spin:
+                QTimer.singleShot(0, self.required_spin.selectAll)
+            elif obj == self.link_edit:
+                QTimer.singleShot(0, self.link_edit.selectAll)
         return super().eventFilter(obj, event)
 
 

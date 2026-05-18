@@ -95,12 +95,11 @@ class TaskDialog(BaseDialog):
         }
 
     def eventFilter(self, obj, event):
-        if obj == self.required_spin and event.type() == QEvent.Type.FocusIn:
-            QTimer.singleShot(0, self.required_spin.selectAll)
-            return False
-        if obj == self.weight_spin and event.type() == QEvent.Type.FocusIn:
-            QTimer.singleShot(0, self.weight_spin.selectAll)
-            return False
+        if event.type() == QEvent.Type.FocusIn:
+            if obj == self.required_spin:
+                QTimer.singleShot(0, self.required_spin.selectAll)
+            if obj == self.weight_spin:
+                QTimer.singleShot(0, self.weight_spin.selectAll)
         return super().eventFilter(obj, event)
 
 
