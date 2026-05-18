@@ -229,6 +229,8 @@ class TaskWindow(BaseWindow):
         self.tasks = []
         self.task_items = []
 
+        self.inherit_tasks_from_last_week_if_not_exist()
+
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QVBoxLayout(self.central_widget)
@@ -288,6 +290,24 @@ class TaskWindow(BaseWindow):
         self.main_layout.addLayout(self.button_layout)
 
         self.load_and_display_tasks()
+
+    def inherit_tasks_from_last_week_if_not_exist(self):
+        this_week_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.this_week_num))
+        this_week_json_path = os.path.join(this_week_dir, 'tasks.json')
+
+        if os.path.exists(this_week_json_path):
+            return
+
+        last_week_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.this_week_num - 1))
+        last_week_json_path = os.path.join(last_week_dir, 'tasks.json')
+        if os.path.exists(last_week_json_path):
+            os.makedirs(this_week_dir, exist_ok=True)
+            with open(last_week_json_path, 'r', encoding='utf-8') as f:
+                tasks = json.load(f)
+            for task in tasks:
+                task['completed'] = 0.0
+            with open(this_week_json_path, 'w', encoding='utf-8') as f:
+                json.dump(tasks, f, ensure_ascii=False, indent=4)
 
     def load_tasks(self):
         data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
