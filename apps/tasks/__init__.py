@@ -428,15 +428,26 @@ class FloatingWidget(QWidget):
 
         self.adjustSize()
 
-    def set_content(self, name, progress, description, color):
-        self.top_label.setText(f"{name} - {progress}")
+    def set_content(self, name, completed, required, description, color):
+        if required == 0.0:
+            progress_text = '(已完成)'
+        elif required == 1.0:
+            if completed == 0.0:
+                progress_text = ''
+            elif completed == 1.0:
+                progress_text = '(已完成)'
+            else:
+                progress_text = f'({completed}/{required})'
+        else:
+            progress_text = f'({completed}/{required})'
+        
+        self.top_label.setText(f"{name}{progress_text}")
         self.bottom_label.setText(description)
 
         r, g, b = _hex_to_rgb(color)
         self.background_widget.setStyleSheet(f"""
             #FloatingBackground {{
                 background-color: rgba({r}, {g}, {b}, 0.5);
-                border-radius: 20px;
             }}
         """)
         self.adjustSize()
@@ -580,25 +591,13 @@ class TaskWindow(BaseWindow):
             completed = task.get('completed', 0.0)
             required = task.get('required', 1.0)
 
-            if required == 0.0:
-                progress = '已完成'
-            elif required == 1.0:
-                if completed == 0.0:
-                    progress = '未完成'
-                elif completed == 1.0:
-                    progress = '已完成'
-                else:
-                    progress = f'{completed}/{required}'
-            else:
-                progress = f'{completed}/{required}'
-
             name = task.get('name', '')
             description = task.get('description', '')
 
             if not self.floating_widget:
                 self.floating_widget = FloatingWidget()
 
-            self.floating_widget.set_content(name, progress, description, color)
+            self.floating_widget.set_content(name, completed, required, description, color)
             self.set_floating_position()
             self.floating_widget.show()
         else:
