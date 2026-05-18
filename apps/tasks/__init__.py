@@ -4,7 +4,7 @@ import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
-                               QTextEdit, QSizePolicy, QListWidget, QDialog)
+                               QTextEdit, QSizePolicy, QListWidget, QDialog, QComboBox)
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl
 from PySide6.QtGui import QFont
 from PySide6.QtGui import QDesktopServices
@@ -79,6 +79,14 @@ class TaskDialog(BaseDialog):
             self.name_edit.setText(task.get('name', ''))
         self.layout_.addWidget(self.name_label)
         self.layout_.addWidget(self.name_edit)
+
+        self.type_label = QLabel('任务类型:')
+        self.type_combo = QComboBox()
+        self.type_combo.addItems(['支线', '主线'])
+        if task:
+            self.type_combo.setCurrentIndex(task.get('type', 0))
+        self.layout_.addWidget(self.type_label)
+        self.layout_.addWidget(self.type_combo)
 
         self.description_label = QLabel('任务描述:')
         self.description_edit = QTextEdit()
@@ -161,6 +169,7 @@ class TaskDialog(BaseDialog):
     def get_task_data(self):
         data = {
             'name': self.name_edit.text(),
+            'type': self.type_combo.currentIndex(),
             'description': self.description_edit.toPlainText(),
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
             'required': self.required_spin.value()
@@ -189,25 +198,27 @@ class TaskItem(QWidget):
         self.task = task
         self.id_ = id_
         self.is_tracking = is_tracking
+        self.task_type = task.get('type', 0)
+        
+        self.color_main = '#FFCC00'
+        self.color_branch = '#00CC66'
+        if self.task_type == 0:
+            self.current_color = self.color_branch
+        elif self.task_type == 1:
+            self.current_color = self.color_main
 
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        if is_tracking:
-            self.setStyleSheet("""
-                TaskItem {
-                    background-color: rgba(255, 255, 255, 0.2);
-                }
-                TaskItem:hover {
-                    background-color: rgba(255, 255, 255, 0.28);
-                }
-            """)
-        else:
-            self.setStyleSheet("""
-                TaskItem:hover {
-                    background-color: rgba(255, 255, 255, 0.1);
-                }
-            """)
+        self.update_style()
 
-        self.layout_ = QVBoxLayout(self)
+        self.layout_ = QHBoxLayout(self)
+        
+        self.line_widget = QWidget()
+        self.line_widget.setFixedWidth(4)
+        self.line_widget.setStyleSheet(f"background-color: {self.current_color};")
+        self.layout_.addWidget(self.line_widget)
+
+        self.content_widget = QWidget()
+        self.content_layout = QVBoxLayout(self.content_widget)
 
         self.top_layout = QHBoxLayout()
 
@@ -232,12 +243,12 @@ class TaskItem(QWidget):
         self.track_button.clicked.connect(self.on_track_clicked)
         self.top_layout.addWidget(self.track_button)
 
-        self.layout_.addLayout(self.top_layout)
+        self.content_layout.addLayout(self.top_layout)
 
         self.description_label = QLabel(self.task.get('description', ''))
         self.description_label.setWordWrap(True)
         self.description_label.setStyleSheet("font-size: 15px; color: #AAAAAA;")
-        self.layout_.addWidget(self.description_label)
+        self.content_layout.addWidget(self.description_label)
         if not self.description_label.text():
             self.description_label.hide()
 
@@ -264,29 +275,41 @@ class TaskItem(QWidget):
         """)
         self.progress_widget.mousePressEvent = self.on_progress_clicked
 
-        self.layout_.addWidget(self.progress_widget)
+        self.content_layout.addWidget(self.progress_widget)
+        
+        self.layout_.addWidget(self.content_widget)
 
         self.update_progress_percent()
+    
+    def update_style(self):
+        r, g, b = self.hex_to_rgb(self.current_color)
+        if self.is_tracking:
+            self.setStyleSheet(f"""
+                TaskItem {{
+                    background-color: rgba({r}, {g}, {b}, 0.15);
+                }}
+                TaskItem:hover {{
+                    background-color: rgba({r}, {g}, {b}, 0.22);
+                }}
+            """)
+        else:
+            self.setStyleSheet(f"""
+                TaskItem:hover {{
+                    background-color: rgba({r}, {g}, {b}, 0.08);
+                }}
+            """)
+    
+    def hex_to_rgb(self, hex_color):
+        hex_color = hex_color.lstrip('#')
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     def set_tracking(self, is_tracking):
         self.is_tracking = is_tracking
         if is_tracking:
             self.track_button.setText('停止追踪')
-            self.setStyleSheet("""
-                TaskItem {
-                    background-color: rgba(255, 255, 255, 0.2);
-                }
-                TaskItem:hover {
-                    background-color: rgba(255, 255, 255, 0.3);
-                }
-            """)
         else:
             self.track_button.setText('开始追踪')
-            self.setStyleSheet("""
-                TaskItem:hover {
-                    background-color: rgba(255, 255, 255, 0.1);
-                }
-            """)
+        self.update_style()
         self.go_button.setVisible(is_tracking and bool(self.task.get('link')))
 
     def on_go_clicked(self):
@@ -349,6 +372,17 @@ class TaskItem(QWidget):
         self.task.clear()
         self.task.update(data)
         self.name_label.setText(data['name'])
+        
+        new_type = data.get('type', 0)
+        if new_type != self.task_type:
+            self.task_type = new_type
+            if self.task_type == 0:
+                self.current_color = self.color_branch
+            elif self.task_type == 1:
+                self.current_color = self.color_main
+            self.line_widget.setStyleSheet(f"background-color: {self.current_color};")
+            self.update_style()
+        
         self.description_label.setText(data['description'])
         if self.description_label.text():
             self.description_label.show()
