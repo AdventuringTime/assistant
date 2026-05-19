@@ -443,6 +443,10 @@ class FloatingWidget(QWidget):
         
         self.top_label.setText(f"{name}{progress_text}")
         self.bottom_label.setText(description)
+        if description.strip():
+            self.bottom_label.show()
+        else:
+            self.bottom_label.hide()
 
         r, g, b = _hex_to_rgb(color)
         self.background_widget.setStyleSheet(f"""
