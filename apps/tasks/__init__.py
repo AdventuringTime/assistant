@@ -278,7 +278,7 @@ class TaskItem(QWidget):
                 background-color: rgba(255, 255, 255, 0.05);
             }
         """)
-        self.progress_widget.mousePressEvent = self.on_progress_clicked
+        self.progress_widget.mousePressEvent = self.set_completed_from_input
 
         self.content_layout.addWidget(self.progress_widget)
 
@@ -348,7 +348,7 @@ class TaskItem(QWidget):
             progress_value = 100
         self.progress_bar.setValue(progress_value)
 
-    def on_progress_clicked(self, event):
+    def set_completed_from_input(self, event=None):
         self.completed, ok = QInputDialog.getDouble(self, '修改进度',
             f'请输入完成数量:',
             value=self.completed,
@@ -396,12 +396,13 @@ class TaskItem(QWidget):
 
 
 class FloatingWidget(QWidget):
+    clicked = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint |
                            Qt.WindowType.WindowStaysOnBottomHint |
-                           Qt.WindowType.Tool |
-                           Qt.WindowType.WindowTransparentForInput)
+                           Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
 
         self.layout_ = QVBoxLayout(self)
@@ -427,6 +428,10 @@ class FloatingWidget(QWidget):
         self.layout_.addWidget(self.background_widget)
 
         self.adjustSize()
+
+    def mousePressEvent(self, event):
+        self.clicked.emit()
+        super().mousePressEvent(event)
 
     def set_content(self, name, completed, required, description, color):
         if required == 0.0:
@@ -600,6 +605,7 @@ class TaskWindow(BaseWindow):
 
             if not self.floating_widget:
                 self.floating_widget = FloatingWidget()
+                self.floating_widget.clicked.connect(self.on_floating_clicked)
 
             self.floating_widget.set_content(name, completed, required, description, color)
             self.set_floating_position()
@@ -607,6 +613,10 @@ class TaskWindow(BaseWindow):
         else:
             if self.floating_widget:
                 self.floating_widget.hide()
+
+    def on_floating_clicked(self):
+        if self.tracking_task_id is not None and 0 <= self.tracking_task_id < len(self.task_items):
+            self.task_items[self.tracking_task_id].set_completed_from_input()
 
     def set_floating_position(self):
         if self.floating_widget:
