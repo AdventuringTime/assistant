@@ -3,7 +3,7 @@ import json
 import numpy as np
 import os
 from PySide6.QtCore import QRectF, Qt, Signal, QThread
-from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap, QIcon
+from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap, QIcon, QFontMetrics
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QPushButton, QApplication)
@@ -1095,13 +1095,29 @@ class AppItemWidget(QWidget):
         layout.addWidget(self.icon_widget, alignment=Qt.AlignmentFlag.AlignCenter)
 
         # 应用名称
-        self.name_label = QLabel(self.display_name)
+        self.name_label = QLabel()
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.name_label.setWordWrap(True)
+        self.name_label.setWordWrap(False)
         self.name_label.setStyleSheet("""
             font-size: 12px;
             color: #FFFFFF;
         """)
+
+        font_metrics = self.name_label.fontMetrics()
+        text_width = font_metrics.horizontalAdvance(self.display_name)
+
+        max_width = 66
+        if text_width > max_width:
+            elided_text = font_metrics.elidedText(
+                self.display_name,
+                Qt.TextElideMode.ElideRight,
+                max_width
+            )
+            self.name_label.setText(elided_text)
+            self.setToolTip(self.display_name)        
+        else:
+            self.name_label.setText(self.display_name)
+
         layout.addWidget(self.name_label)
 
     def mousePressEvent(self, event):
