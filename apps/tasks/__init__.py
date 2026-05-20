@@ -68,6 +68,7 @@ class SortDialog(BaseDialog):
 
 class TaskDialog(BaseDialog):
     on_save_signal = Signal(dict)
+    on_save_copy_signal = Signal(dict)
     on_delete_signal = Signal()
 
     def __init__(self, task=None, parent=None):
@@ -136,6 +137,10 @@ class TaskDialog(BaseDialog):
             self.delete_button.clicked.connect(self.on_delete)
             self.button_layout.addWidget(self.delete_button)
 
+            self.save_copy_button = QPushButton('保存副本')
+            self.save_copy_button.clicked.connect(self.on_save_copy)
+            self.button_layout.addWidget(self.save_copy_button)
+
         self.save_button = QPushButton('保存')
         self.save_button.clicked.connect(self.on_save)
         self.save_button.setDefault(True)
@@ -148,6 +153,10 @@ class TaskDialog(BaseDialog):
 
     def on_save(self):
         self.on_save_signal.emit(self.get_task_data())
+        self.close()
+
+    def on_save_copy(self):
+        self.on_save_copy_signal.emit(self.get_task_data())
         self.close()
 
     def on_delete(self):
@@ -196,6 +205,7 @@ class TaskDialog(BaseDialog):
 class TaskItem(QWidget):
     task_updated = Signal()
     task_deleted = Signal()
+    task_copy_created = Signal(dict)
     tracking_changed = Signal(int)
 
     def __init__(self, task, id_, is_tracking=False, parent=None):
@@ -362,9 +372,13 @@ class TaskItem(QWidget):
     def on_edit_clicked(self, event):
         dialog = TaskDialog(self.task, self)
         dialog.on_save_signal.connect(self.on_dialog_save)
+        dialog.on_save_copy_signal.connect(self.on_dialog_save_copy)
         dialog.on_delete_signal.connect(self.on_dialog_delete)
 
         dialog.show()
+
+    def on_dialog_save_copy(self, data):
+        self.task_copy_created.emit(data)
 
     def on_dialog_delete(self):
         self.task_deleted.emit()
@@ -559,6 +573,7 @@ class TaskWindow(BaseWindow):
             task_item = TaskItem(task, id_, is_tracking)
             task_item.task_updated.connect(self.on_task_updated)
             task_item.task_deleted.connect(self.on_task_deleted)
+            task_item.task_copy_created.connect(self.on_creation_via_dialog)
             task_item.tracking_changed.connect(self.on_tracking_changed)
             self.task_items.append(task_item)
             self.content_layout.insertWidget(id_, task_item)
@@ -582,10 +597,10 @@ class TaskWindow(BaseWindow):
 
     def on_add_task(self):
         dialog = TaskDialog(parent=self)
-        dialog.on_save_signal.connect(self.on_dialog_create)
+        dialog.on_save_signal.connect(self.on_creation_via_dialog)
         dialog.show()
 
-    def on_dialog_create(self, data):
+    def on_creation_via_dialog(self, data):
         if data['name'].strip():
             self.tasks.append(data)
             self.save_tasks()
