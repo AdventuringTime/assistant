@@ -425,42 +425,45 @@ class VersionLabel(QLabel):
         # 加载并显示数据
         self.load_data()
 
-    def load_data(self):
+    def _read_user_version(self):
         """
-        从JSON文件加载版本数据并更新显示
+        从 data/homepage/Version.json 读取 user_version
 
-        如果文件不存在、损坏或读取失败，使用默认值("未知")并尝试创建文件。
+        Returns:
+            str: user_version 值，如果读取失败返回"未知"
         """
-
-        # 构建文件路径
         json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
                                 'data', 'homepage', 'Version.json')
-
-        # 尝试读取并解析JSON文件
         try:
             with open(json_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-
-            # 获取版本数据
-            user_version = data['user_version']
-            app_version = data['app_version']
-
+            return data.get('user_version', '未知')
         except (FileNotFoundError, json.JSONDecodeError, IOError, KeyError, TypeError):
-            # 如果文件不存在、损坏、读取失败或数据格式错误，尝试创建目录并写入默认数据
-            default_data = {
-                "user_version": "未知",
-                "app_version": "未知"
-            }
-            user_version = "未知"
-            app_version = "未知"
-            try:
-                os.makedirs(os.path.dirname(json_path), exist_ok=True)
-                with open(json_path, 'w', encoding='utf-8') as f:
-                    json.dump(default_data, f, ensure_ascii=False, indent=4)
-            except IOError:
-                pass  # 如果无法写入，继续使用默认数据
+            return '未知'
 
-        # 设置显示文本（无论是否发生异常都会执行）
+    def _read_app_version(self):
+        """
+        从 assets/version.json 读取 app_version
+
+        Returns:
+            str: app_version 值，如果读取失败返回"未知"
+        """
+        json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                                'assets', 'version.json')
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                content = json.load(f)
+            return content
+        except (FileNotFoundError, IOError, json.JSONDecodeError):
+            return '未知'
+
+    def load_data(self):
+        """
+        加载版本数据并更新显示
+        """
+        user_version = self._read_user_version()
+        app_version = self._read_app_version()
+
         display_text = f"版本：user: {user_version} app: {app_version}"
         self.setText(display_text)
 

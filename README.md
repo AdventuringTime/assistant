@@ -25,6 +25,7 @@
 │   │   └── <other files>    # 其他本应用相关文件
 ├── assets/                  # 资源文件
 │   ├── svg/                 # SVG 图标
+│   ├── version.json         # 当前版本号
 │   ├── logo.ico             # 应用图标
 │   └── logo.png             # PNG 图标
 ├── data/                    # 数据目录（不会被同步到代码库）
