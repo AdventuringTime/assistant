@@ -665,8 +665,7 @@ class TaskWindow(BaseWindow):
         dialog = SortDialog(self, self.tasks, "排序")
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.tracking_task_id = None  # 排序后暂时移除追踪
-            self.on_tracking_changed()
+            self.on_tracking_changed(self.tracking_task_id)  # 排序后暂时移除追踪
             self.tasks = dialog.result
             self.save_tasks()
             self.refresh_ui()
