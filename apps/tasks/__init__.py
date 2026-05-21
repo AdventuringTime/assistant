@@ -667,7 +667,6 @@ class TaskWindow(BaseWindow):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.on_tracking_changed(self.tracking_task_id)  # 排序后暂时移除追踪
             self.tasks = dialog.result
-            self.save_tasks()
             self.refresh_ui()
 
     def load_tasks(self):
@@ -717,7 +716,6 @@ class TaskWindow(BaseWindow):
 
     def on_task_updated(self):
         """任务更新后的处理"""
-        self.save_tasks()
         self.update_floating_widget()
 
     def on_task_deleted(self):
@@ -732,7 +730,6 @@ class TaskWindow(BaseWindow):
                 self.tracking_task_id -= 1
             # 删除任务
             del self.tasks[index]
-            self.save_tasks()
             self.refresh_ui()
             self.update_floating_widget()
 
@@ -746,7 +743,6 @@ class TaskWindow(BaseWindow):
         """通过对话框创建新任务"""
         if data['name'].strip():
             self.tasks.append(data)
-            self.save_tasks()
             self.refresh_ui()
 
     def update_floating_widget(self):
@@ -800,7 +796,6 @@ class TaskWindow(BaseWindow):
                 self.task_items[old_index].set_tracking(False)
             self.task_items[index].set_tracking(True)
 
-        self.save_tasks()
         self.update_floating_widget()
 
     def closeEvent(self, event):
@@ -810,6 +805,7 @@ class TaskWindow(BaseWindow):
         Parameters:
             event (QCloseEvent): 关闭事件
         """
+        self.save_tasks()
         if self.floating_widget:
             self.floating_widget.close()
         super().closeEvent(event)
