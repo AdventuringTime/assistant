@@ -34,9 +34,9 @@
                     {
                         "label": "系统版本",
                         "type": "text",
-                        "path": "data/homepage/Version.json",
-                        "json_path": "app_version",
-                        "default": "0.0"
+                        "path": "assets/version.json",
+                        "json_path": "",
+                        "default": "0.0.0"
                     }
                 ]
             ]

@@ -210,23 +210,42 @@ class SettingItemWidget_Config(SettingItemWidget):
 
         Parameters:
             data (dict): 要查询的JSON数据
-            json_path (str): glom支持的JSON路径表达式
+            json_path (str): glom支持的JSON路径表达式。若为空，则将数据原样返回。
 
         Returns:
             路径对应的值
         """
-        return glom(data, json_path)
+        if json_path:
+            return glom(data, json_path)
+        else:
+            return data
 
     def set_json_value(self, data, json_path, value):
         """
         使用glom根据JSON路径设置值
 
         Parameters:
-            data (dict): 要修改的JSON数据
+            data: 要修改的JSON数据
             json_path (str): glom支持的JSON路径表达式
             value: 要设置的值
+
+        Returns:
+            data: 修改后的JSON数据或设置的值
+
+        Examples:
+        ```
+            data = {"user": {"name": "Alice", "age": 30}}
+            self.set_json_value(data, "user.age", 31)
+            # data 现在为 {"user": {"name": "Alice", "age": 31}}
+            self.set_json_value(data, "user.phone", "123-456-7890")
+            # data 现在为 {"user": {"name": "Alice", "age": 31}, "phone": "123-456-7890"}
+        ```
         """
-        glom(data, Assign(json_path, value))
+        if json_path:
+            glom(data, Assign(json_path, value))
+            return data
+        else:
+            return value
 
     def get_field_value(self, field):
         """
@@ -269,7 +288,7 @@ class SettingItemWidget_Config(SettingItemWidget):
             value = bool_map.get(value, value)
 
         # 更新数据
-        self.set_json_value(data, field["json_path"], value)
+        data = self.set_json_value(data, field["json_path"], value)
 
         # 保存文件
         with open(file_path, 'w', encoding='utf-8') as f:
