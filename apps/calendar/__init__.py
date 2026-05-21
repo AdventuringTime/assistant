@@ -15,7 +15,16 @@ from .schedule_editor import ScheduleEditorWindow
 data_dir = "apps/calendar/data"
 
 class PlaceLabel(QLabel):
+    """地点标签，支持链接悬停和点击事件拦截"""
+
     def __init__(self, text, parent=None):
+        """
+        初始化地点标签
+
+        Parameters:
+            text (str): 显示文本，如果以 https:// 开头则作为链接处理
+            parent (QWidget, optional): 父控件，默认为None
+        """
         if text.startswith("https://"):
             super().__init__(f'<a href="{text}">{text}</a>', parent)
         else:
@@ -26,7 +35,12 @@ class PlaceLabel(QLabel):
         self.linkHovered.connect(self.onLinkHovered)
 
     def onLinkHovered(self, link):
-        """当悬停状态改变时调用"""
+        """
+        链接悬停状态改变时的处理
+
+        Parameters:
+            link (str): 悬停的链接地址，空字符串表示离开链接
+        """
         if link:
             # 鼠标进入链接
             self.is_hovering_link = True
@@ -43,7 +57,19 @@ class PlaceLabel(QLabel):
                 self.parent().removeEventFilter(self)
 
     def eventFilter(self, obj, event):
-        """事件过滤器：拦截父控件的事件"""
+        """
+        事件过滤器：拦截父控件的鼠标事件
+
+        当悬停在链接上时，拦截鼠标事件并转发给当前标签处理，
+        防止父控件（如日程项）误触发点击事件。
+
+        Parameters:
+            obj (QObject): 事件源对象
+            event (QEvent): 事件对象
+
+        Returns:
+            bool: 是否拦截事件
+        """
         if self.is_hovering_link and obj == self.parent():
             # 当悬停在链接上时，拦截所有鼠标事件
             if event.type() in [QEvent.Type.MouseButtonPress,
@@ -57,7 +83,17 @@ class PlaceLabel(QLabel):
         return super().eventFilter(obj, event)
 
 class ScheduleItemWidget(QWidget):
+    """日程项部件，显示单个日程的详细信息"""
+
     def __init__(self, schedule_item, schedule_id=None, parent=None):
+        """
+        初始化日程项部件
+
+        Parameters:
+            schedule_item (dict): 日程数据字典
+            schedule_id (int, optional): 日程ID，默认为None
+            parent (QWidget, optional): 父控件，默认为None
+        """
         super().__init__(parent)
         self.schedule_item = schedule_item
         self.schedule_id = schedule_id
@@ -72,22 +108,26 @@ class ScheduleItemWidget(QWidget):
 
         self.layout_ = QVBoxLayout(self)
 
+        # 标题
         self.title_label = QLabel(schedule_item["title"])
         self.title_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #FFFFFF;")
         self.title_label.setWordWrap(True)
         self.layout_.addWidget(self.title_label)
 
+        # 时间
         if "start_time" and "end_time" in schedule_item and schedule_item["start_time"] and schedule_item["end_time"]:
             self.time_label = QLabel(f"{schedule_item['start_time']} - {schedule_item['end_time']}")
             self.time_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
             self.layout_.addWidget(self.time_label)
 
+        # 地点（支持链接）
         if "location" in schedule_item and schedule_item["location"]:
             self.location_label = PlaceLabel(schedule_item['location'])
             self.location_label.setStyleSheet("font-size: 14px; color: #CCCCCC;")
             self.location_label.setWordWrap(True)
             self.layout_.addWidget(self.location_label)
 
+        # 类型和重复信息
         if "type" in schedule_item or ("repetition" in schedule_item and schedule_item["repetition"] != 0):
             self.type_repetition_widget = QWidget()
             self.type_repetition_layout = QHBoxLayout(self.type_repetition_widget)
@@ -114,18 +154,33 @@ class ScheduleItemWidget(QWidget):
             self.type_repetition_layout.addWidget(self.repetition_label)
 
     def mousePressEvent(self, event):
-         # 打开日程编辑窗口
-         editor = ScheduleEditorWindow(self, self.schedule_item, self.schedule_id)
-         editor.show()
+        """
+        鼠标点击事件，打开日程编辑窗口
+
+        Parameters:
+            event (QMouseEvent): 鼠标事件
+        """
+        editor = ScheduleEditorWindow(self, self.schedule_item, self.schedule_id)
+        editor.show()
 
 class CalendarSchedulesManager:
+    """日程管理器，负责日程的加载、保存和重复事件处理"""
+
     def init_repeat_events_of_date(self, date):
-        """初始化指定日期的重复事件"""
+        """
+        初始化指定日期的重复事件
+
+        根据前一天（每天重复）或前一周（每周重复）的日程，
+        生成当天的重复事件。
+
+        Parameters:
+            date (date): 目标日期
+        """
         # 处理每天重复事件
         yesterday = date - datetime.timedelta(days=1)
         events_yesterday = self.load_schedules(yesterday.year, yesterday.month, yesterday.day)
         for event in events_yesterday.values():
-            if event.get("repetition") == 1: # 每天重复
+            if event.get("repetition") == 1:  # 每天重复
                 start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
                 start_time_new = start_time_old + datetime.timedelta(days=1)
                 event["start_time"] = start_time_new.strftime('%Y-%m-%d %H:%M')
@@ -144,7 +199,7 @@ class CalendarSchedulesManager:
         lastweek = date - datetime.timedelta(days=7)
         events_lastweek = self.load_schedules(lastweek.year, lastweek.month, lastweek.day)
         for event in events_lastweek.values():
-            if event.get("repetition") == 2: # 每周重复
+            if event.get("repetition") == 2:  # 每周重复
                 start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
                 start_time_new = start_time_old + datetime.timedelta(days=7)
                 event["start_time"] = start_time_new.strftime('%Y-%m-%d %H:%M')
@@ -160,7 +215,15 @@ class CalendarSchedulesManager:
                     copy=True)
 
     def init_repeat_events_until_today(self, today):
-        """初始化从上次到今天的重复事件（要求时间差不多于30天）"""
+        """
+        初始化从上次更新到今天的所有重复事件
+
+        从上次更新日期开始，遍历到今天，为每个日期生成重复事件。
+        如果上次更新超过30天前，会发出警告并跳过更新。
+
+        Parameters:
+            today (date): 当前日期
+        """
         # 获取上次更新的日期
         last_update_date_file = os.path.join(data_dir, "last_update_date.json")
         try:
@@ -180,7 +243,7 @@ class CalendarSchedulesManager:
             warnings.warn("上次更新在30天之前，暂不更新重复事件")
             return
 
-        # 遍历日期
+        # 遍历日期，生成重复事件
         updating_date = last_update_date
         while updating_date < today:
             updating_date += datetime.timedelta(days=1)
@@ -191,7 +254,17 @@ class CalendarSchedulesManager:
             json.dump(str(today), f, indent=4)
 
     def load_schedules(self, year, month, day):
-        """从文件加载日程数据"""
+        """
+        从文件加载指定日期的日程数据
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+            day (int): 日期
+
+        Returns:
+            dict: 日程字典，key为日程ID，value为日程数据
+        """
         file_path = os.path.join(data_dir, str(year), str(month), str(day) + ".json")
         if os.path.exists(file_path):
             # 若文件读取失败，应报错
@@ -286,22 +359,33 @@ class CalendarSchedulesManager:
             os.remove(file_path)
 
 class CalendarWindow(BaseWindow, CalendarSchedulesManager):
+    """日历窗口，提供日程的查看、创建和编辑功能"""
+
     def __init__(self, parent=None):
+        """
+        初始化日历窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口，默认为None
+        """
         super().__init__(parent)
 
         self.setWindowTitle("日程")
         self.setMinimumSize(600, 400)
 
+        # 主容器
         self.container = QWidget()
         self.setCentralWidget(self.container)
 
         self.container_layout = QVBoxLayout(self.container)
 
+        # 日期选择器
         self.date_selector = QDateEdit(self.container)
         self.date_selector.setFixedHeight(30)
         self.date_selector.setCalendarPopup(True)
         self.container_layout.addWidget(self.date_selector)
 
+        # 滚动区域用于显示日程列表
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
         self.scroll_content = QWidget()
@@ -309,14 +393,18 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
         self.scroll_area.setWidget(self.scroll_content)
         self.container_layout.addWidget(self.scroll_area)
 
+        # 创建悬浮添加按钮
         self.create_floating_button()
 
+        # 连接信号
         self.date_selector.dateChanged.connect(self.on_date_changed)
+
+        # 设置初始日期为今天
         today = get_today()
         self.date_selector.setDate(QDate(today.year, today.month, today.day))
 
     def create_floating_button(self):
-        """创建右下角悬浮按钮"""
+        """创建右下角悬浮添加按钮"""
         # 创建悬浮按钮
         self.floating_button = QPushButton("+", self)
         self.floating_button.setFixedSize(60, 60)
@@ -347,13 +435,23 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
         self.floating_button.raise_()
 
     def resizeEvent(self, event):
-        """窗口大小改变事件，保持按钮在右下角"""
+        """
+        窗口大小改变事件，保持悬浮按钮在右下角
+
+        Parameters:
+            event (QResizeEvent): 窗口大小改变事件
+        """
         super().resizeEvent(event)
         if hasattr(self, 'floating_button'):
             self.floating_button.move(self.width() - 80, self.height() - 80)
 
     def on_date_changed(self, date):
-        """日期改变时的处理函数"""
+        """
+        日期选择改变时的处理
+
+        Parameters:
+            date (QDate): 新选择的日期
+        """
         self.year_displayed = date.year()
         self.month_displayed = date.month()
         self.day_displayed = date.day()
@@ -361,7 +459,7 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
         self.refresh_schedules()
 
     def open_new_schedule(self):
-        """打开新增日程窗口"""
+        """打开新增日程编辑窗口"""
         editor = ScheduleEditorWindow(
             self,
             year=self.year_displayed,
@@ -371,7 +469,7 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
         editor.show()
 
     def refresh_schedules(self):
-        """刷新日程显示"""
+        """刷新当前显示日期的日程列表"""
         # 清空现有布局（包括所有widget和stretch）
         while self.scroll_layout.count():
             item = self.scroll_layout.takeAt(0)

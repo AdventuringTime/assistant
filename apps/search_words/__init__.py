@@ -11,11 +11,17 @@ from core.base_window import BaseWindow
 
 
 class SearchWordsWindow(BaseWindow):
-    """搜索词管理窗口类"""
+    """搜索词管理窗口，用于管理和维护搜索词列表"""
 
     words_file_path = "apps/search_words/data/words.json"
 
     def __init__(self, parent=None):
+        """
+        初始化搜索词管理窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
         super().__init__(parent)
 
         self.setWindowTitle("搜索词")
@@ -92,7 +98,12 @@ class SearchWordsWindow(BaseWindow):
         self.refresh_list()
 
     def load_words(self):
-        """加载搜索词数据"""
+        """
+        从文件加载搜索词数据，若文件不存在则创建空文件
+
+        Returns:
+            list: 搜索词列表
+        """
         if os.path.exists(self.words_file_path):
             with open(self.words_file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -103,12 +114,12 @@ class SearchWordsWindow(BaseWindow):
             return []
 
     def save_words(self):
-        """保存搜索词数据"""
+        """保存搜索词数据到文件"""
         with open(self.words_file_path, 'w', encoding='utf-8') as f:
             json.dump(self.words, f, ensure_ascii=False, indent=4)
 
     def refresh_list(self):
-        """刷新列表显示"""
+        """刷新搜索词列表显示，将words数据加载到列表控件中"""
         self.words_list.clear()
         for word in self.words:
             item = QListWidgetItem(word)
@@ -119,7 +130,12 @@ class SearchWordsWindow(BaseWindow):
             self.words_list.addItem(item)
 
     def on_item_changed(self, item):
-        """列表项内容改变时自动保存"""
+        """
+        列表项内容改变时自动保存到文件
+
+        Parameters:
+            item (QListWidgetItem): 修改后的列表项
+        """
         row = self.words_list.row(item)
         new_text = item.text().strip()
 
@@ -127,7 +143,7 @@ class SearchWordsWindow(BaseWindow):
         self.save_words()
 
     def on_add_clicked(self):
-        """添加搜索词：在最后加一个空项并触发编辑"""
+        """添加新搜索词，在列表末尾添加空项并自动进入编辑状态"""
         self.words.append("")
         self.refresh_list()
         # 编辑最后一项
@@ -136,20 +152,20 @@ class SearchWordsWindow(BaseWindow):
             self.words_list.editItem(last_item)
 
     def on_copy_clicked(self):
-        """复制选中的搜索词到剪贴板"""
+        """将选中的搜索词复制到系统剪贴板"""
         selected_items = self.words_list.selectedItems()
         if selected_items:
             text = selected_items[0].text()
             QGuiApplication.clipboard().setText(text)
 
     def on_rename_clicked(self):
-        """重命名选中的搜索词"""
+        """触发选中搜索词的编辑状态以进行重命名"""
         selected_items = self.words_list.selectedItems()
         if selected_items:
             self.words_list.editItem(selected_items[0])
 
     def on_delete_clicked(self):
-        """删除选中的搜索词"""
+        """删除选中的搜索词并保存"""
         selected_items = self.words_list.selectedItems()
         if selected_items:
             row = self.words_list.row(selected_items[0])

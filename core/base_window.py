@@ -10,6 +10,7 @@ class WindowsManager:
     _windows = []
 
     def __new__(cls):
+        """创建单例实例，确保全局只有一个窗口管理器"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -45,16 +46,22 @@ class WindowsManager:
 
 class BaseWindow(QMainWindow):
     """
-    基础窗口类，提供统一的窗口样式
+    基础窗口类，提供统一的窗口样式和生命周期管理
     """
     def __init__(self, parent=None):
+        """
+        初始化基础窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口，默认为None
+        """
         super().__init__(parent)
 
         # 设置窗口图标
         self.icon = QIcon(icon_path)
         self.setWindowIcon(self.icon)
 
-        # 设置窗口背景颜色
+        # 设置窗口背景颜色（深色主题）
         self.setStyleSheet("QMainWindow { background-color: #1E1E1E; }")
 
         # 设置窗口关闭时自动销毁
@@ -64,23 +71,34 @@ class BaseWindow(QMainWindow):
         WindowsManager.register_window(self)
 
     def closeEvent(self, event):
-        """窗口关闭事件"""
+        """
+        窗口关闭事件处理
+
+        Parameters:
+            event (QCloseEvent): 关闭事件对象
+        """
         # 从窗口管理器注销
         WindowsManager.unregister_window(self)
         super().closeEvent(event)
 
 class BaseDialog(QDialog):
     """
-    基础对话框类，提供统一的对话框样式
+    基础对话框类，提供统一的对话框样式和生命周期管理
     """
     def __init__(self, parent=None):
+        """
+        初始化基础对话框
+
+        Parameters:
+            parent (QWidget, optional): 父窗口，默认为None
+        """
         super().__init__(parent)
 
         # 设置对话框图标
         self.icon = QIcon(icon_path)
         self.setWindowIcon(self.icon)
 
-        # 设置对话框背景颜色
+        # 设置对话框背景颜色（深色主题）
         self.setStyleSheet("QDialog { background-color: #2D2D30; }")
 
         # 设置窗口关闭时自动销毁
@@ -90,7 +108,12 @@ class BaseDialog(QDialog):
         WindowsManager.register_window(self)
 
     def closeEvent(self, event):
-        """对话框关闭事件"""
+        """
+        对话框关闭事件处理
+
+        Parameters:
+            event (QCloseEvent): 关闭事件对象
+        """
         # 从窗口管理器注销
         WindowsManager.unregister_window(self)
         super().closeEvent(event)

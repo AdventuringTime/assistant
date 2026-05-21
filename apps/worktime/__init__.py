@@ -15,7 +15,20 @@ from .editor import EditorWindow
 data_dir = "apps/worktime/data"
 
 class ItemWidget(QWidget):
+    """工作时间记录项部件，显示单个工作时间记录的详细信息"""
+
     def __init__(self, year, month, day, item, id_=None, parent=None):
+        """
+        初始化工作时间记录项
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+            day (int): 日期
+            item (dict): 工作时间记录数据
+            id_ (int, optional): 记录索引ID
+            parent (QWidget, optional): 父控件
+        """
         super().__init__(parent)
         self.item = item
         self.year = year
@@ -66,12 +79,20 @@ class ItemWidget(QWidget):
             self.layout_.addWidget(self.description_label)
 
     def mousePressEvent(self, event):
-         # 打开编辑窗口
-         editor = EditorWindow(self, self.year, self.month, self.day, self.item, self.id_)
-         editor.show()
+        """点击记录项时打开编辑窗口"""
+        editor = EditorWindow(self, self.year, self.month, self.day, self.item, self.id_)
+        editor.show()
 
 class WorktimeWindow(BaseWindow):
+    """工作时间管理窗口，提供上下班打卡和工作时间记录管理功能"""
+
     def __init__(self, parent=None):
+        """
+        初始化工作时间窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
         super().__init__(parent)
 
         self.worktimes = {}
@@ -118,7 +139,12 @@ class WorktimeWindow(BaseWindow):
         self.stacked_widget.setCurrentIndex(0)
 
     def on_category_changed(self, row):
-        """类别切换事件"""
+        """
+        类别切换事件处理
+
+        Parameters:
+            row (int): 类别索引（0=上下班打卡，1=工作时间详情）
+        """
         if row >= 0:
             self.stacked_widget.setCurrentIndex(row)
 
@@ -139,7 +165,7 @@ class WorktimeWindow(BaseWindow):
                 self.floating_button.hide()
 
     def load_clock_data(self):
-        """读取打卡数据"""
+        """从文件读取打卡状态数据"""
         clock_file_path = os.path.join(data_dir, "clock.json")
 
         if os.path.exists(clock_file_path):
@@ -149,7 +175,7 @@ class WorktimeWindow(BaseWindow):
             self.clock_data = {"working": False, "from": None}
 
     def save_clock_data(self):
-        """保存打卡数据"""
+        """保存打卡状态数据到文件"""
         clock_file_path = os.path.join(data_dir, "clock.json")
 
         os.makedirs(os.path.dirname(clock_file_path), exist_ok=True)
@@ -157,7 +183,7 @@ class WorktimeWindow(BaseWindow):
             json.dump(self.clock_data, f, ensure_ascii=False, indent=4)
 
     def update_clock_ui(self):
-        """更新打卡UI状态"""
+        """根据打卡状态更新UI显示（上班/下班按钮切换）"""
         if self.clock_data["working"]:
             # 上班状态：显示下班打卡按钮
             self.clock_button.setText("下班打卡")
@@ -196,7 +222,16 @@ class WorktimeWindow(BaseWindow):
             self.clock_status_label.hide()
 
     def calculate_work_time_str(self, from_time, to_time):
-        """计算工作时间（小时:分钟）"""
+        """
+        计算两个时间之间的工作时长
+
+        Parameters:
+            from_time (datetime.time): 开始时间
+            to_time (datetime.time): 结束时间
+
+        Returns:
+            str: 格式化的工作时长（HH:MM）
+        """
         # 处理跨天情况
         total_minutes = (to_time.hour - from_time.hour) * 60 + to_time.minute - from_time.minute
         if total_minutes < 0:
@@ -210,11 +245,12 @@ class WorktimeWindow(BaseWindow):
         """
         添加工作时间记录
 
-        :param from_time: 上班时间（格式: "HH:MM"）
-        :param to_time: 下班时间（datetime.datetime对象）
-        :param year: 年份
-        :param month: 月份
-        :param day: 日
+        Parameters:
+            from_time (str): 上班时间（格式: "HH:MM"）
+            to_time (datetime.datetime): 下班时间对象
+            year (int): 年份
+            month (int): 月份
+            day (int): 日期
         """
         worktime_record = {
             "from": from_time,
@@ -240,7 +276,7 @@ class WorktimeWindow(BaseWindow):
 
 
     def on_clock_clicked(self):
-        """打卡按钮点击事件"""
+        """打卡按钮点击事件，切换上班/下班状态"""
         now = datetime.datetime.now()
 
         if self.clock_data["working"]:
@@ -267,7 +303,7 @@ class WorktimeWindow(BaseWindow):
             self.update_clock_ui()
 
     def on_backfill_clicked(self):
-        """补卡按钮点击事件"""
+        """补卡按钮点击事件，支持选择特定时间进行补打卡"""
         selected_datetime = self.backfill_datetime.dateTime().toPython()
 
         if self.clock_data["working"]:
@@ -293,6 +329,7 @@ class WorktimeWindow(BaseWindow):
             self.update_clock_ui()
 
     def init_clock_ui(self):
+        """初始化上下班打卡界面"""
         self.clock_layout.setAlignment(Qt.AlignCenter)
         self.clock_layout.addStretch()
 
@@ -345,7 +382,17 @@ class WorktimeWindow(BaseWindow):
         self.update_clock_ui()
 
     def calculate_day_worktime(self, year, month, day):
-        """计算指定日期的工作时间"""
+        """
+        计算指定日期的总工作时间
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+            day (int): 日期
+
+        Returns:
+            tuple: (hours, minutes) 总工作时长
+        """
         worktime_records = self.get_worktimes_of_month(year, month)
         total_worktime = 0
         for record in worktime_records.get(str(day), []):
@@ -356,6 +403,7 @@ class WorktimeWindow(BaseWindow):
         return divmod(total_worktime, 60)
 
     def init_worktime_detail_ui(self):
+        """初始化工作时间详情界面"""
         self.date_selector = QDateEdit(self.worktime_detail_widget)
         self.date_selector.setFixedHeight(30)
         self.date_selector.setCalendarPopup(True)
@@ -380,7 +428,7 @@ class WorktimeWindow(BaseWindow):
         self.date_selector.setDate(QDate(today.year, today.month, today.day))
 
     def create_floating_button(self):
-        """创建右下角悬浮按钮"""
+        """创建右下角悬浮添加按钮，用于快速添加新的工作时间记录"""
         # 创建悬浮按钮
         self.floating_button = QPushButton("+", self)
         self.floating_button.setFixedSize(60, 60)
@@ -411,13 +459,23 @@ class WorktimeWindow(BaseWindow):
         self.floating_button.raise_()
 
     def resizeEvent(self, event):
-        """窗口大小改变事件，保持按钮在右下角"""
+        """
+        窗口大小改变事件，保持悬浮按钮在右下角位置
+
+        Parameters:
+            event (QResizeEvent): 窗口大小改变事件
+        """
         super().resizeEvent(event)
         if hasattr(self, 'floating_button'):
             self.floating_button.move(self.width() - 80, self.height() - 80)
 
     def on_date_changed(self, date):
-        """日期改变时的处理函数"""
+        """
+        日期选择器日期改变时的处理函数
+
+        Parameters:
+            date (QDate): 新选择的日期
+        """
         self.year_displayed = date.year()
         self.month_displayed = date.month()
         self.day_displayed = date.day()
@@ -425,12 +483,21 @@ class WorktimeWindow(BaseWindow):
         self.refresh_data()
 
     def open_new_editor(self):
-        """打开新增工作时间记录窗口"""
+        """打开新增工作时间记录编辑窗口"""
         editor = EditorWindow(self, self.year_displayed, self.month_displayed, self.day_displayed)
         editor.show()
 
     def load_worktimes(self, year, month):
-        """从文件加载工作时间记录数据"""
+        """
+        从文件加载指定月份的工作时间记录
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+
+        Returns:
+            dict: 该月份的工作时间记录字典
+        """
         file_path = os.path.join(data_dir, str(year)[2:], str(month) + ".json")
 
         if year not in self.worktimes:
@@ -446,7 +513,14 @@ class WorktimeWindow(BaseWindow):
         return self.worktimes[year][month]
 
     def save_worktimes(self, year, month, data):
-        """保存工作时间记录数据到文件"""
+        """
+        保存工作时间记录数据到文件
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+            data (dict): 工作时间记录数据
+        """
         file_path = os.path.join(data_dir, str(year)[2:], str(month) + ".json")
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
@@ -454,7 +528,16 @@ class WorktimeWindow(BaseWindow):
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     def get_worktimes_of_month(self, year, month):
-        """获取指定月份的工作时间记录"""
+        """
+        获取指定月份的工作时间记录，优先从缓存读取
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+
+        Returns:
+            dict: 该月份的工作时间记录字典
+        """
         if (year in self.worktimes
             and month in self.worktimes[year]
         ):
@@ -463,7 +546,7 @@ class WorktimeWindow(BaseWindow):
             return self.load_worktimes(year, month)
 
     def refresh_data(self):
-        """刷新工作时间记录显示"""
+        """刷新当前日期的工作时间记录列表显示"""
         # 清空现有布局（包括所有widget和stretch）
         while self.scroll_layout.count():
             item = self.scroll_layout.takeAt(0)
@@ -499,9 +582,11 @@ class WorktimeWindow(BaseWindow):
 
     def save_worktime_of_editor(self, worktime_editor, copy=False):
         """
-            保存工作时间记录到文件。
+        保存编辑器中的工作时间记录到文件
 
-            :param worktime_editor: 工作时间记录编辑器窗口实例。
+        Parameters:
+            worktime_editor (EditorWindow): 工作时间记录编辑器窗口实例
+            copy (bool, optional): 是否保存为副本，默认为False
         """
         year = worktime_editor.year
         month = worktime_editor.month
@@ -530,9 +615,10 @@ class WorktimeWindow(BaseWindow):
 
     def delete_worktime_of_editor(self, worktime_editor):
         """
-            删除工作时间记录。
+        删除编辑器指定的工作时间记录
 
-            :param worktime_editor: 工作时间记录编辑器窗口实例。
+        Parameters:
+            worktime_editor (EditorWindow): 工作时间记录编辑器窗口实例
         """
         year = worktime_editor.year
         month = worktime_editor.month

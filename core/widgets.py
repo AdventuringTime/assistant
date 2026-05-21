@@ -14,12 +14,11 @@ class SettingItemWidget(QWidget):
         """
         初始化设置项组件
 
-        Args:
+        Parameters:
             label (str): 标签文本
             field_type (str): 字段类型，支持："text", "textarea", "datetime", "time", "type", "bool", "int"
             placeholder (str/list of str): 占位符文本；如果为"type"，在这里输入各类型的显示文本
-            config_data (dict): 配置数据（用于设置应用）
-            parent: 父组件
+            parent (QWidget, optional): 父组件，默认为None
         """
         super().__init__(parent)
         self.field_type = field_type
@@ -65,7 +64,19 @@ class SettingItemWidget(QWidget):
             raise ValueError(f"未知字段类型: {field_type}")
 
     def get_value(self):
-        """获取输入值"""
+        """
+        获取当前输入控件的值
+
+        Returns:
+            根据字段类型返回对应类型的值：
+            - "text": str
+            - "textarea": str
+            - "datetime": QDateTime
+            - "time": QTime
+            - "type": int (当前选中项的data值)
+            - "bool": bool
+            - "int": int
+        """
         if self.field_type == "text":
             return self.input_field.text()
         elif self.field_type == "textarea":
@@ -82,7 +93,19 @@ class SettingItemWidget(QWidget):
             return self.input_field.value()
 
     def set_value(self, value):
-        """设置输入值"""
+        """
+        设置输入控件的值
+
+        Parameters:
+            value: 根据字段类型传入对应类型的值：
+                   - "text": str
+                   - "textarea": str
+                   - "datetime": QDateTime
+                   - "time": QTime
+                   - "type": int (下拉框索引)
+                   - "bool": bool
+                   - "int": int
+        """
         if self.field_type == "text":
             self.input_field.setText(value)
         elif self.field_type == "textarea":
@@ -99,8 +122,19 @@ class SettingItemWidget(QWidget):
             self.input_field.setValue(value)
 
 class SettingItemWidget_Config(SettingItemWidget):
-    """配置项窗口组件"""
+    """配置项窗口组件，自动与配置文件同步"""
+
     def __init__(self, label, field_type, placeholder="", config_data=None, parent=None):
+        """
+        初始化配置项窗口组件
+
+        Parameters:
+            label (str): 标签文本
+            field_type (str): 字段类型
+            placeholder (str, optional): 占位符文本，默认为空字符串
+            config_data (dict, optional): 配置数据字典，包含路径和JSON路径信息
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(label, field_type, placeholder, parent)
 
         self.config_data = config_data
@@ -171,15 +205,39 @@ class SettingItemWidget_Config(SettingItemWidget):
             raise ValueError(f"未知字段类型: {field_type}")
 
     def get_json_value(self, data, json_path):
-        """使用glom根据JSON路径获取值"""
+        """
+        使用glom根据JSON路径从数据中获取值
+
+        Parameters:
+            data (dict): 要查询的JSON数据
+            json_path (str): glom支持的JSON路径表达式
+
+        Returns:
+            路径对应的值
+        """
         return glom(data, json_path)
 
     def set_json_value(self, data, json_path, value):
-        """使用glom根据JSON路径设置值"""
+        """
+        使用glom根据JSON路径设置值
+
+        Parameters:
+            data (dict): 要修改的JSON数据
+            json_path (str): glom支持的JSON路径表达式
+            value: 要设置的值
+        """
         glom(data, Assign(json_path, value))
 
     def get_field_value(self, field):
-        """获取字段的当前值（配置数据模式）"""
+        """
+        从配置文件中获取字段的当前值
+
+        Parameters:
+            field (dict): 字段配置信息，包含"path"(文件路径)、"json_path"(JSON路径)、"default"(默认值)
+
+        Returns:
+            字段当前值，如果文件不存在则返回默认值
+        """
         file_path = field["path"]
         if os.path.exists(file_path):
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -188,7 +246,13 @@ class SettingItemWidget_Config(SettingItemWidget):
         return field.get("default")
 
     def save_field_value(self, field, value):
-        """保存字段值到对应文件（配置数据模式）"""
+        """
+        将字段值保存到对应的配置文件
+
+        Parameters:
+            field (dict): 字段配置信息
+            value: 要保存的值
+        """
         file_path = field["path"]
         os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
@@ -199,7 +263,7 @@ class SettingItemWidget_Config(SettingItemWidget):
         else:
             data = {}
 
-        # 处理布尔值
+        # 处理布尔值（Qt的QCheckBox stateChanged信号返回0/1/2，对应False/None/True）
         if field["type"] == "bool":
             bool_map = {0: False, 1: None, 2: True}
             value = bool_map.get(value, value)
@@ -212,13 +276,26 @@ class SettingItemWidget_Config(SettingItemWidget):
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     def on_setting_changed(self, field, value):
-        """设置项改变事件（配置数据模式）"""
+        """
+        设置项值改变时的回调函数
+
+        Parameters:
+            field (dict): 字段配置信息
+            value: 新的字段值
+        """
         self.save_field_value(field, value)
 
 class SettingSubcategoryWidget(QWidget):
-    """设置子类别窗口组件"""
+    """设置子类别窗口组件，包含多个设置项"""
 
     def __init__(self, subcategory_data, parent=None):
+        """
+        初始化设置子类别窗口组件
+
+        Parameters:
+            subcategory_data (tuple): 子类别数据，格式为 (子类别名称, [设置项列表])
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
         self.subcategory_data = subcategory_data
 
@@ -242,9 +319,16 @@ class SettingSubcategoryWidget(QWidget):
             subcategory_layout.addWidget(item_widget)
 
 class SettingCategoryWidget(QWidget):
-    """设置内容窗口组件"""
+    """设置内容窗口组件，包含多个子类别"""
 
     def __init__(self, category_data, parent=None):
+        """
+        初始化设置内容窗口组件
+
+        Parameters:
+            category_data (tuple): 类别数据，格式为 (类别名称, [子类别列表])
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
         self.category_data = category_data
 

@@ -6,8 +6,20 @@ from core.widgets import SettingItemWidget
 
 
 class EditorWindow(BaseDialog):
-    """编辑窗口"""
+    """工作时间编辑窗口，用于创建和编辑工作时间记录"""
+
     def __init__(self, parent, year, month, day, item=None, id_=None):
+        """
+        初始化工作时间编辑窗口
+
+        Parameters:
+            parent (QWidget): 父窗口
+            year (int): 年份
+            month (int): 月份
+            day (int): 日期
+            item (dict, optional): 待编辑的工作时间记录，None表示新建
+            id_ (int, optional): 记录索引ID
+        """
         super().__init__(parent)
         self.item = item or {} # a if a else b
         self.is_new = item is None
@@ -23,7 +35,7 @@ class EditorWindow(BaseDialog):
         self.load_data()
 
     def init_ui(self):
-        """初始化UI界面"""
+        """初始化UI界面，创建表单控件和按钮"""
         self.setWindowTitle("工作时间项")
         self.setMinimumSize(500, 400)
 
@@ -67,7 +79,7 @@ class EditorWindow(BaseDialog):
         main_layout.addLayout(button_layout)
 
     def load_data(self):
-        """加载数据到表单"""
+        """从item中加载数据到表单控件"""
         if self.item:
             start_time_str = self.item.get("from")
             if start_time_str:
@@ -89,7 +101,12 @@ class EditorWindow(BaseDialog):
                 self.description_editor.set_value(description)
 
     def save(self, copy=False):
-        """保存工作时间记录"""
+        """
+        保存工作时间记录
+
+        Parameters:
+            copy (bool, optional): 是否保存为副本，默认为False
+        """
         # 读取数据
         start_time = self.start_time_editor.get_value() or QTime(0, 0)
         end_time = self.end_time_editor.get_value() or QTime(0, 0)
@@ -123,7 +140,7 @@ class EditorWindow(BaseDialog):
         self.close()
 
     def delete(self):
-        """删除日程"""
+        """删除当前工作时间记录，需用户确认"""
         reply = QMessageBox.question(self, "确认删除",
                                    "确认删除？",
                                    QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)

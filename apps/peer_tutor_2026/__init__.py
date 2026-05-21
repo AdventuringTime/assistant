@@ -16,10 +16,19 @@ from math import floor
 icon = QIcon('apps/peer_tutor_2026/assets/icon.ico')
 
 class TaskDialog(BaseDialog):
-    on_save_signal = Signal(dict)
-    on_delete_signal = Signal()
+    """任务编辑对话框，支持创建和编辑任务"""
+
+    on_save_signal = Signal(dict)  # 保存任务信号
+    on_delete_signal = Signal()    # 删除任务信号
 
     def __init__(self, task=None, parent=None):
+        """
+        初始化任务编辑对话框
+
+        Parameters:
+            task (dict, optional): 待编辑的任务数据，None表示新建任务
+            parent (QWidget, optional): 父窗口
+        """
         super().__init__(parent)
         self.task = task
         self.setWindowTitle('任务')
@@ -76,10 +85,12 @@ class TaskDialog(BaseDialog):
         self.weight_spin.installEventFilter(self)
 
     def on_save(self):
+        """保存任务，发出保存信号并关闭对话框"""
         self.on_save_signal.emit(self.get_task_data())
         self.close()
 
     def on_delete(self):
+        """删除任务，需用户确认"""
         reply = QMessageBox.question(self, '删除任务', '删除任务？',
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
@@ -87,6 +98,12 @@ class TaskDialog(BaseDialog):
             self.close()
 
     def get_task_data(self):
+        """
+        获取当前表单中的任务数据
+
+        Returns:
+            dict: 任务数据字典
+        """
         return {
             'name': self.name_edit.text(),
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
@@ -95,6 +112,16 @@ class TaskDialog(BaseDialog):
         }
 
     def eventFilter(self, obj, event):
+        """
+        事件过滤器，实现输入框聚焦时自动全选
+
+        Parameters:
+            obj (QObject): 事件源对象
+            event (QEvent): 事件对象
+
+        Returns:
+            bool: 是否拦截事件
+        """
         if event.type() == QEvent.Type.FocusIn:
             if obj == self.required_spin:
                 QTimer.singleShot(0, self.required_spin.selectAll)
@@ -104,10 +131,19 @@ class TaskDialog(BaseDialog):
 
 
 class TaskItem(QWidget):
-    task_updated = Signal()
-    task_deleted = Signal()
+    """任务项部件，显示单个任务的详细信息和进度"""
+
+    task_updated = Signal()  # 任务更新信号
+    task_deleted = Signal()  # 任务删除信号
 
     def __init__(self, task, parent=None):
+        """
+        初始化任务项部件
+
+        Parameters:
+            task (dict): 任务数据字典
+            parent (QWidget, optional): 父控件
+        """
         super().__init__(parent)
         self.task = task
 
@@ -161,7 +197,7 @@ class TaskItem(QWidget):
         self.update_progress_percent()
 
     def update_progress_percent(self):
-        """更新进度条和进度标签"""
+        """更新进度条和进度标签显示"""
         if self.required == 0.0:
             self.progress_label.setText('已完成')
             self.progress_percent = 100
@@ -185,6 +221,12 @@ class TaskItem(QWidget):
         self.progress_bar.setValue(progress_value)
 
     def on_progress_clicked(self, event):
+        """
+        通过输入对话框修改完成数量
+
+        Parameters:
+            event (QMouseEvent): 鼠标点击事件
+        """
         self.completed, ok = QInputDialog.getDouble(self, '修改进度',
             f'请输入完成数量:',
             value=self.completed,
@@ -196,6 +238,12 @@ class TaskItem(QWidget):
             self.task_updated.emit()
 
     def on_name_clicked(self, event):
+        """
+        点击任务名称打开编辑对话框
+
+        Parameters:
+            event (QMouseEvent): 鼠标点击事件
+        """
         dialog = TaskDialog(self.task, self)
         dialog.on_save_signal.connect(self.on_dialog_save)
         dialog.on_delete_signal.connect(self.on_dialog_delete)
@@ -203,9 +251,16 @@ class TaskItem(QWidget):
         dialog.show()
 
     def on_dialog_delete(self):
+        """处理删除操作"""
         self.task_deleted.emit()
 
     def on_dialog_save(self, data):
+        """
+        处理保存操作，更新任务数据
+
+        Parameters:
+            data (dict): 更新后的任务数据
+        """
         self.task['name'] = data['name']
         self.task['required'] = data['required']
         self.task['weight'] = data['weight']
@@ -216,7 +271,15 @@ class TaskItem(QWidget):
 
 
 class TaskWindow(BaseWindow):
+    """任务管理窗口，芙芙伴学应用主窗口"""
+
     def __init__(self, parent=None):
+        """
+        初始化任务窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
         super().__init__(parent)
         self.setWindowTitle('芙芙伴学')
         self.setWindowIcon(icon)
@@ -292,6 +355,7 @@ class TaskWindow(BaseWindow):
         self.load_and_display_tasks()
 
     def inherit_tasks_from_last_week_if_not_exist(self):
+        """如果本周任务不存在，则从上一周继承任务（重置完成次数）"""
         this_week_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.this_week_num))
         this_week_json_path = os.path.join(this_week_dir, 'tasks.json')
 
@@ -310,6 +374,7 @@ class TaskWindow(BaseWindow):
                 json.dump(tasks, f, ensure_ascii=False, indent=4)
 
     def load_tasks(self):
+        """从文件加载指定周的任务数据"""
         data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
         json_path = os.path.join(data_dir, 'tasks.json')
 
@@ -320,6 +385,7 @@ class TaskWindow(BaseWindow):
             self.tasks = json.load(f)
 
     def save_tasks(self):
+        """保存当前周的任务数据到文件"""
         data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
         json_path = os.path.join(data_dir, 'tasks.json')
 
@@ -327,6 +393,7 @@ class TaskWindow(BaseWindow):
             json.dump(self.tasks, f, ensure_ascii=False, indent=4)
 
     def update_total_progress(self):
+        """更新加权总进度显示"""
         total_percent = 0
         total_weight = 0
         if self.task_items:
@@ -347,6 +414,12 @@ class TaskWindow(BaseWindow):
 
     @staticmethod
     def _open_folder_of_dir(data_dir):
+        """
+        打开指定目录
+
+        Parameters:
+            data_dir (str): 目录路径
+        """
         os.makedirs(data_dir, exist_ok=True)
         if sys.platform == 'win32': # 限 Windows
             os.startfile(data_dir)
@@ -356,12 +429,19 @@ class TaskWindow(BaseWindow):
             QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
 
     def open_this_week_folder(self):
+        """打开当前显示周的文件夹"""
         data_dir = os.path.join(os.path.dirname(__file__), 'data',
                                 str(self.week_displayed))
         self._open_folder_of_dir(data_dir)
 
     @staticmethod
     def open_folder_of_the_day(dt: datetime.datetime):
+        """
+        打开指定日期对应的文件夹
+
+        Parameters:
+            dt (datetime.datetime): 日期时间对象
+        """
         days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         week = floor(get_this_week(dt=dt,
             start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
@@ -373,17 +453,21 @@ class TaskWindow(BaseWindow):
 
     @staticmethod
     def open_today_folder():
+        """打开今日文件夹"""
         TaskWindow.open_folder_of_the_day(datetime.datetime.now())
 
     @staticmethod
     def open_yesterday_folder():
+        """打开昨日文件夹"""
         TaskWindow.open_folder_of_the_day(datetime.datetime.now() - datetime.timedelta(days=1))
 
     def on_task_updated(self):
+        """任务更新处理，保存任务并更新总进度"""
         self.save_tasks()
         self.update_total_progress()
 
     def on_task_deleted(self):
+        """任务删除处理"""
         sender = self.sender()
         if sender in self.task_items:
             index = self.task_items.index(sender)
@@ -394,11 +478,18 @@ class TaskWindow(BaseWindow):
             self.update_total_progress()
 
     def on_add_task(self):
+        """添加新任务"""
         dialog = TaskDialog(parent=self)
         dialog.on_save_signal.connect(self.on_dialog_create)
         dialog.show()
 
     def on_dialog_create(self, data):
+        """
+        创建新任务处理
+
+        Parameters:
+            data (dict): 新任务数据
+        """
         if data['name'].strip():
             self.tasks.append(data)
             task_item = TaskItem(data)
@@ -410,6 +501,7 @@ class TaskWindow(BaseWindow):
             self.update_total_progress()
 
     def toggle_week(self):
+        """切换显示本周/上周任务"""
         if self.is_showing_this_week:
             self.week_displayed = self.this_week_num - 1
             self.week_switch_button.setText('本周')
@@ -420,6 +512,7 @@ class TaskWindow(BaseWindow):
         self.load_and_display_tasks()
 
     def load_and_display_tasks(self):
+        """加载并显示任务列表"""
         for item in self.task_items:
             item.deleteLater()
         self.task_items.clear()

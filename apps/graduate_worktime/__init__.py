@@ -12,11 +12,17 @@ from core.base_window import BaseWindow
 
 
 class GraduateWorktimeWindow(BaseWindow):
-    """研招工时统计窗口类"""
+    """研招工时统计窗口，用于记录和统计研究生招生工作的工时"""
 
     data_file_path = "apps/graduate_worktime/data/records.json"
 
     def __init__(self, parent=None):
+        """
+        初始化研招工时统计窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
         super().__init__(parent)
 
         self.setWindowTitle("研招工时统计")
@@ -112,6 +118,12 @@ class GraduateWorktimeWindow(BaseWindow):
         self.refresh_table()
 
     def load_records(self):
+        """
+        从文件加载工时记录
+
+        Returns:
+            list: 工时记录列表，每个记录是包含 date, content, duration 的字典
+        """
         if os.path.exists(self.data_file_path):
             with open(self.data_file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -119,11 +131,13 @@ class GraduateWorktimeWindow(BaseWindow):
             return []
 
     def save_records(self):
+        """保存工时记录到文件"""
         os.makedirs(os.path.dirname(self.data_file_path), exist_ok=True)
         with open(self.data_file_path, 'w', encoding='utf-8') as f:
             json.dump(self.records, f, ensure_ascii=False, indent=4)
 
     def refresh_table(self):
+        """刷新表格显示，将records数据加载到表格中"""
         self.table.setRowCount(0)
         for record in self.records:
             row = self.table.rowCount()
@@ -139,11 +153,13 @@ class GraduateWorktimeWindow(BaseWindow):
                 self.table.setItem(row, col, item)
 
     def on_clear_clicked(self):
+        """清空所有工时记录"""
         self.records = []
         self.save_records()
         self.refresh_table()
 
     def on_export_clicked(self):
+        """导出工时记录到剪贴板，包含总时长统计"""
         lines = []
         total_hours = 0.0
         for record in self.records:
@@ -167,6 +183,7 @@ class GraduateWorktimeWindow(BaseWindow):
             QGuiApplication.clipboard().setText(output)
 
     def on_delete_clicked(self):
+        """删除选中的工时记录行"""
         selected_items = self.table.selectedItems()
         if selected_items:
             row = selected_items[0].row()
@@ -175,6 +192,12 @@ class GraduateWorktimeWindow(BaseWindow):
             self.refresh_table()
 
     def on_item_changed(self, item):
+        """
+        表格单元格内容改变时的处理函数
+
+        Parameters:
+            item (QTableWidgetItem): 被修改的表格项
+        """
         row = self.table.row(item)
         col = self.table.column(item)
         if 0 <= row < len(self.records):
@@ -195,6 +218,7 @@ class GraduateWorktimeWindow(BaseWindow):
             self.save_records()
 
     def on_add_clicked(self):
+        """添加新的工时记录行，默认日期为今天，时长为1.5小时"""
         today = datetime.now().strftime("%Y-%m-%d")
         new_record = {
             "date": today,

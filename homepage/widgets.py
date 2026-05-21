@@ -18,9 +18,15 @@ from apps import APP_LIST
 
 
 class ClockWidget(QWidget):
-    """时钟部件，显示三个同心环进度条"""
+    """时钟部件，显示三个同心环进度条：内环（周次）、中环（本周进度）、外环（本日状态）"""
 
     def __init__(self, parent=None):
+        """
+        初始化时钟部件
+
+        Parameters:
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
 
         # 设置环的宽度
@@ -33,12 +39,12 @@ class ClockWidget(QWidget):
         # 初始化日历数据
         self.current_day = None
 
-        # 数字-颜色映射表
+        # 数字-颜色映射表（事件类型对应颜色）
         self.type_colors = [
-            QColor(255, 0, 0, 128),   # 其他 - 红色
+            QColor(255, 0, 0, 128),     # 其他 - 红色
             QColor(128, 32, 255, 128),   # 会议 - 紫色
-            QColor(255, 165, 0, 128),     # 娱乐 - 橙色
-            QColor(0, 255, 255, 128),     # 活动 - 青色
+            QColor(255, 165, 0, 128),    # 娱乐 - 橙色
+            QColor(0, 255, 255, 128),    # 活动 - 青色
             QColor(100, 255, 100, 128)   # 课程 - 绿色
         ]
 
@@ -77,7 +83,12 @@ class ClockWidget(QWidget):
         self.outer_progress = np.clip((time_in_day / day_duration), 0, 1)
 
     def load_calendar_data(self):
-        """加载当天的日历数据并计算事件圆弧位置"""
+        """
+        加载当天的日历数据并计算事件圆弧位置
+
+        从 apps/calendar/data/年/月/日.json 文件加载日历事件数据，
+        然后计算每个事件在外环上对应的圆弧位置。
+        """
 
         # 构建日历数据文件路径
         year = self.current_day.year
@@ -96,7 +107,12 @@ class ClockWidget(QWidget):
         self.calculate_event_arcs()
 
     def calculate_event_arcs(self):
-        """计算日历事件的圆弧起终点"""
+        """
+        计算日历事件的圆弧起终点
+
+        将每个日历事件的时间范围转换为外环上的圆弧角度，
+        用于在绘制时显示事件位置。
+        """
         self.event_arcs = {}
 
         # 当天开始时间（凌晨4:00）
@@ -136,7 +152,14 @@ class ClockWidget(QWidget):
             }
 
     def paintEvent(self, event):
-        """绘制三个同心环"""
+        """
+        绘制三个同心环
+
+        绘制顺序：外环（本日状态）→ 中环（本周进度）→ 内环（周次进度）
+
+        Parameters:
+            event (QPaintEvent): 绘制事件
+        """
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)  # 抗锯齿
 
@@ -156,17 +179,26 @@ class ClockWidget(QWidget):
         middle_radius = max_radius * 0.65
         inner_radius = max_radius * 0.3
 
-        # 绘制外环：本日状态（灰色虚线 + 黄色圆点）
-        self.draw_day_ring(painter, center_x, center_y, outer_radius, self.outer_progress)
+        # 绘制外环：本日状态（灰色背景 + 黄色圆点 + 日历事件）
+        self._draw_day_ring(painter, center_x, center_y, outer_radius, self.outer_progress)
 
         # 绘制中环：本周进度条（绿色）
-        self.draw_week_ring(painter, center_x, center_y, middle_radius, self.middle_progress)
+        self._draw_week_ring(painter, center_x, center_y, middle_radius, self.middle_progress)
 
         # 绘制内环：周次进度条（蓝色）
-        self.draw_season_ring(painter, center_x, center_y, inner_radius, self.inner_progress)
+        self._draw_season_ring(painter, center_x, center_y, inner_radius, self.inner_progress)
 
-    def draw_season_ring(self, painter, center_x, center_y, radius, progress):
-        """绘制内环：周次进度条（蓝色）"""
+    def _draw_season_ring(self, painter, center_x, center_y, radius, progress):
+        """
+        绘制内环：周次进度条（蓝色）
+
+        Parameters:
+            painter (QPainter): 绘图工具
+            center_x (int): 圆心X坐标
+            center_y (int): 圆心Y坐标
+            radius (float): 环的半径
+            progress (float): 进度值（0-1）
+        """
         # 计算环的矩形区域
         rect = QRectF(center_x - radius, center_y - radius,
                      radius * 2, radius * 2)
@@ -191,10 +223,17 @@ class ClockWidget(QWidget):
         start_angle = 1440  # 从顶部开始（90度）
         painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
 
-        # 删除环标签
+    def _draw_week_ring(self, painter, center_x, center_y, radius, progress):
+        """
+        绘制中环：本周进度条（绿色）
 
-    def draw_week_ring(self, painter, center_x, center_y, radius, progress):
-        """绘制中环：本周进度条（绿色）"""
+        Parameters:
+            painter (QPainter): 绘图工具
+            center_x (int): 圆心X坐标
+            center_y (int): 圆心Y坐标
+            radius (float): 环的半径
+            progress (float): 进度值（0-1）
+        """
         # 计算环的矩形区域
         rect = QRectF(center_x - radius, center_y - radius,
                      radius * 2, radius * 2)
@@ -219,8 +258,17 @@ class ClockWidget(QWidget):
         start_angle = 1440  # 从顶部开始（90度）
         painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
 
-    def draw_day_ring(self, painter, center_x, center_y, radius, progress):
-        """绘制外环：本日状态（灰色背景 + 黄色圆点 + 日历事件标记）"""
+    def _draw_day_ring(self, painter, center_x, center_y, radius, progress):
+        """
+        绘制外环：本日状态（灰色背景 + 黄色圆点 + 日历事件标记）
+
+        Parameters:
+            painter (QPainter): 绘图工具
+            center_x (int): 圆心X坐标
+            center_y (int): 圆心Y坐标
+            radius (float): 环的半径
+            progress (float): 进度值（0-1，表示当天已过时间比例）
+        """
         # 计算环的矩形区域
         rect = QRectF(center_x - radius, center_y - radius,
                      radius * 2, radius * 2)
@@ -233,9 +281,9 @@ class ClockWidget(QWidget):
         painter.drawArc(rect, 0, 5760)  # 完整的背景环
 
         # 绘制日历事件标记
-        self.draw_calendar_events(painter, rect, center_x, center_y, radius)
+        self._draw_calendar_events(painter, rect, center_x, center_y, radius)
 
-        # 计算黄色圆点的位置
+        # 计算黄色圆点的位置（表示当前时间）
         angle_rad = (90 - progress * 360) * np.pi / 180  # 转换为弧度，从顶部开始顺时针
         dot_x = center_x + radius * np.cos(angle_rad)
         dot_y = center_y - radius * np.sin(angle_rad)  # Y轴向下为正
@@ -246,8 +294,17 @@ class ClockWidget(QWidget):
         painter.drawEllipse(int(dot_x - self.dot_size / 2), int(dot_y - self.dot_size / 2),
                           self.dot_size, self.dot_size)
 
-    def draw_calendar_events(self, painter, rect, center_x, center_y, radius):
-        """在日圆环上绘制日历事件圆弧"""
+    def _draw_calendar_events(self, painter, rect, center_x, center_y, radius):
+        """
+        在日圆环上绘制日历事件圆弧
+
+        Parameters:
+            painter (QPainter): 绘图工具
+            rect (QRectF): 外环的矩形区域
+            center_x (int): 圆心X坐标
+            center_y (int): 圆心Y坐标
+            radius (float): 外环的半径
+        """
         if not self.event_arcs:
             return
 
@@ -281,8 +338,14 @@ class ClockWidget(QWidget):
 
 class DateTimeLabel(QLabel):
     """日期时间标签，显示日期和时间"""
+
     def update_display(self, weeks_collapsed):
-        """更新显示内容"""
+        """
+        更新显示内容
+
+        Parameters:
+            weeks_collapsed (float): 当前已过周数（浮点型）
+        """
         # 计算周数
         week_number = int(weeks_collapsed) + 1
 
@@ -297,13 +360,23 @@ class PeriodSeasonLabel(QLabel):
     """时期与季节标签，显示时期和季节信息"""
 
     def __init__(self, parent=None):
+        """
+        初始化时期与季节标签
+
+        Parameters:
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
 
         # 加载并显示数据
         self.load_data()
 
     def load_data(self):
-        """从JSON文件加载数据并更新显示，如果文件不存在则使用默认值并创建文件"""
+        """
+        从JSON文件加载时期和季节数据并更新显示
+
+        如果文件不存在、损坏或读取失败，使用默认值("原初期 夏季")并尝试创建文件。
+        """
 
         # 构建文件路径
         json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
@@ -341,13 +414,23 @@ class VersionLabel(QLabel):
     """版本标签，显示应用版本与个人版本信息"""
 
     def __init__(self, parent=None):
+        """
+        初始化版本标签
+
+        Parameters:
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
 
         # 加载并显示数据
         self.load_data()
 
     def load_data(self):
-        """从JSON文件加载数据并更新显示，如果文件不存在则使用默认值并创建文件"""
+        """
+        从JSON文件加载版本数据并更新显示
+
+        如果文件不存在、损坏或读取失败，使用默认值("未知")并尝试创建文件。
+        """
 
         # 构建文件路径
         json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
@@ -385,6 +468,12 @@ class TopStatusWidget(QWidget):
     """顶部状态部件，圆角矩形框内，左侧时钟，右侧日期周次和时期季节"""
 
     def __init__(self, parent=None):
+        """
+        初始化顶部状态部件
+
+        Parameters:
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
 
         # 设置组件
@@ -435,24 +524,29 @@ class TopStatusWidget(QWidget):
 
         main_layout.addLayout(right_layout, 1)
 
-        # 定期更新显示
+        # 定期更新显示（每5分钟自动更新）
         self.updater = Heartbeat(self.update_time_display, interval=300, immediate=False)
-        self.update_display() # 初始化时加载时期季节等数据
+        self.update_display()  # 初始化时加载时期季节等数据
 
     def update_weeks_collapsed(self):
         """更新自身存储的周次进度"""
-        # 获取时钟部件的内环进度（对应周次进度）
+        # 获取当前周数进度
         self.weeks_collapsed = get_this_week()
 
     def update_time_display(self, force_update_calendar=False):
-        """更新时间显示"""
+        """
+        更新时间显示
+
+        Parameters:
+            force_update_calendar (bool, optional): 是否强制更新日历数据，默认False
+        """
         self.update_weeks_collapsed()
         self.clock_widget.calculate_progress(self.weeks_collapsed, force_update_calendar)
         self.clock_widget.update()
         self.date_week_label.update_display(self.weeks_collapsed)
 
     def update_display(self):
-        """更新所有显示"""
+        """更新所有显示内容，包括时间、时期季节和版本信息"""
         self.update_time_display(force_update_calendar=True)
         self.period_season_label.load_data()
         self.version_label.load_data()
@@ -468,6 +562,14 @@ class CollapsibleContainerWidget(QWidget):
     """可折叠容器基类，提供统一的标题格式和折叠/展开功能"""
 
     def __init__(self, title="", default_expanded=False, parent=None):
+        """
+        初始化可折叠容器
+
+        Parameters:
+            title (str): 容器标题，默认为空字符串
+            default_expanded (bool): 默认是否展开，默认为False（折叠状态）
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
         self.is_expanded = default_expanded
         self.title = title
@@ -524,13 +626,18 @@ class CollapsibleContainerWidget(QWidget):
         self.title_widget.mousePressEvent = self.toggle_expand
 
     def toggle_expand(self, event):
-        """切换折叠/展开状态"""
+        """
+        切换折叠/展开状态
+
+        Parameters:
+            event (QMouseEvent): 鼠标点击事件
+        """
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_expanded = not self.is_expanded
             self.update_expansion_display()
 
     def update_expansion_display(self):
-        """更新显示状态"""
+        """更新显示状态，包括箭头方向和内容容器的显示/隐藏"""
         # 更新箭头方向
         if self.is_expanded:
             self.arrow_svg.load("assets/svg/expanded.svg")
@@ -542,24 +649,34 @@ class CollapsibleContainerWidget(QWidget):
             self.on_collapse()
 
     def on_expand(self):
-        """展开时的回调函数，子类可以重写"""
+        """展开时的回调函数，子类可以重写以添加自定义逻辑"""
         pass
 
     def on_collapse(self):
-        """折叠时的回调函数，子类可以重写"""
+        """折叠时的回调函数，子类可以重写以添加自定义逻辑"""
         pass
 
     def set_title(self, title):
-        """设置标题"""
+        """
+        设置容器标题
+
+        Parameters:
+            title (str): 新的标题文本
+        """
         self.title = title
         self.title_label.setText(title)
 
     def add_widget_to_content(self, widget):
-        """向内容容器添加部件"""
+        """
+        向内容容器添加部件
+
+        Parameters:
+            widget (QWidget): 要添加的部件
+        """
         self.content_layout.addWidget(widget)
 
     def clear_content(self):
-        """清空内容容器"""
+        """清空内容容器中的所有部件"""
         for i in reversed(range(self.content_layout.count())):
             item = self.content_layout.itemAt(i)
             if item:
@@ -582,7 +699,19 @@ class NotificationItemWidget(QWidget):
             is_read=False,
             notification_system=None,
             create_time=None
-        ):
+    ):
+        """
+        初始化单个通知项
+
+        Parameters:
+            title (str): 通知标题，默认为"来自助手的通知"
+            content (str): 通知内容，默认为"助手没收到更多内容哦"
+            click_action (dict, optional): 点击操作，格式为{"type": "open_url|open_file|open_app", "value": ...}
+            icon_path (str): 图标路径，默认为空
+            is_read (bool): 是否已读，默认为False
+            notification_system (NotificationSystemWidget): 所属的通知系统
+            create_time (datetime, optional): 创建时间，默认为当前时间
+        """
         super().__init__()
         self.title = title
         self.content = content
@@ -660,7 +789,7 @@ class NotificationItemWidget(QWidget):
         self.update_read_style()
 
     def update_read_style(self):
-        """更新已读状态样式"""
+        """根据已读状态更新样式（字体颜色、按钮样式）"""
         if self.is_read:
             self.title_label.setStyleSheet("""
                 font-size: 18px;
@@ -707,7 +836,17 @@ class NotificationItemWidget(QWidget):
             self.status_button.setToolTip("标记已读")
 
     def mousePressEvent(self, event):
-        """鼠标点击事件"""
+        """
+        鼠标点击事件处理
+
+        支持的点击操作类型：
+        - open_url: 打开URL链接
+        - open_file: 打开本地文件
+        - open_app: 打开应用
+
+        Parameters:
+            event (QMouseEvent): 鼠标事件
+        """
         if event.button() == Qt.MouseButton.LeftButton:
             if self.click_action:
                 if self.click_action["type"] == "open_url":
@@ -725,7 +864,7 @@ class NotificationItemWidget(QWidget):
         super().mousePressEvent(event)
 
     def mark_as_read(self):
-        """标记为已读"""
+        """标记通知为已读，并更新样式和通知系统状态"""
         self.is_read = True
         self.update_read_style()
         # 保存状态变化
@@ -735,7 +874,7 @@ class NotificationItemWidget(QWidget):
             self.notification_system.update_unread_count()
 
     def mark_as_unread(self):
-        """标记为未读"""
+        """标记通知为未读，并更新样式和通知系统状态"""
         self.is_read = False
         self.update_read_style()
         # 保存状态变化
@@ -745,7 +884,13 @@ class NotificationItemWidget(QWidget):
             self.notification_system.update_unread_count()
 
     def update_content(self, title=None, content=None):
-        """更新通知内容"""
+        """
+        更新通知内容
+
+        Parameters:
+            title (str, optional): 新的标题文本
+            content (str, optional): 新的内容文本
+        """
         if title is not None:
             self.title = title
             self.title_label.setText(title)
@@ -763,12 +908,18 @@ class NotificationItemWidget(QWidget):
         self.notification_system.save_notifications()
 
 class NotificationSystemWidget(CollapsibleContainerWidget):
-    """通知系统部件，管理多个通知项"""
+    """通知系统部件，管理多个通知项，支持线程安全的通知添加"""
 
     # 定义信号，用于线程安全的通知添加
     notify_signal = Signal(str, str, object, str, bool)
 
     def __init__(self, parent=None):
+        """
+        初始化通知系统部件
+
+        Parameters:
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__("通知", True, parent)  # 默认展开状态
         self.notifications = []
 
@@ -778,7 +929,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         # 确保数据目录存在
         os.makedirs(os.path.dirname(self.notifications_file), exist_ok=True)
 
-        # 连接信号到槽函数
+        # 连接信号到槽函数（用于线程安全的通知添加）
         self.notify_signal.connect(self._notify)
 
         # 添加未读消息计数标签到标题
@@ -798,7 +949,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         self.load_notifications()
 
     def add_unread_count_label(self):
-        """添加未读消息计数标签到标题"""
+        """添加未读消息计数标签到标题栏"""
         # 未读消息计数标签
         self.unread_count_label = QLabel()
         self.unread_count_label.setFixedSize(24, 24)
@@ -818,11 +969,16 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         self.title_layout.insertWidget(2, self.unread_count_label)
 
     def get_unread_count(self):
-        """获取未读通知数量"""
+        """
+        获取未读通知数量
+
+        Returns:
+            int: 未读通知的数量
+        """
         return sum(1 for notification in self.notifications if not notification.is_read)
 
     def update_unread_count(self):
-        """更新未读消息计数"""
+        """更新未读消息计数标签的显示"""
         unread_count = self.get_unread_count()
 
         self.unread_count_label.setText(str(unread_count))
@@ -839,7 +995,19 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
             click_action=None,
             icon_path='',
             is_read=False):
-        """添加新通知（线程安全版本）"""
+        """
+        添加新通知（线程安全版本）
+
+        Parameters:
+            title (str): 通知标题，默认为"来自助手的通知"
+            content (str): 通知内容，默认为"助手没收到更多内容哦"
+            click_action (dict, optional): 点击操作配置
+            icon_path (str): 图标路径，默认为空
+            is_read (bool): 是否已读，默认为False
+
+        Returns:
+            NotificationItemWidget: 创建的通知项部件
+        """
         # 如果当前线程不是主线程，使用信号槽机制
         if QThread.currentThread() != self.thread():
             self.notify_signal.emit(title, content, click_action, icon_path, is_read)
@@ -854,7 +1022,19 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
             click_action=None,
             icon_path='',
             is_read=False):
-        """线程安全的通知添加方法（在主线程中执行）"""
+        """
+        线程安全的通知添加方法（在主线程中执行）
+
+        Parameters:
+            title (str): 通知标题，默认为"来自助手的通知"
+            content (str): 通知内容，默认为"助手没收到更多内容哦"
+            click_action (dict, optional): 点击操作配置
+            icon_path (str): 图标路径，默认为空
+            is_read (bool): 是否已读，默认为False
+
+        Returns:
+            NotificationItemWidget: 创建的通知项部件
+        """
         # 添加通知项
         notification_item = NotificationItemWidget(
             title, content, click_action, icon_path, is_read, self
@@ -879,7 +1059,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
             title=title,
             msg=content,
             icon=icon_path
-        ) # TODO: 再次运行改编成打开主窗口后，增加打开app的链接
+        )  # TODO: 再次运行改编成打开主窗口后，增加打开app的链接
         notif.show()
 
         # 保存通知到文件
@@ -894,9 +1074,14 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         return notification_item
 
     def remove_notification(self, notification_item):
-        """移除通知"""
+        """
+        移除指定的通知项
+
+        Parameters:
+            notification_item (NotificationItemWidget): 要移除的通知项
+        """
         if notification_item in self.notifications:
-            # 获取通知项在布局中的索引
+            # 获取通知项在列表中的索引
             item_index = self.notifications.index(notification_item)
 
             # 计算需要移除的部件索引
@@ -925,7 +1110,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
 
             # 如果这是第一个通知项而且不仅有一个通知项，移除后面的分界线
             elif item_index == 0 and len(self.notifications) > 1:
-                separator_index = layout_index # 第一个通知已被移除
+                separator_index = layout_index  # 第一个通知已被移除
                 separator_item = self.content_layout.itemAt(separator_index)
                 if separator_item:
                     separator_widget = separator_item.widget()
@@ -944,12 +1129,12 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
             self.update_unread_count()
 
     def clear_notifications(self):
-        """清空所有通知并保存"""
+        """清空所有通知并保存到文件"""
         self._clear_notifications()
         self.save_notifications()
 
     def _clear_notifications(self):
-        """清空所有通知"""
+        """清空所有通知（内部方法，不保存）"""
         # 清空布局中的所有部件
         for i in reversed(range(self.content_layout.count())):
             item = self.content_layout.itemAt(i)
@@ -975,7 +1160,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         self.update_unread_count()
 
     def save_notifications(self):
-        """保存通知到JSON文件"""
+        """保存所有通知到JSON文件"""
         notifications_data = []
         for notification in self.notifications:
             notification_data = {
@@ -1040,6 +1225,16 @@ class AppItemWidget(QWidget):
     """应用图标部件，显示单个应用的图标和名称"""
 
     def __init__(self, app_name, display_name, icon_path=None, description="", parent=None):
+        """
+        初始化应用图标部件
+
+        Parameters:
+            app_name (str): 应用名称（用于查找APP_LIST中的应用）
+            display_name (str): 显示名称（界面上显示的名称）
+            icon_path (str, optional): 图标路径，默认为None（使用默认路径）
+            description (str): 应用描述（悬停提示），默认为空字符串
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__(parent)
         self.app_name = app_name
         self.display_name = display_name
@@ -1077,7 +1272,7 @@ class AppItemWidget(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.setSpacing(5)
 
-        # 加载并设置图标
+        # 加载并设置图标（支持SVG、ICO和其他图片格式）
         if self.icon_path.endswith(".svg"):
             self.icon_widget = QSvgWidget(self.icon_path)
         else:
@@ -1094,7 +1289,7 @@ class AppItemWidget(QWidget):
         self.icon_widget.setFixedSize(48, 48)
         layout.addWidget(self.icon_widget, alignment=Qt.AlignmentFlag.AlignCenter)
 
-        # 应用名称
+        # 应用名称（支持文本过长时自动省略）
         self.name_label = QLabel()
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.name_label.setWordWrap(False)
@@ -1114,20 +1309,30 @@ class AppItemWidget(QWidget):
                 max_width
             )
             self.name_label.setText(elided_text)
-            self.setToolTip(self.display_name)        
+            self.setToolTip(self.display_name)
         else:
             self.name_label.setText(self.display_name)
 
         layout.addWidget(self.name_label)
 
     def mousePressEvent(self, event):
-        """鼠标点击事件"""
+        """
+        鼠标点击事件处理
+
+        Parameters:
+            event (QMouseEvent): 鼠标事件
+        """
         if event.button() == Qt.MouseButton.LeftButton:
             self.open_app()
         super().mousePressEvent(event)
 
     def open_app(self):
-        """打开应用对应的窗口"""
+        """
+        打开应用对应的窗口
+
+        Raises:
+            TypeError: 如果应用未定义或没有窗口函数
+        """
         app_info = APP_LIST.get(self.app_name)
         if app_info and "window" in app_info:
             app_info["window"]().show()
@@ -1136,9 +1341,15 @@ class AppItemWidget(QWidget):
 
 
 class AppEntryWidget(CollapsibleContainerWidget):
-    """应用入口部件，支持折叠/展开显示应用图标"""
+    """应用入口部件，支持折叠/展开显示应用图标，使用流式布局自动换行"""
 
     def __init__(self, parent=None):
+        """
+        初始化应用入口部件
+
+        Parameters:
+            parent (QWidget, optional): 父组件，默认为None
+        """
         super().__init__("应用", True, parent)
 
         # 加载应用列表
@@ -1154,12 +1365,18 @@ class AppEntryWidget(CollapsibleContainerWidget):
         self.populate_apps()
 
     def load_apps(self):
-        """加载应用列表"""
+        """从apps模块加载应用列表"""
         from apps import APP_LIST
         self.apps = APP_LIST
 
     def add_app(self, app_name, app_info):
-        """添加应用图标"""
+        """
+        添加应用图标到布局
+
+        Parameters:
+            app_name (str): 应用名称
+            app_info (dict): 应用信息字典，包含display_name、icon、description等
+        """
         app_icon = AppItemWidget(
             app_name=app_name,
             display_name=app_info.get("display_name", app_name),
@@ -1169,7 +1386,7 @@ class AppEntryWidget(CollapsibleContainerWidget):
         self.content_layout.addWidget(app_icon)
 
     def populate_apps(self):
-        """填充应用图标"""
+        """填充所有应用图标到布局"""
         # 清空现有应用图标
         self.clear_apps()
 
@@ -1178,7 +1395,12 @@ class AppEntryWidget(CollapsibleContainerWidget):
             self.add_app(app_name, app_info)
 
     def delete_app(self, idx):
-        """删除应用图标"""
+        """
+        删除指定索引的应用图标
+
+        Parameters:
+            idx (int): 要删除的应用图标索引
+        """
         item = self.content_layout.itemAt(idx)
         if item:
             widget = item.widget()
@@ -1188,7 +1410,7 @@ class AppEntryWidget(CollapsibleContainerWidget):
                 widget.deleteLater()
 
     def clear_apps(self):
-        """清空应用图标"""
+        """清空所有应用图标"""
         for i in reversed(range(self.content_layout.count())):
             self.delete_app(i)
 

@@ -30,8 +30,20 @@ CHECK_THRESHOLD = 10  # 检查更新的阈值
 
 network_error = False
 
+
 def extract_news_id(url):
-    """从新闻链接中提取最后一个斜杠后的数字ID（如从"/1958"提取"1958"）"""
+    """
+    从新闻链接中提取最后一个斜杠后的数字ID
+
+    Parameters:
+        url (str): 新闻链接
+
+    Returns:
+        str: 提取的数字ID
+
+    Raises:
+        ValueError: 无法从URL中提取数字ID时抛出
+    """
     # 匹配最后一个斜杠后的数字序列（允许末尾有其他字符但取纯数字部分）
     match = re.search(r'/(\d+)[^/]*$', url)
     if match:
@@ -40,7 +52,19 @@ def extract_news_id(url):
 
 
 def get_latest_news(target_url):
-    """爬取目标网页，解析前MAX_NEWS_COUNT条新闻的链接并提取ID"""
+    """
+    爬取目标网页，解析前MAX_NEWS_COUNT条新闻的链接并提取ID
+
+    Parameters:
+        target_url (str): 目标网页URL
+
+    Returns:
+        list: 新闻列表，每个元素为 (news_id, news_title, full_link)
+
+    Raises:
+        requests.exceptions.RequestException: 网络请求失败时抛出
+        ValueError: 网页未找到新闻链接时抛出
+    """
     response = requests.get(target_url, timeout=10)
     response.raise_for_status()  # 检查HTTP状态码，有异常则报错
     response.encoding = response.apparent_encoding  # 自动识别编码，避免乱码
@@ -49,7 +73,7 @@ def get_latest_news(target_url):
     soup = BeautifulSoup(response.text, "html.parser")
     # 提取前MAX_NEWS_COUNT条新闻的链接
     # 修改网页后请同时修改以下代码以正确定位新闻位置
-    news_links = soup.find('div',class_="r-box").find('ul').\
+    news_links = soup.find('div', class_="r-box").find('ul').\
         find_all('a', limit=MAX_NEWS_COUNT)
     if not news_links:
         raise ValueError(f"网页 {target_url} 未找到新闻链接")
@@ -73,21 +97,36 @@ def get_latest_news(target_url):
 
     return news_list
 
+
 def open_url(url):
-    """打开指定的URL链接"""
+    """
+    打开指定的URL链接
+
+    Parameters:
+        url (str): 要打开的URL链接
+    """
     try:
         webbrowser.open(url)
     except:
         traceback.print_exc()
 
 def check_news_update():
-    """检查所有目标网页的新闻ID变化，有更新则推送通知。返回新的检查间隔时间（秒）"""
+    """
+    检查所有目标网页的新闻ID变化，有更新则推送通知。返回新的检查间隔时间（秒）
+
+    遍历所有目标网页，获取最新新闻列表，与存储的历史ID对比，
+    如果发现新新闻则推送通知，并更新存储的ID记录。
+
+    Returns:
+        int: 下次检查的间隔时间（秒），网络异常时返回DISCONNECT_DELAY，
+             正常情况返回CHECK_INTERVAL
+    """
     global last_news_ids, network_error
     for i, (url, name) in enumerate(TARGETS):
         # 获取当前网页的最新ID和链接
         try:
             current_news_list = get_latest_news(url)
-        except SystemExit: # 备调试使用
+        except SystemExit:  # 备调试使用
             quit()
         except requests.exceptions.RequestException:
             # 捕获网络请求异常
@@ -114,9 +153,9 @@ def check_news_update():
             for news_id, news_title, news_link in new_news:
                 # 推送系统通知
                 notification_system.notify(
-                    title=name+"更新",
+                    title=name + "更新",
                     content=news_title,
-                    click_action={"type": "open_url", "value": url} # 打开主界面
+                    click_action={"type": "open_url", "value": url}  # 打开主界面
                 )
 
         # 更新记录的ID列表（只保留最新的MAX_NEWS_COUNT个）
@@ -131,7 +170,12 @@ def check_news_update():
             return CHECK_INTERVAL  # 正常情况返回默认间隔时间
 
 def load_saved_ids():
-    """从JSON文件加载上次保存的新闻ID记录（直接返回列表形式）"""
+    """
+    从JSON文件加载上次保存的新闻ID记录（直接返回列表形式）
+
+    Returns:
+        list: 新闻ID列表，每个目标网页对应一个子列表
+    """
     if os.path.exists(STORAGE_FILE):
         try:
             with open(STORAGE_FILE, "r", encoding="utf-8") as f:

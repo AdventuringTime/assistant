@@ -9,11 +9,11 @@ def get_today(dt: datetime.datetime=None) -> datetime.date:
     """
     给定一个datetime，返回一个date为今天的日期，以凌晨四点为界
 
-    参数:
-        dt: datetime对象，如果为None则使用当前时间
+    Parameters:
+        dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
 
-    返回:
-        date对象，表示今天的日期
+    Returns:
+        datetime.date: 表示今天的日期
     """
     if dt is None:
         dt = datetime.datetime.now()
@@ -31,12 +31,12 @@ def is_first_run_today(data_file: str, dt: datetime.datetime=None) -> bool:
     判断指定模块是否为今天首次调用
     使用内部缓存减少重复读取文件操作
 
-    参数:
-        data_file: 数据文件路径，用于存储模块的独立判定
-        dt: datetime对象，供手动指定时间，默认使用当前时间
+    Parameters:
+        data_file (str): 数据文件路径，用于存储模块的独立判定
+        dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
 
-    返回:
-        bool值，如果是今天首次调用则返回True，否则返回False
+    Returns:
+        bool: 如果是今天首次调用则返回True，否则返回False
     """
     global _cached_dates
 
@@ -69,14 +69,14 @@ def is_first_run_today(data_file: str, dt: datetime.datetime=None) -> bool:
 
 def get_this_week(dt: datetime.datetime=None, start_date: datetime.datetime=None) -> float:
     """
-    计算当前时间对应的周数（float）
+    计算当前时间对应的周数，float 类型。
 
     Parameters:
-        dt (datetime.datetime, optional): 如果为None则使用当前时间。
+        dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
         start_date (datetime.datetime, optional): 起始时间，默认为 datetime.datetime(2025, 9, 11, 4, 0, 0)
 
     Returns:
-        周数。例如，如果第二周已过30%，则返回1.3。
+        float: 周数。例如，如果第二周已过 30%，则返回 1.3。
     """
     if dt is None:
         dt = datetime.datetime.now()

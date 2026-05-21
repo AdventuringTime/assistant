@@ -4,17 +4,25 @@
 
 import sys
 import traceback
-from PySide6.QtWidgets import (QVBoxLayout, QHBoxLayout, QTextEdit,
-                               QPushButton, QLabel, QApplication)
+from PySide6.QtWidgets import (QVBoxLayout, QTextEdit,
+                               QLabel, QApplication)
 from PySide6.QtGui import QFont
 
 from core.base_window import BaseDialog
 
 
 class ErrorWindow(BaseDialog):
-    """错误信息显示窗口"""
+    """错误信息显示窗口，用于展示应用程序运行时的异常信息"""
 
     def __init__(self, error_message, traceback_text, parent=None):
+        """
+        初始化错误窗口
+
+        Parameters:
+            error_message (str): 错误消息描述
+            traceback_text (str): 异常堆栈跟踪信息
+            parent (QWidget, optional): 父窗口，默认为None
+        """
         super().__init__(parent)
 
         # 设置窗口属性
@@ -53,21 +61,35 @@ class ErrorWindow(BaseDialog):
         self.resize(400, 300)
 
     def copy_error_info(self):
-        """复制错误信息到剪贴板"""
+        """复制错误堆栈信息到系统剪贴板"""
         clipboard = QApplication.clipboard()
         clipboard.setText(self.traceback_edit.toPlainText())
 
 
 def show_error_dialog(error_message, traceback_text, parent=None):
-    """显示错误对话框"""
+    """
+    创建并显示错误对话框
+
+    Parameters:
+        error_message (str): 错误消息描述
+        traceback_text (str): 异常堆栈跟踪信息
+        parent (QWidget, optional): 父窗口，默认为None
+    """
     error_window = ErrorWindow(error_message, traceback_text, parent)
     error_window.show()
 
 
 def excepthook(exc_type, exc_value, exc_traceback):
-    """全局异常处理钩子"""
+    """
+    全局异常处理钩子，捕获未处理的异常并显示错误窗口
 
-    # 调用原始异常处理
+    Parameters:
+        exc_type (type): 异常类型
+        exc_value (BaseException): 异常实例
+        exc_traceback (traceback): 堆栈跟踪对象
+    """
+
+    # 调用原始异常处理（保留默认行为）
     sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
     # 显示错误对话框（如果Qt应用程序正在运行）

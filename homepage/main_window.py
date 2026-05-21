@@ -1,11 +1,12 @@
 from core.heartbeat import DynamicHeartbeat
 import json
-'''
+
+"""
 主窗口类，包含系统托盘和内容部件
 
 常需修改的变量：
 - content_widgets：要在主窗口显示的内容部件列表。
-'''
+"""
 
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QScrollArea
 from PySide6.QtCore import Qt
@@ -16,8 +17,12 @@ from core.functions import get_today
 from core.global_constants import app_name
 from homepage.widgets import top_status, app_entry, notification_system
 
+
 class MainWindow(BaseWindow):
+    """主窗口类，包含系统托盘和内容部件"""
+
     def __init__(self):
+        """初始化主窗口，包括系统托盘、自启动程序和窗口内容"""
         super().__init__()
 
         # 设置窗口标题
@@ -63,7 +68,7 @@ class MainWindow(BaseWindow):
         self.tray.show()
 
     def show_window(self):
-        """显示窗口"""
+        """显示并激活主窗口"""
         # 如果窗口是最小化状态，先解除最小化
         if self.isMinimized():
             self.showNormal()
@@ -74,13 +79,25 @@ class MainWindow(BaseWindow):
         self.raise_()
 
     def on_tray_activated(self, reason):
-        """托盘图标激活事件"""
+        """
+        托盘图标激活事件处理
+
+        Parameters:
+            reason (QSystemTrayIcon.ActivationReason): 激活原因
+        """
         # 如果是左键点击或双击托盘图标，显示窗口
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.show_window()
 
     def closeEvent(self, event):
-        """关闭窗口不会退出程序"""
+        """
+        关闭窗口事件处理
+
+        关闭窗口时不会退出程序，而是最小化到系统托盘。
+
+        Parameters:
+            event (QCloseEvent): 关闭事件
+        """
         event.ignore()  # 忽略关闭事件
         self.hide()     # 隐藏窗口
 
@@ -92,7 +109,7 @@ class MainWindow(BaseWindow):
         QApplication.quit()
 
     def init_content(self):
-        """初始化窗口内容"""
+        """初始化窗口内容，创建滚动区域和内容部件布局"""
         # 创建滚动区域
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -119,7 +136,7 @@ class MainWindow(BaseWindow):
         if self.test_button:
             self.content_widgets.insert(1, self.test_button)
 
-        # 组合部件
+        # 组合部件到布局
         for widget in self.content_widgets:
             layout.addWidget(widget)
         container.setLayout(layout)
@@ -129,13 +146,21 @@ class MainWindow(BaseWindow):
         self.setCentralWidget(scroll_area)
 
     def test_function(self):
+        """测试函数（预留）"""
         pass
 
     def init_auto_start(self):
-        """初始化自启动程序"""
+        """
+        初始化自启动模块
+
+        启动以下三个模块：
+        1. news_monitor - 定期检查研究生院新闻更新的心跳器
+        2. daily_year - 每天第一次运行时推送年度事记通知
+        3. calendar_repeat_schedules - 初始化日历重复事件（从上次更新到今天）
+        """
         self.auto_start = {}
 
-        # news_monitor
+        # news_monitor - 新闻监控心跳器，定期检查新闻更新
         with open("apps/news_monitor/data/settings.json", "r") as f:
             news_monitor_settings = json.load(f)
         if news_monitor_settings["activated"]:
@@ -144,14 +169,14 @@ class MainWindow(BaseWindow):
                 DynamicHeartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])
             )
 
-        # daily_year
+        # daily_year - 每日年度事记，导入时自动推送当天年度事记通知
         with open("apps/daily_year/data/settings.json", "r") as f:
             daily_year_settings = json.load(f)
         if daily_year_settings["activated"]:
             from apps import daily_year
             self.auto_start["daily_year"] = daily_year
 
-        # calendar_repeat_schedules
+        # calendar_repeat_schedules - 日历重复事件管理器，初始化历史重复事件
         from apps.calendar import CalendarSchedulesManager
         manager = CalendarSchedulesManager()
         manager.init_repeat_events_until_today(get_today())

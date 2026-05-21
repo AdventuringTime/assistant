@@ -10,6 +10,15 @@ from core.widgets import SettingItemWidget
 
 
 def _get_date(time):
+    """
+    从时间对象中提取日期的年、月、日
+
+    Parameters:
+        time (datetime): 时间对象
+
+    Returns:
+        tuple: (year, month, day)
+    """
     schedule_date = get_today(time)
 
     year = schedule_date.year
@@ -18,9 +27,17 @@ def _get_date(time):
 
     return year, month, day
 
+
 @contextmanager
 def block_signals(widgets):
-    """临时阻塞多个控件的信号"""
+    """
+    上下文管理器：临时阻塞多个控件的信号
+
+    在 `with` 块内，指定控件的信号会被阻塞，退出块后恢复。
+
+    Parameters:
+        widgets (list): 要阻塞信号的控件列表
+    """
     for widget in widgets:
         widget.blockSignals(True)
     try:
@@ -29,12 +46,24 @@ def block_signals(widgets):
         for widget in widgets:
             widget.blockSignals(False)
 
+
 class ScheduleEditorWindow(BaseWindow):
-    """日程编辑窗口"""
+    """日程编辑窗口，用于创建或编辑日程项"""
 
     def __init__(self, parent, schedule_item=None, schedule_id=None, *, year=None, month=None, day=None):
+        """
+        初始化日程编辑窗口
+
+        Parameters:
+            parent (QWidget): 父窗口
+            schedule_item (dict, optional): 现有日程数据（编辑模式），默认为None（新建模式）
+            schedule_id (int, optional): 日程ID，默认为None
+            year (int, optional): 新建日程时的默认年
+            month (int, optional): 新建日程时的默认月
+            day (int, optional): 新建日程时的默认日
+        """
         super().__init__(parent)
-        self.schedule_item = schedule_item or {} # a if a else b
+        self.schedule_item = schedule_item or {}  # a if a else b
         self.is_new_schedule = schedule_item is None
 
         if schedule_item:
@@ -103,7 +132,12 @@ class ScheduleEditorWindow(BaseWindow):
         main_layout.addLayout(button_layout)
 
     def load_schedule_data(self):
-        """加载日程数据到表单"""
+        """
+        加载日程数据到表单控件
+
+        如果是编辑模式，从 schedule_item 中读取数据并填充到各个编辑器；
+        如果是新建模式，设置默认的开始和结束时间。
+        """
         if self.schedule_item:
             title = self.schedule_item.get("title")
             if title:
@@ -145,7 +179,7 @@ class ScheduleEditorWindow(BaseWindow):
                 and self.day is not None
             ):
                 current_time = QDateTime(QDate(self.year, self.month, self.day), QTime.currentTime())
-                # 处理跨天逻辑
+                # 处理跨天逻辑（凌晨4点前视为前一天）
                 if current_time.time().hour() < 4:
                     current_time = current_time.addDays(1)
             else:
@@ -153,29 +187,44 @@ class ScheduleEditorWindow(BaseWindow):
             self.start_time = current_time.addSecs(3600)  # 加1小时
             self.start_time.setTime(QTime(self.start_time.time().hour(), 0))  # 分钟归零
             self.start_time_editor.set_value(self.start_time)
-            self.end_time = self.start_time.addSecs(3600)
+            self.end_time = self.start_time.addSecs(3600)  # 默认持续1小时
             self.end_time_editor.set_value(self.end_time)
             self.duration = self.start_time.secsTo(self.end_time)
 
     def on_end_time_changed(self, new_end_time):
-        """当结束时间改变时，重新计算时长"""
+        """
+        结束时间改变时的处理，当结束时间改变时重新计算时长
+
+        Parameters:
+            new_end_time (QDateTime): 新的结束时间
+        """
         self.end_time = new_end_time
         self.duration = self.start_time.secsTo(new_end_time)
 
     def on_start_time_changed(self, new_start_time):
-        """当开始时间改变时，更新结束时间"""
+        """
+        开始时间改变时的处理，自动调整结束时间以保持时长不变
+
+        Parameters:
+            new_start_time (QDateTime): 新的开始时间
+        """
         self.start_time = new_start_time
         self.end_time = new_start_time.addSecs(self.duration)
         with block_signals([self.end_time_editor.input_field]):
             self.end_time_editor.set_value(self.end_time)
 
     def save_schedule(self, copy=False):
-        """保存日程"""
+        """
+        保存日程数据
+
+        Parameters:
+            copy (bool): 是否保存为副本（不删除原日程），默认为False
+        """
         title = self.title_editor.get_value().strip()
         if not title:
             title = "新日程"
 
-        # 验证时间
+        # 验证时间：结束时间不能早于开始时间
         if self.duration < 0:
             reply = QMessageBox.question(self, "保存日程",
                                     "结束时间早于开始时间，是否继续保存？",
@@ -185,7 +234,7 @@ class ScheduleEditorWindow(BaseWindow):
 
         self.year_new, self.month_new, self.day_new = _get_date(self.start_time.toPython())
 
-        # 计算新的id
+        # 计算新的ID（从事件当天凌晨4点到开始时间的分钟数）
         start_time = self.start_time.time()
         self.id_new = int(((start_time.hour() * 60 + start_time.minute()) - 240) % 1440)
 
@@ -222,7 +271,7 @@ class ScheduleEditorWindow(BaseWindow):
         self.close()
 
     def delete_schedule(self):
-        """删除日程"""
+        """删除当前日程（需用户确认）"""
         reply = QMessageBox.question(self, "确认删除",
                                    "确认删除？",
                                    QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)

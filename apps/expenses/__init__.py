@@ -14,6 +14,16 @@ from core.functions import get_today
 
 
 def evaluate_estimated_amount(expression="0", constants=None):
+    """
+    评估预估金额表达式，支持常量替换
+
+    Parameters:
+        expression (str): 数学表达式，可包含常量名称
+        constants (dict, optional): 常量字典，键为常量名，值为常量值
+
+    Returns:
+        float or str: 计算结果（浮点数）或 "Error"（表达式无效时）
+    """
     constants = constants or {}
     expr = expression
     for name, value in constants.items():
@@ -27,7 +37,17 @@ def evaluate_estimated_amount(expression="0", constants=None):
 
 
 class SortDialog(BaseDialog):
+    """排序对话框，支持拖拽排序列表项"""
+
     def __init__(self, parent, children, title="排序"):
+        """
+        初始化排序对话框
+
+        Parameters:
+            parent (QWidget): 父窗口
+            children (list): 待排序的项列表，每项需包含 'name' 键
+            title (str, optional): 对话框标题，默认为"排序"
+        """
         super().__init__(parent)
         self.setWindowTitle(title)
         self.children = children
@@ -59,6 +79,7 @@ class SortDialog(BaseDialog):
         self.result = None
 
     def accept(self):
+        """确认排序，根据列表顺序重新排列项"""
         new_order = []
         for i in range(self.list_widget.count()):
             item = self.list_widget.item(i)
@@ -71,12 +92,21 @@ class SortDialog(BaseDialog):
         super().accept()
 
     def reject(self):
+        """取消排序，返回None"""
         self.result = None
         super().reject()
 
 
 class ConstantEditWindow(BaseWindow):
+    """常量编辑窗口，用于管理记账系统中的数学常量"""
+
     def __init__(self, parent):
+        """
+        初始化常量编辑窗口
+
+        Parameters:
+            parent (QWidget): 父窗口（应为 ExpensesWindow 实例）
+        """
         super().__init__(parent)
         self.expenses_window = parent.window()
         assert isinstance(self.expenses_window, ExpensesWindow)
@@ -108,6 +138,7 @@ class ConstantEditWindow(BaseWindow):
         self.load_constants()
 
     def load_constants(self):
+        """加载并显示所有常量"""
         while self.constants_layout.count() > 0:
             item = self.constants_layout.takeAt(0)
             if item.widget():
@@ -142,6 +173,7 @@ class ConstantEditWindow(BaseWindow):
         self.constants_layout.addStretch()
 
     def add_constant(self):
+        """添加新常量"""
         name, ok = QInputDialog.getText(self, "添加常量", "输入常量名称:")
         if ok:
             if not name:
@@ -155,19 +187,42 @@ class ConstantEditWindow(BaseWindow):
             self.load_constants()
 
     def delete_constant(self, name):
+        """
+        删除指定常量
+
+        Parameters:
+            name (str): 常量名称
+        """
         if name in self.expenses_window.constants:
             del self.expenses_window.constants[name]
             self.expenses_window.save_and_reload()
             self.load_constants()
 
     def update_constant(self, name, value):
+        """
+        更新常量值
+
+        Parameters:
+            name (str): 常量名称
+            value (int): 新的常量值
+        """
         if name in self.expenses_window.constants:
             self.expenses_window.constants[name] = value
             self.expenses_window.save_and_reload()
 
 
 class ExpenseItemWidget(QWidget):
+    """单个费用项部件，显示预算和实际支出"""
+
     def __init__(self, item_data, constants, parent=None):
+        """
+        初始化费用项部件
+
+        Parameters:
+            item_data (dict): 费用项数据
+            constants (dict): 常量字典
+            parent (QWidget, optional): 父控件
+        """
         super().__init__(parent)
         self.item_data = item_data
         self.constants = constants
@@ -232,9 +287,11 @@ class ExpenseItemWidget(QWidget):
         self.update_progress()
 
     def get_estimated_value(self):
+        """获取预估金额值"""
         return evaluate_estimated_amount(self.item_data.get('estimated_amount', "0"), self.constants)
 
     def update_progress(self):
+        """更新进度条显示"""
         estimated = self.get_estimated_value()
         actual = self.item_data.get('actual_amount', 0.)
 
@@ -257,6 +314,7 @@ class ExpenseItemWidget(QWidget):
             self.progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
     def rename(self):
+        """重命名费用项"""
         new_name, ok = QInputDialog.getText(self, "重命名", "输入新名称:", text=self.item_data['name'])
         if ok and new_name:
             self.item_data['name'] = new_name
@@ -264,9 +322,11 @@ class ExpenseItemWidget(QWidget):
             self.window().save_and_reload()
 
     def delete(self):
+        """删除费用项"""
         self.window().remove_item(self.item_data)
 
     def modify_budget(self):
+        """修改预算金额"""
         new_budget, ok = QInputDialog.getText(self, "修改预算", "输入新预算:", text=self.item_data.get('estimated_amount', "0"))
         if ok and new_budget != self.item_data.get('estimated_amount'):
             self.item_data['estimated_amount'] = new_budget
@@ -274,6 +334,7 @@ class ExpenseItemWidget(QWidget):
             self.window().save_and_reload()
 
     def toggle_record(self):
+        """切换记账输入状态，显示/隐藏金额输入框"""
         if not self.recording:
             self.recording = True
             self.record_input = QDoubleSpinBox()
@@ -305,7 +366,17 @@ class ExpenseItemWidget(QWidget):
 
 
 class ExpenseTypeWidget(QWidget):
+    """费用类型部件，支持展开/折叠，包含子项和子类型"""
+
     def __init__(self, type_data, constants, parent=None):
+        """
+        初始化费用类型部件
+
+        Parameters:
+            type_data (dict): 类型数据
+            constants (dict): 常量字典
+            parent (QWidget, optional): 父控件
+        """
         super().__init__(parent)
         self.type_data = type_data
         self.constants = constants
@@ -395,12 +466,14 @@ class ExpenseTypeWidget(QWidget):
         self.update_totals()
 
     def toggle_expand(self):
+        """切换展开/折叠状态"""
         self.is_expanded = not self.is_expanded
         self.type_data['expanded'] = self.is_expanded
         self.expand_svg.load("assets/svg/expanded.svg" if self.is_expanded else "assets/svg/collapsed.svg")
         self.children_container.setVisible(self.is_expanded)
 
     def rename(self):
+        """重命名费用类型"""
         new_name, ok = QInputDialog.getText(self, "重命名", "输入新名称:", text=self.type_data['name'])
         if ok and new_name:
             self.type_data['name'] = new_name
@@ -408,9 +481,11 @@ class ExpenseTypeWidget(QWidget):
             self.window().save_and_reload()
 
     def delete(self):
+        """删除费用类型"""
         self.window().remove_type(self.type_data)
 
     def add_item(self):
+        """添加子记账项"""
         name, ok = QInputDialog.getText(self, "添加记账项", "输入记账项名称:")
         if ok and name:
             if 'children' not in self.type_data:
@@ -424,6 +499,7 @@ class ExpenseTypeWidget(QWidget):
             self.window().save_and_reload()
 
     def add_subtype(self):
+        """添加子类型"""
         name, ok = QInputDialog.getText(self, "添加子类型", "输入子类型名称:")
         if ok and name:
             if 'children' not in self.type_data:
@@ -436,6 +512,7 @@ class ExpenseTypeWidget(QWidget):
             self.window().save_and_reload()
 
     def open_sort_dialog(self):
+        """打开子项排序对话框"""
         children = self.type_data.get('children', [])
         if not children:
             return
@@ -451,6 +528,7 @@ class ExpenseTypeWidget(QWidget):
         dialog.destroyed.connect(check_result)
 
     def load_children(self):
+        """加载并显示所有子项和子类型"""
         while self.children_layout.count() > 0:
             item = self.children_layout.takeAt(0)
             if item.widget():
@@ -466,6 +544,15 @@ class ExpenseTypeWidget(QWidget):
                 self.children_layout.addWidget(type_widget)
 
     def get_total_estimated(self, type_data=None):
+        """
+        递归计算预估总金额
+
+        Parameters:
+            type_data (dict, optional): 类型数据，默认为当前类型
+
+        Returns:
+            float or str: 总预估金额或 "Error"
+        """
         if type_data is None:
             type_data = self.type_data
         total = 0.
@@ -483,6 +570,15 @@ class ExpenseTypeWidget(QWidget):
         return total
 
     def get_total_actual(self, type_data=None):
+        """
+        递归计算实际总金额
+
+        Parameters:
+            type_data (dict, optional): 类型数据，默认为当前类型
+
+        Returns:
+            float: 总实际金额
+        """
         if type_data is None:
             type_data = self.type_data
         total = 0.
@@ -494,6 +590,7 @@ class ExpenseTypeWidget(QWidget):
         return total
 
     def update_totals(self):
+        """更新总计金额和进度条显示"""
         estimated = self.get_total_estimated()
         actual = self.get_total_actual()
 
@@ -516,9 +613,17 @@ class ExpenseTypeWidget(QWidget):
 
 
 class ExpensesWindow(BaseWindow):
+    """记账管理窗口，用于管理月度费用预算和支出记录"""
+
     data_dir = "apps/expenses/data"
 
     def __init__(self, parent=None):
+        """
+        初始化记账窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
         super().__init__(parent)
         self.setWindowTitle("记账")
         self.setMinimumSize(800, 600)
@@ -622,13 +727,21 @@ class ExpensesWindow(BaseWindow):
 
     @staticmethod
     def open_ecard_paylist():
+        """打开校园卡交易明细网页"""
         QDesktopServices.openUrl(QUrl("https://ecard.ustc.edu.cn/paylist"))
 
     def on_date_changed(self, date):
+        """
+        日期改变时加载对应月份数据
+
+        Parameters:
+            date (QDate): 新选择的日期
+        """
         self.current_date = date
         self.load_month_data()
 
     def load_month_data(self):
+        """加载指定月份的记账数据"""
         year = self.current_date.year()
         month = self.current_date.month()
 
@@ -643,9 +756,10 @@ class ExpensesWindow(BaseWindow):
             self.constants = {}
             self.children_ = []
 
-        self.render_ui()
+        self.update_expense_items_and_types()
 
-    def render_ui(self):
+    def update_expense_items_and_types(self):
+        """根据数据更新费用项和类型部件"""
         while self.scroll_layout.count() > 0:
             item = self.scroll_layout.takeAt(0)
             if item.widget():
@@ -664,7 +778,13 @@ class ExpensesWindow(BaseWindow):
 
     @classmethod
     def try_init_from_last_month(cls, year, month):
-        """尝试从上一个月初始化当前月的记账数据文件，然后仍然需要重新加载"""
+        """
+        尝试从上一个月初始化当前月的记账数据文件
+
+        Parameters:
+            year (int): 目标年份
+            month (int): 目标月份
+        """
         last_month = month - 1
         last_year = year
         if last_month == 0:
@@ -681,7 +801,12 @@ class ExpensesWindow(BaseWindow):
 
     @staticmethod
     def reset_actual(data_path):
-        """将一个记账数据文件的实际金额全部设为0"""
+        """
+        将记账数据文件中的所有实际金额重置为0
+
+        Parameters:
+            data_path (str): 数据文件路径
+        """
         def reset_actual_children(data):
             for child in data.get('children', []):
                 if child['type'] == 'item':
@@ -699,9 +824,20 @@ class ExpensesWindow(BaseWindow):
 
     @classmethod
     def get_data_path(cls, year, month):
+        """
+        获取指定月份数据文件的路径
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+
+        Returns:
+            str: 数据文件路径
+        """
         return os.path.join(cls.data_dir, f"{year}-{month:02d}.json")
 
     def save_month_data(self):
+        """保存当前月份的记账数据到文件"""
         year = self.current_date.year()
         month = self.current_date.month()
         data_path = self.get_data_path(year, month)
@@ -723,10 +859,12 @@ class ExpensesWindow(BaseWindow):
             json.dump(data, f, ensure_ascii=False, indent=4)
 
     def save_and_reload(self):
+        """保存数据并重新加载UI"""
         self.save_month_data()
-        self.render_ui()
+        self.update_expense_items_and_types()
 
     def add_root_item(self):
+        """在根级别添加记账项"""
         name, ok = QInputDialog.getText(self, "添加记账项", "输入记账项名称:")
         if ok and name:
             self.children_.append({
@@ -738,6 +876,7 @@ class ExpensesWindow(BaseWindow):
             self.save_and_reload()
 
     def add_root_type(self):
+        """在根级别添加记账类型"""
         name, ok = QInputDialog.getText(self, "添加记账类型", "输入记账类型名称:")
         if ok and name:
             self.children_.append({
@@ -748,6 +887,7 @@ class ExpensesWindow(BaseWindow):
             self.save_and_reload()
 
     def open_sort_dialog(self):
+        """打开根级别排序对话框"""
         if not self.children_:
             return
 
@@ -758,14 +898,36 @@ class ExpensesWindow(BaseWindow):
             self.save_and_reload()
 
     def remove_item(self, item_data):
+        """
+        删除指定的费用项
+
+        Parameters:
+            item_data (dict): 要删除的费用项数据
+        """
         self._remove_from_children(self.children_, item_data)
         self.save_and_reload()
 
     def remove_type(self, type_data):
+        """
+        删除指定的费用类型
+
+        Parameters:
+            type_data (dict): 要删除的类型数据
+        """
         self._remove_from_children(self.children_, type_data)
         self.save_and_reload()
 
     def _remove_from_children(self, children_list, target_data):
+        """
+        递归从子列表中删除指定数据
+
+        Parameters:
+            children_list (list): 子项列表
+            target_data (dict): 目标数据
+
+        Returns:
+            bool: 是否成功删除
+        """
         for i, child in enumerate(children_list):
             if child is target_data:
                 del children_list[i]
@@ -776,6 +938,7 @@ class ExpensesWindow(BaseWindow):
         return False
 
     def update_total_display(self):
+        """更新总计金额显示和进度条"""
         estimated = self.get_total_estimated()
         actual = self.get_total_actual()
 
@@ -797,6 +960,15 @@ class ExpensesWindow(BaseWindow):
             self.total_progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
     def get_total_estimated(self, children_list=None):
+        """
+        递归计算所有子项的预估总金额
+
+        Parameters:
+            children_list (list, optional): 子项列表，默认为根级子项
+
+        Returns:
+            float or str: 总预估金额或 "Error"
+        """
         if children_list is None:
             children_list = self.children_
         total = 0.
@@ -814,6 +986,15 @@ class ExpensesWindow(BaseWindow):
         return total
 
     def get_total_actual(self, children_list=None):
+        """
+        递归计算所有子项的实际总金额
+
+        Parameters:
+            children_list (list, optional): 子项列表，默认为根级子项
+
+        Returns:
+            float: 总实际金额
+        """
         if children_list is None:
             children_list = self.children_
         total = 0.
@@ -825,5 +1006,6 @@ class ExpensesWindow(BaseWindow):
         return total
 
     def open_constants_window(self):
+        """打开常量编辑窗口"""
         self.constants_window = ConstantEditWindow(self)
         self.constants_window.show()

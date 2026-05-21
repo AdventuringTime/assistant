@@ -5,7 +5,10 @@ from .deepseek_tokenizer import tokenize
 
 
 class TokenizerWindow(BaseWindow):
+    """词元提取器窗口，用于展示 DeepSeek 分词器的分词结果"""
+
     def __init__(self):
+        """初始化词元提取器窗口"""
         super().__init__()
 
         self.setWindowTitle("词元提取器")
@@ -55,6 +58,7 @@ class TokenizerWindow(BaseWindow):
         self.left_layout.addWidget(self.tokenize_button)
 
     def tokenize(self):
+        """执行分词操作，将输入文本分词后显示结果"""
         text = self.left_edit.toPlainText()
         tokens = tokenize(text)
         self.right_edit.setText(str(tokens))
