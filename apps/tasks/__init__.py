@@ -26,6 +26,23 @@ def _hex_to_rgb(hex_color):
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
 
+def get_subtasks_first_line(task):
+    """
+    获取子任务的第一行文本，兼容新旧字段（description和subtasks）
+
+    Parameters:
+        task (dict): 任务数据字典
+
+    Returns:
+        str: 子任务的第一行文本
+    """
+    subtasks = task.get('subtasks', task.get('description', ''))
+    if subtasks:
+        # 只返回第一行
+        return subtasks.split('\n')[0].strip()
+    return ''
+
+
 class SortDialog(BaseDialog):
     """排序对话框，支持拖拽排序任务列表"""
 
@@ -129,14 +146,15 @@ class TaskDialog(BaseDialog):
         self.layout_.addWidget(self.type_label)
         self.layout_.addWidget(self.type_combo)
 
-        # 任务描述
-        self.description_label = QLabel('任务描述:')
-        self.description_edit = QTextEdit()
-        self.description_edit.setFixedHeight(80)
+        # 子任务
+        self.subtasks_label = QLabel('子任务（每行一个）:')
+        self.subtasks_edit = QTextEdit()
+        self.subtasks_edit.setFixedHeight(80)
         if task:
-            self.description_edit.setPlainText(task.get('description', ''))
-        self.layout_.addWidget(self.description_label)
-        self.layout_.addWidget(self.description_edit)
+            # 兼容旧字段
+            self.subtasks_edit.setPlainText(task.get('subtasks', task.get('description', '')))
+        self.layout_.addWidget(self.subtasks_label)
+        self.layout_.addWidget(self.subtasks_edit)
 
         # 所需完成次数
         self.required_label = QLabel('所需次数:')
@@ -232,7 +250,7 @@ class TaskDialog(BaseDialog):
         data = {
             'name': self.name_edit.text(),
             'type': self.type_combo.currentIndex(),
-            'description': self.description_edit.toPlainText(),
+            'subtasks': self.subtasks_edit.toPlainText(),
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
             'required': self.required_spin.value()
         }
@@ -337,13 +355,13 @@ class TaskItem(QWidget):
 
         self.content_layout.addLayout(self.top_layout)
 
-        # 任务描述
-        self.description_label = QLabel(self.task.get('description', ''))
-        self.description_label.setWordWrap(True)
-        self.description_label.setStyleSheet("font-size: 15px; color: #AAAAAA;")
-        self.content_layout.addWidget(self.description_label)
-        if not self.description_label.text():
-            self.description_label.hide()
+        # 子任务（显示第一行）
+        self.subtask_label = QLabel(get_subtasks_first_line(self.task))
+        self.subtask_label.setWordWrap(True)
+        self.subtask_label.setStyleSheet("font-size: 15px; color: #AAAAAA;")
+        self.content_layout.addWidget(self.subtask_label)
+        if not self.subtask_label.text():
+            self.subtask_label.hide()
 
         # 进度信息
         self.completed = self.task.get('completed', 0.0)
@@ -493,12 +511,12 @@ class TaskItem(QWidget):
             self.line_widget.setStyleSheet(f"background-color: {self.current_color};")
             self.update_style()
 
-        # 更新描述
-        self.description_label.setText(data['description'])
-        if self.description_label.text():
-            self.description_label.show()
+        # 更新子任务（只显示第一行）
+        self.subtask_label.setText(get_subtasks_first_line(self.task))
+        if self.subtask_label.text():
+            self.subtask_label.show()
         else:
-            self.description_label.hide()
+            self.subtask_label.hide()
 
         # 更新进度
         self.required = data['required']
@@ -557,7 +575,7 @@ class FloatingWidget(QWidget):
         self.clicked.emit()
         super().mousePressEvent(event)
 
-    def set_content(self, name, completed, required, description, color):
+    def set_content(self, name, completed, required, subtask, color):
         """
         设置悬浮窗口的内容
 
@@ -565,7 +583,7 @@ class FloatingWidget(QWidget):
             name (str): 任务名称
             completed (float): 已完成数量
             required (float): 所需数量
-            description (str): 任务描述
+            subtask (str): 当前子任务
             color (str): 任务类型颜色（十六进制）
         """
         # 计算进度文本
@@ -582,8 +600,8 @@ class FloatingWidget(QWidget):
             progress_text = f'({completed}/{required})'
         
         self.top_label.setText(f"{name}{progress_text}")
-        self.bottom_label.setText(description)
-        self.bottom_label.setVisible(bool(description.strip()))
+        self.bottom_label.setText(subtask)
+        self.bottom_label.setVisible(bool(subtask.strip()))
 
         # 设置背景颜色
         r, g, b = _hex_to_rgb(color)
@@ -777,13 +795,13 @@ class TaskWindow(BaseWindow):
             completed = task.get('completed', 0.0)
             required = task.get('required', 1.0)
             name = task.get('name', '')
-            description = task.get('description', '')
+            subtask = get_subtasks_first_line(task)
 
             if not self.floating_widget:
                 self.floating_widget = FloatingWidget()
                 self.floating_widget.clicked.connect(self.on_floating_clicked)
 
-            self.floating_widget.set_content(name, completed, required, description, color)
+            self.floating_widget.set_content(name, completed, required, subtask, color)
             self.set_floating_position()
             self.floating_widget.show()
         else:
