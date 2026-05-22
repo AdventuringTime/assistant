@@ -252,6 +252,10 @@ class ScheduleImportDialog(QDialog):
         if hasattr(editor, 'start_time') and hasattr(editor, 'end_time'):
             editor.duration = editor.start_time.secsTo(editor.end_time)
 
+        # 设置描述
+        if "description" in schedule_data:
+            editor.description_editor.set_value(schedule_data["description"])
+
         editor.show()
 
         # 关闭对话框
