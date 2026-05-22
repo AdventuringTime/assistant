@@ -602,8 +602,11 @@ class TaskWindow(BaseWindow):
     _initialized = False      # 防止重复初始化
 
     def __new__(cls, *args, **kwargs):
-        # 如果已有实例且可见，则激活并返回该实例
-        if cls._instance is not None and cls._instance.isVisible():
+    # 只要实例存在，就激活并返回该实例（无论是否最小化或可见）
+        if cls._instance is not None:
+            # 如果窗口最小化，恢复正常状态
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
             cls._instance.raise_()
             cls._instance.activateWindow()
             return cls._instance
