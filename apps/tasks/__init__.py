@@ -598,6 +598,17 @@ class FloatingWidget(QWidget):
 class TaskWindow(BaseWindow):
     """任务管理窗口，提供任务列表的查看、编辑、排序和追踪功能"""
 
+    _instance = None          # 单例实例
+    _initialized = False      # 防止重复初始化
+
+    def __new__(cls, *args, **kwargs):
+        # 如果已有实例且可见，则激活并返回该实例
+        if cls._instance is not None and cls._instance.isVisible():
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
+
     def __init__(self, parent=None):
         """
         初始化任务窗口
@@ -605,7 +616,13 @@ class TaskWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口
         """
+        # 避免重复初始化
+        if TaskWindow._initialized:
+            return
         super().__init__(parent)
+        TaskWindow._instance = self
+        TaskWindow._initialized = True
+
         self.setWindowTitle('任务')
         self.setMinimumSize(600, 400)
         self.resize(1000, 800)
@@ -802,7 +819,7 @@ class TaskWindow(BaseWindow):
 
     def closeEvent(self, event):
         """
-        关闭窗口事件处理
+        关闭窗口时，保存任务并重置单例标志
 
         Parameters:
             event (QCloseEvent): 关闭事件
@@ -811,3 +828,6 @@ class TaskWindow(BaseWindow):
         if self.floating_widget:
             self.floating_widget.close()
         super().closeEvent(event)
+        # 重置单例标志，允许下次重新创建
+        TaskWindow._instance = None
+        TaskWindow._initialized = False
