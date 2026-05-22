@@ -4,8 +4,9 @@ import datetime
 
 from sortedcontainers import SortedDict
 from PySide6.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout,
-                               QScrollArea, QPushButton, QDateEdit)
-from PySide6.QtCore import Qt, QDate, QEvent
+                               QScrollArea, QPushButton, QDateEdit, QDialog,
+                               QTextEdit, QMessageBox, QDialogButtonBox)
+from PySide6.QtCore import Qt, QDate, QEvent, QDateTime
 
 from core.base_window import BaseWindow
 from core.functions import get_today
@@ -162,6 +163,95 @@ class ScheduleItemWidget(QWidget):
         """
         editor = ScheduleEditorWindow(self, self.schedule_item, self.schedule_id)
         editor.show()
+
+class ScheduleImportDialog(QDialog):
+    """日程文本导入对话框"""
+    
+    def __init__(self, parent, year, month, day):
+        super().__init__(parent)
+        self.year = year
+        self.month = month
+        self.day = day
+        
+        self.setWindowTitle("通过文本导入")
+        self.setMinimumSize(400, 300)
+        
+        # 创建布局
+        layout = QVBoxLayout(self)
+        
+        # 添加文本编辑框
+        self.import_text_edit = QTextEdit()
+        self.import_text_edit.setPlaceholderText("标题: [title]\n地点: [place]\n开始: [start time, yyyy-m-d h:m]\n结束: [end time, yyyy-m-d h:m]\n其他内容: [other contents]")
+        layout.addWidget(self.import_text_edit)
+        
+        # 添加标准按钮框
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        button_box.accepted.connect(self.handle_import)
+        button_box.rejected.connect(self.close)
+        layout.addWidget(button_box)
+    
+    def handle_import(self):
+        """处理文本导入"""
+        text = self.import_text_edit.toPlainText()
+        if not text.strip():
+            QMessageBox.warning(self, "警告", "请输入导入内容")
+            return
+        
+        # 解析文本
+        schedule_data = {}
+        for line in text.strip().split('\n'):
+            line = line.strip()
+            if line.startswith("标题:"):
+                schedule_data["title"] = line[3:].strip()
+            elif line.startswith("地点:"):
+                schedule_data["location"] = line[3:].strip()
+            elif line.startswith("开始:"):
+                schedule_data["start_time"] = line[3:].strip()
+            elif line.startswith("结束:"):
+                schedule_data["end_time"] = line[3:].strip()
+            # 其他内容忽略
+        
+        # 验证必要字段
+        if "title" not in schedule_data:
+            return
+        
+        # 打开日程编辑器并设置内容（使用CalendarWindow作为父窗口）
+        editor = ScheduleEditorWindow(self.parent())
+        
+        # 设置标题
+        if "title" in schedule_data:
+            editor.title_editor.set_value(schedule_data["title"])
+        
+        # 设置地点
+        if "location" in schedule_data:
+            editor.location_editor.set_value(schedule_data["location"])
+        
+        # 设置开始时间
+        if "start_time" in schedule_data:
+            q_start_time = QDateTime.fromString(schedule_data["start_time"], "yyyy/M/d HH:mm")
+            if q_start_time.isValid():
+                editor.start_time_editor.set_value(q_start_time)
+                editor.start_time = q_start_time
+            elif schedule_data["start_time"]:
+                QMessageBox.warning(self, "警告", "开始时间格式错误")
+        
+        # 设置结束时间
+        if "end_time" in schedule_data:
+            q_end_time = QDateTime.fromString(schedule_data["end_time"], "yyyy/M/d HH:mm")
+            if q_end_time.isValid():
+                editor.end_time_editor.set_value(q_end_time)
+                editor.end_time = q_end_time
+            elif schedule_data["end_time"]:
+                QMessageBox.warning(self, "警告", "结束时间格式错误")
+        
+        # 重新计算时长
+        if hasattr(editor, 'start_time') and hasattr(editor, 'end_time'):
+            editor.duration = editor.start_time.secsTo(editor.end_time)
+        
+        editor.show()
+        
+        # 关闭对话框
+        self.close()
 
 class CalendarSchedulesManager:
     """日程管理器，负责日程的加载、保存和重复事件处理"""
@@ -393,8 +483,8 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
         self.scroll_area.setWidget(self.scroll_content)
         self.container_layout.addWidget(self.scroll_area)
 
-        # 创建悬浮添加按钮
-        self.create_floating_button()
+        # 创建底部按钮布局
+        self.create_bottom_buttons()
 
         # 连接信号
         self.date_selector.dateChanged.connect(self.on_date_changed)
@@ -403,47 +493,32 @@ class CalendarWindow(BaseWindow, CalendarSchedulesManager):
         today = get_today()
         self.date_selector.setDate(QDate(today.year, today.month, today.day))
 
-    def create_floating_button(self):
-        """创建右下角悬浮添加按钮"""
-        # 创建悬浮按钮
-        self.floating_button = QPushButton("+", self)
-        self.floating_button.setFixedSize(60, 60)
-        self.floating_button.setStyleSheet("""
-            QPushButton {
-                background-color: #0078D4;
-                color: white;
-                border-radius: 30px;
-                font-size: 24px;
-                font-weight: bold;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #106EBE;
-            }
-            QPushButton:pressed {
-                background-color: #005A9E;
-            }
-        """)
+    def create_bottom_buttons(self):
+        """创建底部按钮布局"""
+        # 创建底部按钮容器
+        self.bottom_button_widget = QWidget()
+        self.bottom_button_layout = QHBoxLayout(self.bottom_button_widget)
+        
+        # 添加拉伸，使按钮靠右
+        self.bottom_button_layout.addStretch()
+        
+        # 添加导入按钮
+        self.import_button = QPushButton("通过文本导入")
+        self.import_button.clicked.connect(self.open_import_dialog)
+        self.bottom_button_layout.addWidget(self.import_button)
+        
+        # 添加日程按钮
+        self.add_button = QPushButton("添加日程")
+        self.add_button.clicked.connect(self.open_new_schedule)
+        self.bottom_button_layout.addWidget(self.add_button)
+        
+        # 添加到主布局
+        self.container_layout.addWidget(self.bottom_button_widget)
 
-        # 设置按钮位置（右下角，距离边缘20px）
-        self.floating_button.move(self.width() - 80, self.height() - 80)
-
-        # 连接点击事件
-        self.floating_button.clicked.connect(self.open_new_schedule)
-
-        # 设置按钮始终在最前面
-        self.floating_button.raise_()
-
-    def resizeEvent(self, event):
-        """
-        窗口大小改变事件，保持悬浮按钮在右下角
-
-        Parameters:
-            event (QResizeEvent): 窗口大小改变事件
-        """
-        super().resizeEvent(event)
-        if hasattr(self, 'floating_button'):
-            self.floating_button.move(self.width() - 80, self.height() - 80)
+    def open_import_dialog(self):
+        """打开文本导入对话框"""
+        dialog = ScheduleImportDialog(self, self.year_displayed, self.month_displayed, self.day_displayed)
+        dialog.show()
 
     def on_date_changed(self, date):
         """
