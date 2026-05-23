@@ -684,35 +684,70 @@ class ExpensesWidget(QWidget):
             expense = 0.0
         
         circle = self.circles[circle_index]
+        is_selected = (circle_index == self.selected_circle)
         
         if expense <= self.target:
-            circle.setStyleSheet("""
-                QPushButton {
-                    border-radius: 10px; 
-                    background-color: green;
-                    border: none;
-                }
-                QPushButton:hover {
-                    background-color: #00cc00;
-                }
-                QPushButton:pressed {
-                    background-color: #009900;
-                }
-            """)
+            if is_selected:
+                circle.setStyleSheet("""
+                    QPushButton {
+                        border-radius: 10px; 
+                        background-color: green;
+                        border: 3px solid #00aa00;
+                    }
+                    QPushButton:hover {
+                        background-color: #00cc00;
+                        border: none;
+                    }
+                    QPushButton:pressed {
+                        background-color: #006600;
+                        border: none;
+                    }
+                """)
+            else:
+                circle.setStyleSheet("""
+                    QPushButton {
+                        border-radius: 10px; 
+                        background-color: green;
+                        border: none;
+                    }
+                    QPushButton:hover {
+                        background-color: #00cc00;
+                    }
+                    QPushButton:pressed {
+                        background-color: #006600;
+                    }
+                """)
         else:
-            circle.setStyleSheet("""
-                QPushButton {
-                    border-radius: 10px; 
-                    background-color: red;
-                    border: none;
-                }
-                QPushButton:hover {
-                    background-color: #ff6666;
-                }
-                QPushButton:pressed {
-                    background-color: #cc0000;
-                }
-            """)
+            if is_selected:
+                circle.setStyleSheet("""
+                    QPushButton {
+                        border-radius: 10px; 
+                        background-color: red;
+                        border: 3px solid #ff1111;
+                    }
+                    QPushButton:hover {
+                        background-color: #ff3333;
+                        border: none;
+                    }
+                    QPushButton:pressed {
+                        background-color: #cc0000;
+                        border: none;
+                    }
+                """)
+            else:
+                circle.setStyleSheet("""
+                    QPushButton {
+                        border-radius: 10px; 
+                        background-color: red;
+                        border: none;
+                    }
+                    QPushButton:hover {
+                        background-color: #ff6666;
+                    }
+                    QPushButton:pressed {
+                        background-color: #cc0000;
+                    }
+                """)
 
     def update_circle_colors(self):
         """更新所有圆形的颜色"""
@@ -741,8 +776,11 @@ class ExpensesWidget(QWidget):
         Parameters:
             index (int): 被点击的圆形索引（0-2，对应前天、昨天、今天）
         """
+        old_index = self.selected_circle
         self.selected_circle = index
         self.update_expense_spinbox_values()
+        self.update_circle_color(old_index)
+        self.update_circle_color(index)
 
     def on_expense_changed(self, value):
         """
