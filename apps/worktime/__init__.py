@@ -3,8 +3,8 @@ import os
 import datetime
 
 from PySide6.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout,
-                               QScrollArea, QListWidget,
-                               QStackedWidget, QPushButton, QDateEdit, QDateTimeEdit)
+                               QScrollArea, QTabWidget,
+                               QPushButton, QDateEdit, QDateTimeEdit)
 from PySide6.QtCore import Qt, QDate, QDateTime
 
 from core.base_window import BaseWindow
@@ -99,70 +99,49 @@ class WorktimeWindow(BaseWindow):
         self.loaded_pages = set()
 
         self.setWindowTitle("工作时间记录")
-        self.setMinimumSize(600, 400)
+        self.setMinimumSize(600, 500)
 
         self.container = QWidget()
         self.setCentralWidget(self.container)
 
-        self.container_layout = QHBoxLayout(self.container)
+        self.container_layout = QVBoxLayout(self.container)
 
-        # 左侧类别列表
-        self.category_scroll_area = QScrollArea()
-        self.category_scroll_area.setWidgetResizable(True)
-        self.category_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.category_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.category_scroll_area.setFixedWidth(180)
-
-        self.category_list = QListWidget()
-        self.category_list.currentRowChanged.connect(self.on_category_changed)
-        self.category_scroll_area.setWidget(self.category_list)
-        self.container_layout.addWidget(self.category_scroll_area)
-
-        # 右侧设置内容区域
-        self.stacked_widget = QStackedWidget()
-        self.container_layout.addWidget(self.stacked_widget)
+        # 标签页控件
+        self.tab_widget = QTabWidget()
+        self.container_layout.addWidget(self.tab_widget)
 
         # 上下班打卡
-        self.category_list.addItem("上下班打卡")
         self.clock_widget = QWidget()
         self.clock_layout = QVBoxLayout(self.clock_widget)
-        self.stacked_widget.addWidget(self.clock_widget)
+        self.tab_widget.addTab(self.clock_widget, "上下班打卡")
 
         # 工作时间详情
-        self.category_list.addItem("工作时间详情")
         self.worktime_detail_widget = QWidget()
         self.worktime_detail_layout = QVBoxLayout(self.worktime_detail_widget)
-        self.stacked_widget.addWidget(self.worktime_detail_widget)
+        self.tab_widget.addTab(self.worktime_detail_widget, "工作时间详情")
 
-        # 默认选择第一个类别
-        self.category_list.setCurrentRow(0)
-        self.stacked_widget.setCurrentIndex(0)
+        # 连接标签切换信号
+        self.tab_widget.currentChanged.connect(self.on_tab_changed)
 
-    def on_category_changed(self, row):
+        # 默认加载第一个标签
+        self.init_clock_ui()
+        self.loaded_pages = {0}
+
+    def on_tab_changed(self, index):
         """
-        类别切换事件处理
+        标签页切换事件处理
 
         Parameters:
-            row (int): 类别索引（0=上下班打卡，1=工作时间详情）
+            index (int): 标签页索引（0=上下班打卡，1=工作时间详情）
         """
-        if row >= 0:
-            self.stacked_widget.setCurrentIndex(row)
-
-        if row not in self.loaded_pages:
-            if row == 0:
+        if index not in self.loaded_pages:
+            if index == 0:
                 self.init_clock_ui()
-            elif row == 1:
+            elif index == 1:
                 self.init_worktime_detail_ui()
             else:
-                raise ValueError("Invalid category index")
-            self.loaded_pages.add(row)
-
-        if hasattr(self, "floating_button"):
-            if row == 1: # 工作时间详情
-                self.floating_button.show()
-                self.floating_button.raise_()
-            else:
-                self.floating_button.hide()
+                raise ValueError("Invalid tab index")
+            self.loaded_pages.add(index)
 
     def load_clock_data(self):
         """从文件读取打卡状态数据"""
@@ -421,53 +400,20 @@ class WorktimeWindow(BaseWindow):
         self.scroll_area.setWidget(self.scroll_content)
         self.worktime_detail_layout.addWidget(self.scroll_area)
 
-        self.create_floating_button()
+        self.button_layout = QHBoxLayout()
+        self.button_layout.addStretch()
+
+        self.add_button = QPushButton("添加工作时间记录")
+        self.add_button.clicked.connect(self.open_new_editor)
+        self.button_layout.addWidget(self.add_button)
+
+        self.worktime_detail_layout.addLayout(self.button_layout)
 
         self.date_selector.dateChanged.connect(self.on_date_changed)
         today = get_today()
         self.date_selector.setDate(QDate(today.year, today.month, today.day))
 
-    def create_floating_button(self):
-        """创建右下角悬浮添加按钮，用于快速添加新的工作时间记录"""
-        # 创建悬浮按钮
-        self.floating_button = QPushButton("+", self)
-        self.floating_button.setFixedSize(60, 60)
-        self.floating_button.setStyleSheet("""
-            QPushButton {
-                background-color: #0078D4;
-                color: white;
-                border-radius: 30px;
-                font-size: 24px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #106EBE;
-            }
-            QPushButton:pressed {
-                background-color: #005A9E;
-            }
-        """)
 
-        # 设置按钮位置（右下角，距离边缘20px）
-        self.floating_button.move(self.width() - 80, self.height() - 80)
-
-        # 连接点击事件
-        self.floating_button.clicked.connect(self.open_new_editor)
-
-        # 显示按钮
-        self.floating_button.show()
-        self.floating_button.raise_()
-
-    def resizeEvent(self, event):
-        """
-        窗口大小改变事件，保持悬浮按钮在右下角位置
-
-        Parameters:
-            event (QResizeEvent): 窗口大小改变事件
-        """
-        super().resizeEvent(event)
-        if hasattr(self, 'floating_button'):
-            self.floating_button.move(self.width() - 80, self.height() - 80)
 
     def on_date_changed(self, date):
         """
