@@ -554,8 +554,8 @@ class ExpensesWidget(QWidget):
         line1.setFrameShadow(QFrame.Shadow.Sunken)
 
         circle1 = QPushButton()
-        circle1.setFixedSize(20, 20)
-        circle1.setStyleSheet("border-radius: 10px; background-color: gray;")
+        circle1.setFixedSize(40, 40)
+        circle1.setStyleSheet("border-radius: 20px; background-color: gray;")
         circle1.clicked.connect(lambda: self.on_circle_clicked(0))
 
         line2 = QFrame()
@@ -563,8 +563,8 @@ class ExpensesWidget(QWidget):
         line2.setFrameShadow(QFrame.Shadow.Sunken)
 
         circle2 = QPushButton()
-        circle2.setFixedSize(20, 20)
-        circle2.setStyleSheet("border-radius: 10px; background-color: gray;")
+        circle2.setFixedSize(40, 40)
+        circle2.setStyleSheet("border-radius: 20px; background-color: gray;")
         circle2.clicked.connect(lambda: self.on_circle_clicked(1))
 
         line3 = QFrame()
@@ -572,8 +572,8 @@ class ExpensesWidget(QWidget):
         line3.setFrameShadow(QFrame.Shadow.Sunken)
 
         circle3 = QPushButton()
-        circle3.setFixedSize(20, 20)
-        circle3.setStyleSheet("border-radius: 10px; background-color: gray;")
+        circle3.setFixedSize(40, 40)
+        circle3.setStyleSheet("border-radius: 20px; background-color: gray;")
         circle3.clicked.connect(lambda: self.on_circle_clicked(2))
 
         self.circles = [circle1, circle2, circle3]
@@ -690,62 +690,62 @@ class ExpensesWidget(QWidget):
             if is_selected:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 10px; 
-                        background-color: green;
-                        border: 3px solid #00aa00;
+                        border-radius: 20px; 
+                        background-color: #008000;
+                        border: 2px solid #00b000;
                     }
                     QPushButton:hover {
-                        background-color: #00cc00;
+                        background-color: #00d000;
                         border: none;
                     }
                     QPushButton:pressed {
-                        background-color: #006600;
+                        background-color: #006000;
                         border: none;
                     }
                 """)
             else:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 10px; 
-                        background-color: green;
+                        border-radius: 20px; 
+                        background-color: #008000;
                         border: none;
                     }
                     QPushButton:hover {
-                        background-color: #00cc00;
+                        background-color: #00d000;
                     }
                     QPushButton:pressed {
-                        background-color: #006600;
+                        background-color: #006000;
                     }
                 """)
         else:
             if is_selected:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 10px; 
-                        background-color: red;
-                        border: 3px solid #ff1111;
+                        border-radius: 20px; 
+                        background-color: #800000;
+                        border: 2px solid #b00000;
                     }
                     QPushButton:hover {
-                        background-color: #ff3333;
+                        background-color: #d00000;
                         border: none;
                     }
                     QPushButton:pressed {
-                        background-color: #cc0000;
+                        background-color: #600000;
                         border: none;
                     }
                 """)
             else:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 10px; 
-                        background-color: red;
+                        border-radius: 20px; 
+                        background-color: #800000;
                         border: none;
                     }
                     QPushButton:hover {
-                        background-color: #ff6666;
+                        background-color: #d00000;
                     }
                     QPushButton:pressed {
-                        background-color: #cc0000;
+                        background-color: #600000;
                     }
                 """)
 
