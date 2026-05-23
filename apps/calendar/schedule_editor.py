@@ -1,8 +1,7 @@
 from datetime import datetime
-from contextlib import contextmanager
 
 from core.base_window import BaseWindow
-from core.functions import get_today
+from core.functions import get_today, block_signals
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QMessageBox)
 from PySide6.QtCore import QDateTime, QDate, QTime
@@ -26,25 +25,6 @@ def _get_date(time):
     day = schedule_date.day
 
     return year, month, day
-
-
-@contextmanager
-def block_signals(widgets):
-    """
-    上下文管理器：临时阻塞多个控件的信号
-
-    在 `with` 块内，指定控件的信号会被阻塞，退出块后恢复。
-
-    Parameters:
-        widgets (list): 要阻塞信号的控件列表
-    """
-    for widget in widgets:
-        widget.blockSignals(True)
-    try:
-        yield
-    finally:
-        for widget in widgets:
-            widget.blockSignals(False)
 
 
 class ScheduleEditorWindow(BaseWindow):

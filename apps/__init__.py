@@ -36,7 +36,7 @@ APP_LIST = {
     },
     "peer_tutor_2026": {
         "display_name": "芙芙伴学",
-        "window": lambda: import_module('apps.peer_tutor_2026').TaskWindow(),
+        "window": lambda: import_module('apps.peer_tutor_2026').FurinaWindow(),
         "icon": "apps/peer_tutor_2026/assets/icon.ico"
     },
     "tokenizer": {

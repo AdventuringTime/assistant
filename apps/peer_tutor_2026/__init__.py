@@ -3,12 +3,13 @@ import json
 import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
-                               QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox)
+                               QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
+                               QTabWidget, QFrame)
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer
 from PySide6.QtGui import QIcon
 
 from core.base_window import BaseWindow, BaseDialog
-from core.functions import get_this_week, get_today
+from core.functions import get_this_week, get_today, block_signals
 import datetime
 from math import floor
 
@@ -270,20 +271,11 @@ class TaskItem(QWidget):
         self.task_updated.emit()
 
 
-class TaskWindow(BaseWindow):
-    """任务管理窗口，芙芙伴学应用主窗口"""
+class TaskWidget(QWidget):
+    """任务管理组件"""
 
     def __init__(self, parent=None):
-        """
-        初始化任务窗口
-
-        Parameters:
-            parent (QWidget, optional): 父窗口
-        """
         super().__init__(parent)
-        self.setWindowTitle('芙芙伴学')
-        self.setWindowIcon(icon)
-        self.setMinimumSize(600, 400)
 
         self.this_week_num = floor(get_this_week(
             start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
@@ -294,9 +286,7 @@ class TaskWindow(BaseWindow):
 
         self.inherit_tasks_from_last_week_if_not_exist()
 
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout = QVBoxLayout(self)
 
         self.header = QLabel()
         self.header.setStyleSheet("font-size: 24px; font-weight: bold; color: #FFFFFF;")
@@ -449,17 +439,17 @@ class TaskWindow(BaseWindow):
 
         data_dir = os.path.join(os.path.dirname(__file__), 'data',
                                 str(week), days_of_week[dt_date.weekday()])
-        TaskWindow._open_folder_of_dir(data_dir)
+        TaskWidget._open_folder_of_dir(data_dir)
 
     @staticmethod
     def open_today_folder():
         """打开今日文件夹"""
-        TaskWindow.open_folder_of_the_day(datetime.datetime.now())
+        TaskWidget.open_folder_of_the_day(datetime.datetime.now())
 
     @staticmethod
     def open_yesterday_folder():
         """打开昨日文件夹"""
-        TaskWindow.open_folder_of_the_day(datetime.datetime.now() - datetime.timedelta(days=1))
+        TaskWidget.open_folder_of_the_day(datetime.datetime.now() - datetime.timedelta(days=1))
 
     def on_task_updated(self):
         """任务更新处理，保存任务并更新总进度"""
@@ -479,7 +469,7 @@ class TaskWindow(BaseWindow):
 
     def on_add_task(self):
         """添加新任务"""
-        dialog = TaskDialog(parent=self)
+        dialog = TaskDialog()
         dialog.on_save_signal.connect(self.on_dialog_create)
         dialog.show()
 
@@ -526,3 +516,287 @@ class TaskWindow(BaseWindow):
             self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
         self.header.setText(f'第{self.week_displayed}周')
         self.update_total_progress()
+
+
+class ExpensesWidget(QWidget):
+    """流水管理组件"""
+
+    def __init__(self, parent=None):
+        """
+        初始化流水管理组件
+        
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
+        super().__init__(parent)
+
+        self.today = get_today(datetime.datetime.now())
+        # 前天昨天今天
+        self.days = [self.today + datetime.timedelta(days=i) for i in range(-2, 1)]
+        
+        self.target = 0.0
+        self.expenses = {}
+
+        self.selected_circle = 2
+
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setSpacing(20)
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
+
+        self.main_layout.addStretch()
+
+        # 进度行
+        progress_layout = QHBoxLayout()
+        progress_layout.setSpacing(0)
+
+        line1 = QFrame()
+        line1.setFrameShape(QFrame.Shape.HLine)
+        line1.setFrameShadow(QFrame.Shadow.Sunken)
+
+        circle1 = QPushButton()
+        circle1.setFixedSize(20, 20)
+        circle1.setStyleSheet("border-radius: 10px; background-color: gray;")
+        circle1.clicked.connect(lambda: self.on_circle_clicked(0))
+
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.Shape.HLine)
+        line2.setFrameShadow(QFrame.Shadow.Sunken)
+
+        circle2 = QPushButton()
+        circle2.setFixedSize(20, 20)
+        circle2.setStyleSheet("border-radius: 10px; background-color: gray;")
+        circle2.clicked.connect(lambda: self.on_circle_clicked(1))
+
+        line3 = QFrame()
+        line3.setFrameShape(QFrame.Shape.HLine)
+        line3.setFrameShadow(QFrame.Shadow.Sunken)
+
+        circle3 = QPushButton()
+        circle3.setFixedSize(20, 20)
+        circle3.setStyleSheet("border-radius: 10px; background-color: gray;")
+        circle3.clicked.connect(lambda: self.on_circle_clicked(2))
+
+        self.circles = [circle1, circle2, circle3]
+
+        line4 = QFrame()
+        line4.setFrameShape(QFrame.Shape.HLine)
+        line4.setFrameShadow(QFrame.Shadow.Sunken)
+        line4.setStyleSheet("border-top: 2px dashed #888888;")
+
+        progress_layout.addWidget(line1, 2)
+        progress_layout.addWidget(circle1)
+        progress_layout.addWidget(line2, 3)
+        progress_layout.addWidget(circle2)
+        progress_layout.addWidget(line3, 3)
+        progress_layout.addWidget(circle3)
+        progress_layout.addWidget(line4, 2)
+
+        self.main_layout.addLayout(progress_layout)
+
+        # 实际消费行
+        row_layout = QHBoxLayout()
+        row_layout.setSpacing(10)
+        row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        label = QLabel('实际消费')
+        label.setStyleSheet("font-size: 14px; color: #FFFFFF;")
+
+        self.expense_spinbox = QDoubleSpinBox()
+        self.expense_spinbox.setFixedWidth(150)
+        self.expense_spinbox.setDecimals(2)
+        self.expense_spinbox.setRange(-1e10, 1e10)
+        self.expense_spinbox.valueChanged.connect(self.on_expense_changed)
+
+        row_layout.addWidget(label)
+        row_layout.addWidget(self.expense_spinbox)
+
+        self.main_layout.addLayout(row_layout)
+
+        # 目标行
+        row_layout = QHBoxLayout()
+        row_layout.setSpacing(10)
+        row_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        label = QLabel('目标')
+        label.setStyleSheet("font-size: 14px; color: #FFFFFF;")
+
+        self.target_spinbox = QDoubleSpinBox()
+        self.target_spinbox.setFixedWidth(150)
+        self.target_spinbox.setDecimals(2)
+        self.target_spinbox.setRange(-1e10, 1e10)
+        self.target_spinbox.valueChanged.connect(self.on_target_changed)
+
+        row_layout.addWidget(label)
+        row_layout.addWidget(self.target_spinbox)
+
+        self.main_layout.addLayout(row_layout)
+
+        self.load_data()
+        self.update_target_spinbox_values()
+        self.update_expense_spinbox_values()
+        self.update_circle_colors()
+
+        self.main_layout.addStretch()
+
+    def load_data(self):
+        """加载存储的数据"""
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        expenses_path = os.path.join(data_dir, 'expenses.json')
+
+        if os.path.exists(expenses_path):
+            with open(expenses_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.expenses = data.get('expenses', {})
+                self.target = data.get('target', 0.0)
+
+    def update_target_spinbox_values(self):
+        """更新目标输入框数值"""
+        with block_signals([self.target_spinbox]):
+            self.target_spinbox.setValue(self.target)
+        
+    def update_expense_spinbox_values(self):
+        """更新实际消费输入框数值"""
+        date_selected = self.days[self.selected_circle]
+        year = str(date_selected.year)
+        month = str(date_selected.month)
+        day = str(date_selected.day)
+        
+        with block_signals([self.expense_spinbox]):
+            if year in self.expenses and month in self.expenses[year] and day in self.expenses[year][month]:
+                self.expense_spinbox.setValue(self.expenses[year][month][day])
+            else:
+                self.expense_spinbox.setValue(0.0)
+
+    def update_circle_color(self, circle_index):
+        """
+        根据对应日期的消费情况更新指定圆形的颜色
+        
+        Parameters:
+            circle_index (int): 要更新颜色的圆形索引（0-2，对应前天、昨天、今天）
+        """
+        year = str(self.days[circle_index].year)
+        month = str(self.days[circle_index].month)
+        day = str(self.days[circle_index].day)
+        
+        if year in self.expenses and month in self.expenses[year] and day in self.expenses[year][month]:
+            expense = self.expenses[year][month][day]
+        else:
+            expense = 0.0
+        
+        circle = self.circles[circle_index]
+        
+        if expense <= self.target:
+            circle.setStyleSheet("""
+                QPushButton {
+                    border-radius: 10px; 
+                    background-color: green;
+                    border: none;
+                }
+                QPushButton:hover {
+                    background-color: #00cc00;
+                }
+                QPushButton:pressed {
+                    background-color: #009900;
+                }
+            """)
+        else:
+            circle.setStyleSheet("""
+                QPushButton {
+                    border-radius: 10px; 
+                    background-color: red;
+                    border: none;
+                }
+                QPushButton:hover {
+                    background-color: #ff6666;
+                }
+                QPushButton:pressed {
+                    background-color: #cc0000;
+                }
+            """)
+
+    def update_circle_colors(self):
+        """更新所有圆形的颜色"""
+        for circle_index in range(3):
+            self.update_circle_color(circle_index)
+
+    def save_data(self):
+        """保存数据到文件"""
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        
+        expenses_path = os.path.join(data_dir, 'expenses.json')
+
+        data = {
+            'target': self.target,
+            'expenses': self.expenses
+        }
+        
+        with open(expenses_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+    def on_circle_clicked(self, index):
+        """
+        点击圆形时切换选中状态并更新输入框
+        
+        Parameters:
+            index (int): 被点击的圆形索引（0-2，对应前天、昨天、今天）
+        """
+        self.selected_circle = index
+        self.update_expense_spinbox_values()
+
+    def on_expense_changed(self, value):
+        """
+        实际消费变化时更新存储数据
+        
+        Parameters:
+            value (float): 新的消费金额
+        """
+        date_selected = self.days[self.selected_circle]
+        year = str(date_selected.year)
+        month = str(date_selected.month)
+        day = str(date_selected.day)
+        
+        if year not in self.expenses:
+            self.expenses[year] = {}
+        if month not in self.expenses[year]:
+            self.expenses[year][month] = {}
+        
+        self.expenses[year][month][day] = value
+        self.update_circle_color(self.selected_circle)
+        self.save_data()
+
+    def on_target_changed(self, value):
+        """
+        目标变化时更新存储数据
+        
+        Parameters:
+            value (float): 新的目标金额
+        """
+        self.target = value
+        self.update_circle_colors()
+        self.save_data()
+
+
+class FurinaWindow(BaseWindow):
+    """芙芙伴学应用主窗口"""
+
+    def __init__(self, parent=None):
+        """
+        初始化任务窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
+        super().__init__(parent)
+        self.setWindowTitle('芙芙伴学')
+        self.setWindowIcon(icon)
+        self.setMinimumSize(600, 400)
+
+        self.tab_widget = QTabWidget()
+        self.setCentralWidget(self.tab_widget)
+
+        self.task_widget = TaskWidget(self)
+        self.tab_widget.addTab(self.task_widget, '任务')
+
+        self.expenses_widget = ExpensesWidget(self)
+        self.tab_widget.addTab(self.expenses_widget, '流水')

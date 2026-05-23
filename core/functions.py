@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+from contextlib import contextmanager
 
 # 模块级别的缓存字典，用于存储不同模块的调用状态
 _cached_dates = {}
@@ -89,3 +90,22 @@ def get_this_week(dt: datetime.datetime=None, start_date: datetime.datetime=None
     collapsed = (dt - start_date).total_seconds()
 
     return collapsed / duration_of_a_week
+
+
+@contextmanager
+def block_signals(widgets):
+    """
+    上下文管理器：临时阻塞多个控件的信号
+    
+    在 `with` 块内，指定控件的信号会被阻塞，退出块后恢复。
+    
+    Parameters:
+        widgets (list): 要阻塞信号的控件列表
+    """
+    for widget in widgets:
+        widget.blockSignals(True)
+    try:
+        yield
+    finally:
+        for widget in widgets:
+            widget.blockSignals(False)
