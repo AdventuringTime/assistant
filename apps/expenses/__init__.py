@@ -385,7 +385,7 @@ class ExpenseItemWidget(QWidget):
         if ok and new_budget != self.item_data.get('estimated_amount'):
             self.item_data['estimated_amount'] = new_budget
             self.update_progress()
-            self.get_record_widget().mark_modified_and_reload()
+            self.window().record_widget.mark_modified_and_reload()
 
     def toggle_record(self):
         """切换记账输入状态，显示/隐藏金额输入框"""
@@ -409,7 +409,7 @@ class ExpenseItemWidget(QWidget):
                 self.item_data['actual_amount'] = self.item_data.get('actual_amount', 0) + amount
                 self.actual_label.setText(f"{self.item_data['actual_amount']:.2f}")
                 self.update_progress()
-                self.get_record_widget().mark_modified_and_reload()
+                self.window().record_widget.mark_modified_and_reload()
 
             self.bottom_row.removeWidget(self.record_input)
             self.record_input.deleteLater()
