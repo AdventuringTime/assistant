@@ -669,34 +669,22 @@ class ExpenseTypeWidget(QWidget):
 class ExpenseRecordWidget(QWidget):
     """记账标签页部件，包含所有记账功能"""
 
-    data_dir = "apps/expenses/data"
     data_manager = ExpenseDataManager()
 
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         """
         初始化记账标签页
 
         Parameters:
-            parent (ExpensesWindow): 父窗口
+            parent (ExpensesWindow, optional): 父窗口
         """
         super().__init__(parent)
         self.expenses_window = parent
 
-        current_date = get_today()
-        self.current_date = QDate(current_date.year, current_date.month, current_date.day)
         self.constants = {}
         self.children_ = []
 
         main_layout = QVBoxLayout(self)
-
-        top_bar = QHBoxLayout()
-
-        self.date_edit = QDateEdit(self.current_date)
-        self.date_edit.setDisplayFormat("yyyy-MM")
-        self.date_edit.dateChanged.connect(self.on_date_changed)
-        top_bar.addWidget(self.date_edit)
-
-        main_layout.addLayout(top_bar)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -769,33 +757,19 @@ class ExpenseRecordWidget(QWidget):
 
         main_layout.addLayout(self.bottom_buttons_layout)
 
-        os.makedirs(self.data_dir, exist_ok=True)
-
-        data_path = self.get_data_path(self.current_date.year(), self.current_date.month())
-        if not os.path.exists(data_path):
-            self.try_init_from_last_month(self.current_date.year(), self.current_date.month())
-
-        self.load_month_data()
-
     @staticmethod
     def open_ecard_paylist():
         """打开校园卡交易明细网页"""
         QDesktopServices.openUrl(QUrl("https://ecard.ustc.edu.cn/paylist"))
 
-    def on_date_changed(self, date):
+    def load_month_data(self, year, month):
         """
-        日期改变时加载对应月份数据
+        加载指定月份的记账数据
 
         Parameters:
-            date (QDate): 新选择的日期
+            year (int): 年份
+            month (int): 月份
         """
-        self.current_date = date
-        self.load_month_data()
-
-    def load_month_data(self):
-        """加载指定月份的记账数据，优先从内存读取"""
-        year = self.current_date.year()
-        month = self.current_date.month()
 
         data = self.data_manager.load_month_data(year, month)
         self.constants = data.get('constants', {})
@@ -821,71 +795,13 @@ class ExpenseRecordWidget(QWidget):
         self.scroll_layout.addStretch()
         self.update_total_display()
 
-    @classmethod
-    def try_init_from_last_month(cls, year, month):
-        """
-        尝试从上一个月初始化当前月的记账数据文件
-
-        Parameters:
-            year (int): 目标年份
-            month (int): 目标月份
-        """
-        last_month = month - 1
-        last_year = year
-        if last_month == 0:
-            last_month = 12
-            last_year -= 1
-
-        data_path = cls.get_data_path(year, month)
-        last_path = cls.get_data_path(last_year, last_month)
-
-        if os.path.exists(last_path):
-            import shutil
-            shutil.copy(last_path, data_path)
-            cls.reset_actual(data_path)
-
-    @staticmethod
-    def reset_actual(data_path):
-        """
-        将记账数据文件中的所有实际金额重置为0
-
-        Parameters:
-            data_path (str): 数据文件路径
-        """
-        def reset_actual_children(data):
-            for child in data.get('children', []):
-                if child['type'] == 'item':
-                    child['actual_amount'] = 0
-                elif child['type'] == 'type':
-                    reset_actual_children(child)
-
-        with open(data_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        reset_actual_children(data)
-
-        with open(data_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
-    @classmethod
-    def get_data_path(cls, year, month):
-        """
-        获取指定月份数据文件的路径
-
-        Parameters:
-            year (int): 年份
-            month (int): 月份
-
-        Returns:
-            str: 数据文件路径
-        """
-        return os.path.join(cls.data_dir, f"{year}-{month:02d}.json")
-
     def mark_modified_and_reload(self):
-        """标记数据已修改并刷新UI（直接修改data_manager数据时使用）"""
-        year = self.current_date.year()
-        month = self.current_date.month()
-        self.data_manager.mark_modified(year, month)
+        """在每次修改数据后，标记数据已修改并刷新UI"""
+        expenses_window = self.window()
+        self.data_manager.mark_modified(
+            expenses_window.current_date.year(),
+            expenses_window.current_date.month()
+        )
         self.update_expense_items_and_types()
 
     def add_root_item(self):
@@ -1039,6 +955,8 @@ class ExpenseRecordWidget(QWidget):
 class ExpensesWindow(BaseWindow):
     """记账管理窗口，用于管理月度费用预算和支出记录"""
 
+    data_dir = "apps/expenses/data"
+
     def __init__(self, parent=None):
         """
         初始化记账窗口
@@ -1050,14 +968,113 @@ class ExpensesWindow(BaseWindow):
         self.setWindowTitle("记账")
         self.setMinimumSize(800, 600)
 
+        current_date = get_today()
+        self.current_date = QDate(current_date.year, current_date.month, current_date.day)
+
+        self.date_edit = QDateEdit(self.current_date)
+        self.date_edit.setDisplayFormat("yyyy-MM")
+        self.date_edit.dateChanged.connect(self.on_date_changed)
+
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        top_bar = QHBoxLayout()
+        top_bar.addWidget(self.date_edit)
+        main_layout.addLayout(top_bar)
+
         self.tab_widget = QTabWidget()
-        self.setCentralWidget(self.tab_widget)
+        main_layout.addWidget(self.tab_widget)
 
         self.record_widget = ExpenseRecordWidget(self)
         self.tab_widget.addTab(self.record_widget, "记账")
 
         self.trend_widget = QWidget()
         self.tab_widget.addTab(self.trend_widget, "余额趋势")
+
+        os.makedirs(self.data_dir, exist_ok=True)
+        self.load_month_data()
+
+    def on_date_changed(self, date):
+        """
+        日期改变时加载对应月份数据
+
+        Parameters:
+            date (QDate): 新选择的日期
+        """
+        self.current_date = date
+        self.load_month_data()
+
+    def load_month_data(self):
+        """加载指定月份的记账数据"""
+        year = self.current_date.year()
+        month = self.current_date.month()
+
+        data_path = self.get_data_path(year, month)
+        if not os.path.exists(data_path):
+            self.try_init_from_last_month(year, month)
+
+        self.record_widget.load_month_data(year, month)
+
+    @classmethod
+    def get_data_path(cls, year, month):
+        """
+        获取指定月份数据文件的路径
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+
+        Returns:
+            str: 数据文件路径
+        """
+        return os.path.join(cls.data_dir, f"{year}-{month:02d}.json")
+
+    @classmethod
+    def try_init_from_last_month(cls, year, month):
+        """
+        尝试从上一个月初始化当前月的记账数据文件
+
+        Parameters:
+            year (int): 目标年份
+            month (int): 目标月份
+        """
+        last_month = month - 1
+        last_year = year
+        if last_month == 0:
+            last_month = 12
+            last_year -= 1
+
+        data_path = cls.get_data_path(year, month)
+        last_path = cls.get_data_path(last_year, last_month)
+
+        if os.path.exists(last_path):
+            import shutil
+            shutil.copy(last_path, data_path)
+            cls.reset_actual(data_path)
+
+    @staticmethod
+    def reset_actual(data_path):
+        """
+        将记账数据文件中的所有实际金额重置为0
+
+        Parameters:
+            data_path (str): 数据文件路径
+        """
+        def reset_actual_children(data):
+            for child in data.get('children', []):
+                if child['type'] == 'item':
+                    child['actual_amount'] = 0
+                elif child['type'] == 'type':
+                    reset_actual_children(child)
+
+        with open(data_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        reset_actual_children(data)
+
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
 
     def closeEvent(self, event):
         """窗口关闭时保存所有被修改过的数据"""
