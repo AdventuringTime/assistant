@@ -3,7 +3,8 @@ import json
 from PySide6.QtWidgets import (
     QDialog, QWidget, QHBoxLayout, QVBoxLayout, QLabel,
     QPushButton, QProgressBar, QScrollArea, QDateEdit, QMessageBox,
-    QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox, QListWidget
+    QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox, QListWidget,
+    QTabWidget
 )
 from PySide6.QtCore import QDate, Qt, QUrl
 from PySide6.QtSvgWidgets import QSvgWidget
@@ -158,11 +159,11 @@ class ConstantEditWindow(BaseWindow):
         初始化常量编辑窗口
 
         Parameters:
-            parent (QWidget): 父窗口（应为 ExpensesWindow 实例）
+            parent (QWidget): 父窗口（应为 ExpenseRecordWidget 实例）
         """
         super().__init__(parent)
-        self.expenses_window = parent.window()
-        assert isinstance(self.expenses_window, ExpensesWindow)
+        self.record_widget = parent
+        assert isinstance(self.record_widget, ExpenseRecordWidget)
 
         self.setWindowTitle("常量编辑")
         self.setMinimumSize(400, 300)
@@ -197,7 +198,7 @@ class ConstantEditWindow(BaseWindow):
             if item.widget():
                 item.widget().deleteLater()
 
-        for name, value in self.expenses_window.constants.items():
+        for name, value in self.record_widget.constants.items():
             row_widget = QWidget()
             row_layout = QHBoxLayout(row_widget)
 
@@ -232,11 +233,11 @@ class ConstantEditWindow(BaseWindow):
             if not name:
                 QMessageBox.warning(self, "请输入常量名称", "请输入常量名称")
                 return
-            if name in self.expenses_window.constants:
+            if name in self.record_widget.constants:
                 QMessageBox.warning(self, "常量名称已存在", "常量名称已存在")
                 return
-            self.expenses_window.constants[name] = 0
-            self.expenses_window.mark_modified_and_reload()
+            self.record_widget.constants[name] = 0
+            self.record_widget.mark_modified_and_reload()
             self.load_constants()
 
     def delete_constant(self, name):
@@ -246,9 +247,9 @@ class ConstantEditWindow(BaseWindow):
         Parameters:
             name (str): 常量名称
         """
-        if name in self.expenses_window.constants:
-            del self.expenses_window.constants[name]
-            self.expenses_window.mark_modified_and_reload()
+        if name in self.record_widget.constants:
+            del self.record_widget.constants[name]
+            self.record_widget.mark_modified_and_reload()
             self.load_constants()
 
     def update_constant(self, name, value):
@@ -259,9 +260,9 @@ class ConstantEditWindow(BaseWindow):
             name (str): 常量名称
             value (int): 新的常量值
         """
-        if name in self.expenses_window.constants:
-            self.expenses_window.constants[name] = value
-            self.expenses_window.mark_modified_and_reload()
+        if name in self.record_widget.constants:
+            self.record_widget.constants[name] = value
+            self.record_widget.mark_modified_and_reload()
 
 
 class ExpenseItemWidget(QWidget):
@@ -372,11 +373,11 @@ class ExpenseItemWidget(QWidget):
         if ok and new_name:
             self.item_data['name'] = new_name
             self.name_label.setText(new_name)
-            self.window().mark_modified_and_reload()
+            self.window().record_widget.mark_modified_and_reload()
 
     def delete(self):
         """删除费用项"""
-        self.window().remove_item(self.item_data)
+        self.window().record_widget.remove_item(self.item_data)
 
     def modify_budget(self):
         """修改预算金额"""
@@ -384,7 +385,7 @@ class ExpenseItemWidget(QWidget):
         if ok and new_budget != self.item_data.get('estimated_amount'):
             self.item_data['estimated_amount'] = new_budget
             self.update_progress()
-            self.window().mark_modified_and_reload()
+            self.get_record_widget().mark_modified_and_reload()
 
     def toggle_record(self):
         """切换记账输入状态，显示/隐藏金额输入框"""
@@ -408,7 +409,7 @@ class ExpenseItemWidget(QWidget):
                 self.item_data['actual_amount'] = self.item_data.get('actual_amount', 0) + amount
                 self.actual_label.setText(f"{self.item_data['actual_amount']:.2f}")
                 self.update_progress()
-                self.window().mark_modified_and_reload()
+                self.get_record_widget().mark_modified_and_reload()
 
             self.bottom_row.removeWidget(self.record_input)
             self.record_input.deleteLater()
@@ -531,11 +532,11 @@ class ExpenseTypeWidget(QWidget):
         if ok and new_name:
             self.type_data['name'] = new_name
             self.name_label.setText(new_name)
-            self.window().mark_modified_and_reload()
+            self.window().record_widget.mark_modified_and_reload()
 
     def delete(self):
         """删除费用类型"""
-        self.window().remove_type(self.type_data)
+        self.window().record_widget.remove_type(self.type_data)
 
     def add_item(self):
         """添加子记账项"""
@@ -549,7 +550,7 @@ class ExpenseTypeWidget(QWidget):
                 'estimated_amount': "0",
                 'actual_amount': 0
             })
-            self.window().mark_modified_and_reload()
+            self.window().record_widget.mark_modified_and_reload()
 
     def add_subtype(self):
         """添加子类型"""
@@ -562,7 +563,7 @@ class ExpenseTypeWidget(QWidget):
                 'name': name,
                 'children': []
             })
-            self.window().mark_modified_and_reload()
+            self.window().record_widget.mark_modified_and_reload()
 
     def open_sort_dialog(self):
         """打开子项排序对话框"""
@@ -576,7 +577,7 @@ class ExpenseTypeWidget(QWidget):
         def check_result():
             if dialog.result is not None:
                 self.type_data['children'] = dialog.result
-                self.window().mark_modified_and_reload()
+                self.window().record_widget.mark_modified_and_reload()
 
         dialog.destroyed.connect(check_result)
 
@@ -665,31 +666,28 @@ class ExpenseTypeWidget(QWidget):
             self.progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
 
-class ExpensesWindow(BaseWindow):
-    """记账管理窗口，用于管理月度费用预算和支出记录"""
+class ExpenseRecordWidget(QWidget):
+    """记账标签页部件，包含所有记账功能"""
 
     data_dir = "apps/expenses/data"
     data_manager = ExpenseDataManager()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent):
         """
-        初始化记账窗口
+        初始化记账标签页
 
         Parameters:
-            parent (QWidget, optional): 父窗口
+            parent (ExpensesWindow): 父窗口
         """
         super().__init__(parent)
-        self.setWindowTitle("记账")
-        self.setMinimumSize(800, 600)
+        self.expenses_window = parent
 
         current_date = get_today()
         self.current_date = QDate(current_date.year, current_date.month, current_date.day)
         self.constants = {}
         self.children_ = []
 
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
+        main_layout = QVBoxLayout(self)
 
         top_bar = QHBoxLayout()
 
@@ -890,11 +888,6 @@ class ExpensesWindow(BaseWindow):
         self.data_manager.mark_modified(year, month)
         self.update_expense_items_and_types()
 
-    def closeEvent(self, event):
-        """窗口关闭时保存所有被修改过的数据"""
-        self.data_manager.save_all_modified()
-        super().closeEvent(event)
-
     def add_root_item(self):
         """在根级别添加记账项"""
         name, ok = QInputDialog.getText(self, "添加记账项", "输入记账项名称:")
@@ -1041,3 +1034,32 @@ class ExpensesWindow(BaseWindow):
         """打开常量编辑窗口"""
         self.constants_window = ConstantEditWindow(self)
         self.constants_window.show()
+
+
+class ExpensesWindow(BaseWindow):
+    """记账管理窗口，用于管理月度费用预算和支出记录"""
+
+    def __init__(self, parent=None):
+        """
+        初始化记账窗口
+
+        Parameters:
+            parent (QWidget, optional): 父窗口
+        """
+        super().__init__(parent)
+        self.setWindowTitle("记账")
+        self.setMinimumSize(800, 600)
+
+        self.tab_widget = QTabWidget()
+        self.setCentralWidget(self.tab_widget)
+
+        self.record_widget = ExpenseRecordWidget(self)
+        self.tab_widget.addTab(self.record_widget, "记账")
+
+        self.trend_widget = QWidget()
+        self.tab_widget.addTab(self.trend_widget, "余额趋势")
+
+    def closeEvent(self, event):
+        """窗口关闭时保存所有被修改过的数据"""
+        self.record_widget.data_manager.save_all_modified()
+        super().closeEvent(event)
