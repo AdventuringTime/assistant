@@ -13,6 +13,59 @@ from core.base_window import BaseWindow, BaseDialog
 from core.functions import get_today
 
 
+class ExpenseDataManager:
+    """数据维护类，管理所有月份的记账数据，支持内存优先读取和延迟保存"""
+
+    def __init__(self):
+        self.month_data = {}
+        self.modified = set()
+
+    def load_month_data(self, year, month):
+        """加载指定月份的数据，优先从内存读取"""
+        key = f"{year}-{month:02d}"
+
+        if key in self.month_data:
+            return self.month_data[key]
+
+        data_path = os.path.join("apps/expenses/data", f"{key}.json")
+        if os.path.exists(data_path):
+            with open(data_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            data = {
+                'constants': {},
+                'children': []
+            }
+
+        self.month_data[key] = data
+        return data
+
+    def mark_modified(self, year, month):
+        """标记指定月份的数据已被修改"""
+        key = f"{year}-{month:02d}"
+        self.modified.add(key)
+
+    def save_all_modified(self):
+        """保存所有被修改过的数据到硬盘"""
+        for key in self.modified:
+            data_path = os.path.join("apps/expenses/data", f"{key}.json")
+
+            def remove_expanded_field(children):
+                for child in children:
+                    if 'expanded' in child:
+                        del child['expanded']
+                    if child.get('children'):
+                        remove_expanded_field(child['children'])
+
+            data = self.month_data[key].copy()
+            if 'children' in data:
+                remove_expanded_field(data['children'])
+
+            with open(data_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+
+        self.modified.clear()
+
 def evaluate_estimated_amount(expression="0", constants=None):
     """
     评估预估金额表达式，支持常量替换
@@ -183,7 +236,7 @@ class ConstantEditWindow(BaseWindow):
                 QMessageBox.warning(self, "常量名称已存在", "常量名称已存在")
                 return
             self.expenses_window.constants[name] = 0
-            self.expenses_window.save_and_reload()
+            self.expenses_window.mark_modified_and_reload()
             self.load_constants()
 
     def delete_constant(self, name):
@@ -195,7 +248,7 @@ class ConstantEditWindow(BaseWindow):
         """
         if name in self.expenses_window.constants:
             del self.expenses_window.constants[name]
-            self.expenses_window.save_and_reload()
+            self.expenses_window.mark_modified_and_reload()
             self.load_constants()
 
     def update_constant(self, name, value):
@@ -208,7 +261,7 @@ class ConstantEditWindow(BaseWindow):
         """
         if name in self.expenses_window.constants:
             self.expenses_window.constants[name] = value
-            self.expenses_window.save_and_reload()
+            self.expenses_window.mark_modified_and_reload()
 
 
 class ExpenseItemWidget(QWidget):
@@ -319,7 +372,7 @@ class ExpenseItemWidget(QWidget):
         if ok and new_name:
             self.item_data['name'] = new_name
             self.name_label.setText(new_name)
-            self.window().save_and_reload()
+            self.window().mark_modified_and_reload()
 
     def delete(self):
         """删除费用项"""
@@ -331,7 +384,7 @@ class ExpenseItemWidget(QWidget):
         if ok and new_budget != self.item_data.get('estimated_amount'):
             self.item_data['estimated_amount'] = new_budget
             self.update_progress()
-            self.window().save_and_reload()
+            self.window().mark_modified_and_reload()
 
     def toggle_record(self):
         """切换记账输入状态，显示/隐藏金额输入框"""
@@ -355,7 +408,7 @@ class ExpenseItemWidget(QWidget):
                 self.item_data['actual_amount'] = self.item_data.get('actual_amount', 0) + amount
                 self.actual_label.setText(f"{self.item_data['actual_amount']:.2f}")
                 self.update_progress()
-                self.window().save_and_reload()
+                self.window().mark_modified_and_reload()
 
             self.bottom_row.removeWidget(self.record_input)
             self.record_input.deleteLater()
@@ -478,7 +531,7 @@ class ExpenseTypeWidget(QWidget):
         if ok and new_name:
             self.type_data['name'] = new_name
             self.name_label.setText(new_name)
-            self.window().save_and_reload()
+            self.window().mark_modified_and_reload()
 
     def delete(self):
         """删除费用类型"""
@@ -496,7 +549,7 @@ class ExpenseTypeWidget(QWidget):
                 'estimated_amount': "0",
                 'actual_amount': 0
             })
-            self.window().save_and_reload()
+            self.window().mark_modified_and_reload()
 
     def add_subtype(self):
         """添加子类型"""
@@ -509,7 +562,7 @@ class ExpenseTypeWidget(QWidget):
                 'name': name,
                 'children': []
             })
-            self.window().save_and_reload()
+            self.window().mark_modified_and_reload()
 
     def open_sort_dialog(self):
         """打开子项排序对话框"""
@@ -523,7 +576,7 @@ class ExpenseTypeWidget(QWidget):
         def check_result():
             if dialog.result is not None:
                 self.type_data['children'] = dialog.result
-                self.window().save_and_reload()
+                self.window().mark_modified_and_reload()
 
         dialog.destroyed.connect(check_result)
 
@@ -616,6 +669,7 @@ class ExpensesWindow(BaseWindow):
     """记账管理窗口，用于管理月度费用预算和支出记录"""
 
     data_dir = "apps/expenses/data"
+    data_manager = ExpenseDataManager()
 
     def __init__(self, parent=None):
         """
@@ -741,20 +795,13 @@ class ExpensesWindow(BaseWindow):
         self.load_month_data()
 
     def load_month_data(self):
-        """加载指定月份的记账数据"""
+        """加载指定月份的记账数据，优先从内存读取"""
         year = self.current_date.year()
         month = self.current_date.month()
 
-        data_path = self.get_data_path(year, month)
-
-        if os.path.exists(data_path):
-            with open(data_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.constants = data['constants']
-                self.children_ = data['children']
-        else:
-            self.constants = {}
-            self.children_ = []
+        data = self.data_manager.load_month_data(year, month)
+        self.constants = data.get('constants', {})
+        self.children_ = data.get('children', [])
 
         self.update_expense_items_and_types()
 
@@ -836,32 +883,17 @@ class ExpensesWindow(BaseWindow):
         """
         return os.path.join(cls.data_dir, f"{year}-{month:02d}.json")
 
-    def save_month_data(self):
-        """保存当前月份的记账数据到文件"""
+    def mark_modified_and_reload(self):
+        """标记数据已修改并刷新UI（直接修改data_manager数据时使用）"""
         year = self.current_date.year()
         month = self.current_date.month()
-        data_path = self.get_data_path(year, month)
-
-        def remove_expanded_field(children):
-            for child in children:
-                if 'expanded' in child:
-                    del child['expanded']
-                if child.get('children'):
-                    remove_expanded_field(child['children'])
-
-        remove_expanded_field(self.children_)
-
-        data = {
-            'constants': self.constants,
-            'children': self.children_
-        }
-        with open(data_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
-    def save_and_reload(self):
-        """保存数据并重新加载UI"""
-        self.save_month_data()
+        self.data_manager.mark_modified(year, month)
         self.update_expense_items_and_types()
+
+    def closeEvent(self, event):
+        """窗口关闭时保存所有被修改过的数据"""
+        self.data_manager.save_all_modified()
+        super().closeEvent(event)
 
     def add_root_item(self):
         """在根级别添加记账项"""
@@ -873,7 +905,7 @@ class ExpensesWindow(BaseWindow):
                 'estimated_amount': "0",
                 'actual_amount': 0
             })
-            self.save_and_reload()
+            self.mark_modified_and_reload()
 
     def add_root_type(self):
         """在根级别添加记账类型"""
@@ -884,7 +916,7 @@ class ExpensesWindow(BaseWindow):
                 'name': name,
                 'children': []
             })
-            self.save_and_reload()
+            self.mark_modified_and_reload()
 
     def open_sort_dialog(self):
         """打开根级别排序对话框"""
@@ -895,7 +927,7 @@ class ExpensesWindow(BaseWindow):
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.children_ = dialog.result
-            self.save_and_reload()
+            self.mark_modified_and_reload()
 
     def remove_item(self, item_data):
         """
@@ -905,7 +937,7 @@ class ExpensesWindow(BaseWindow):
             item_data (dict): 要删除的费用项数据
         """
         self._remove_from_children(self.children_, item_data)
-        self.save_and_reload()
+        self.mark_modified_and_reload()
 
     def remove_type(self, type_data):
         """
@@ -915,7 +947,7 @@ class ExpensesWindow(BaseWindow):
             type_data (dict): 要删除的类型数据
         """
         self._remove_from_children(self.children_, type_data)
-        self.save_and_reload()
+        self.mark_modified_and_reload()
 
     def _remove_from_children(self, children_list, target_data):
         """
@@ -926,7 +958,7 @@ class ExpensesWindow(BaseWindow):
             target_data (dict): 目标数据
 
         Returns:
-            bool: 是否成功删除
+            bool: 仅在递归时使用，调用时不应接收该变量
         """
         for i, child in enumerate(children_list):
             if child is target_data:
