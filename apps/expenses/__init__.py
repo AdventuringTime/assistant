@@ -1030,16 +1030,17 @@ class TrendWidget(QWidget):
         series = QLineSeries()
         months = self.get_last_12_months(year, month)
         month_labels = []
-        balances = []
+        valid_balances = []
 
         for y, m in months:
             key = f"{y}-{m:02d}"
-            balance = self.balance_data.get(key, 0.0)
-            series.append(QPointF(len(month_labels), balance))
+            balance = self.balance_data.get(key)
+            if balance:
+                series.append(QPointF(len(month_labels), balance))
+                valid_balances.append(balance)
             month_labels.append(f"{y % 100}-{m:02d}")
-            balances.append(balance)
         
-        max_balance = max(balances) if balances else 0.0
+        max_balance = max(valid_balances) if valid_balances else 0.0
 
         series.setPointLabelsVisible(True)
         series.setPointLabelsFormat("@yPoint")
@@ -1047,11 +1048,13 @@ class TrendWidget(QWidget):
 
         axis_x = QBarCategoryAxis()
         axis_x.append(month_labels)
+        axis_x.setGridLineVisible(False)
         chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
         series.attachAxis(axis_x)
 
         axis_y = QValueAxis()
-        axis_y.setLabelFormat("%.2f")
+        axis_y.setLabelsVisible(False)
+        axis_y.setGridLineVisible(False)
         if max_balance > 0:
             axis_y.setMax(max_balance * 1.15)
         chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
