@@ -149,6 +149,7 @@ class SearchWordsWindow(BaseWindow):
         # 编辑最后一项
         last_item = self.words_list.item(self.words_list.count() - 1)
         if last_item:
+            self.words_list.scrollToItem(last_item)
             self.words_list.editItem(last_item)
 
     def on_copy_clicked(self):
@@ -162,6 +163,7 @@ class SearchWordsWindow(BaseWindow):
         """触发选中搜索词的编辑状态以进行重命名"""
         selected_items = self.words_list.selectedItems()
         if selected_items:
+            self.words_list.scrollToItem(selected_items[0])
             self.words_list.editItem(selected_items[0])
 
     def on_delete_clicked(self):
