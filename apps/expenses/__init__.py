@@ -6,12 +6,37 @@ from PySide6.QtWidgets import (
     QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox, QListWidget,
     QTabWidget
 )
-from PySide6.QtCore import QDate, Qt, QUrl
+from PySide6.QtCore import QDate, Qt, QUrl, QPointF
 from PySide6.QtSvgWidgets import QSvgWidget
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QPainter, QColor
+from PySide6.QtCharts import (QChart, QChartView, QLineSeries, QValueAxis,
+                              QBarCategoryAxis)
 
 from core.base_window import BaseWindow, BaseDialog
-from core.functions import get_today
+from core.functions import get_today, block_signals
+
+
+def evaluate_estimated_amount(expression="0", constants=None):
+    """
+    评估预估金额表达式，支持常量替换
+
+    Parameters:
+        expression (str): 数学表达式，可包含常量名称
+        constants (dict, optional): 常量字典，键为常量名，值为常量值
+
+    Returns:
+        float or str: 计算结果（浮点数）或 "Error"（表达式无效时）
+    """
+    constants = constants or {}
+    expr = expression
+    for name, value in constants.items():
+        expr = expr.replace(name, str(value))
+    if expr.strip() == "":
+        return 0.
+    try:
+        return float(eval(expr))
+    except:
+        return "Error"
 
 
 class ExpenseDataManager:
@@ -22,7 +47,16 @@ class ExpenseDataManager:
         self.modified = set()
 
     def load_month_data(self, year, month):
-        """加载指定月份的数据，优先从内存读取"""
+        """
+        加载指定月份的数据，优先从内存读取
+        
+        Parameters:
+            year (int): 年份
+            month (int): 月份（1-12）
+        Returns:
+            dict: 包含常量和子项数据的字典
+            如果数据不存在，返回空字典
+        """
         key = f"{year}-{month:02d}"
 
         if key in self.month_data:
@@ -42,7 +76,13 @@ class ExpenseDataManager:
         return data
 
     def mark_modified(self, year, month):
-        """标记指定月份的数据已被修改"""
+        """
+        标记指定月份的数据已被修改
+        
+        Parameters:
+            year (int): 年份
+            month (int): 月份（1-12）
+        """
         key = f"{year}-{month:02d}"
         self.modified.add(key)
 
@@ -66,28 +106,6 @@ class ExpenseDataManager:
                 json.dump(data, f, ensure_ascii=False, indent=4)
 
         self.modified.clear()
-
-def evaluate_estimated_amount(expression="0", constants=None):
-    """
-    评估预估金额表达式，支持常量替换
-
-    Parameters:
-        expression (str): 数学表达式，可包含常量名称
-        constants (dict, optional): 常量字典，键为常量名，值为常量值
-
-    Returns:
-        float or str: 计算结果（浮点数）或 "Error"（表达式无效时）
-    """
-    constants = constants or {}
-    expr = expression
-    for name, value in constants.items():
-        expr = expr.replace(name, str(value))
-    if expr.strip() == "":
-        return 0.
-    try:
-        return float(eval(expr))
-    except:
-        return "Error"
 
 
 class SortDialog(BaseDialog):
@@ -679,7 +697,6 @@ class ExpenseRecordWidget(QWidget):
             parent (ExpensesWindow, optional): 父窗口
         """
         super().__init__(parent)
-        self.expenses_window = parent
 
         self.constants = {}
         self.children_ = []
@@ -952,6 +969,129 @@ class ExpenseRecordWidget(QWidget):
         self.constants_window.show()
 
 
+class TrendWidget(QWidget):
+    """余额趋势部件，显示最近12个月余额折线图并支持修改"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.data_path = "apps/expenses/data/monthly_balance.json"
+        self.modified = False
+        self.load_data()
+
+        main_layout = QVBoxLayout(self)
+
+        self.chart_view = QChartView()
+        self.chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+        main_layout.addWidget(self.chart_view)
+
+        self.modify_widget = QWidget()
+        self.modify_layout = QHBoxLayout(self.modify_widget)
+        self.modify_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(self.modify_widget)
+
+        self.balance_label = QLabel("")
+        self.balance_label.setStyleSheet("color: white;")
+        self.modify_layout.addWidget(self.balance_label)
+
+        self.balance_spinbox = QDoubleSpinBox()
+        self.balance_spinbox.setRange(-1e18, 1e18)
+        self.balance_spinbox.setDecimals(2)
+        self.balance_spinbox.valueChanged.connect(self.on_balance_changed)
+        self.modify_layout.addWidget(self.balance_spinbox)
+
+    def load_data(self):
+        if os.path.exists(self.data_path):
+            with open(self.data_path, 'r', encoding='utf-8') as f:
+                self.balance_data = json.load(f)
+        else:
+            self.balance_data = {}
+
+    def update_view(self, year, month):
+        self.update_chart(year, month)
+        self.update_modify_widget(year, month)
+
+    @staticmethod
+    def get_last_12_months(year, month):
+        months = []
+        for m in range(month-1, month-13, -1):
+            y = year
+            while m <= 0:
+                m += 12
+                y -= 1
+            months.append((y, m))
+        months.reverse()
+        return months
+
+    def update_chart(self, year, month):
+        chart = QChart()
+        chart.setTheme(QChart.ChartThemeDark)
+        chart.setTitle("最近12个月余额趋势")
+
+        series = QLineSeries()
+        months = self.get_last_12_months(year, month)
+        month_labels = []
+        balances = []
+
+        for y, m in months:
+            key = f"{y}-{m:02d}"
+            balance = self.balance_data.get(key, 0.0)
+            series.append(QPointF(len(month_labels), balance))
+            month_labels.append(f"{y % 100}-{m:02d}")
+            balances.append(balance)
+        
+        max_balance = max(balances) if balances else 0.0
+
+        series.setPointLabelsVisible(True)
+        series.setPointLabelsFormat("@yPoint")
+        chart.addSeries(series)
+
+        axis_x = QBarCategoryAxis()
+        axis_x.append(month_labels)
+        chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+        series.attachAxis(axis_x)
+
+        axis_y = QValueAxis()
+        axis_y.setLabelFormat("%.2f")
+        if max_balance > 0:
+            axis_y.setMax(max_balance * 1.15)
+        chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+        series.attachAxis(axis_y)
+
+        chart.legend().hide()
+        self.chart_view.setChart(chart)
+
+    def update_modify_widget(self, year, month):
+        lm_year, lm_month = (year, month - 1) if month > 1 else (year - 1, 12)
+        key = f"{lm_year}-{lm_month:02d}"
+        balance = self.balance_data.get(key, 0.0)
+
+        self.balance_label.setText(f"{lm_year}年{lm_month}月余额:")
+        with block_signals([self.balance_spinbox]):
+            self.balance_spinbox.setProperty("current_key", key)
+            self.balance_spinbox.setValue(balance)
+
+    def on_balance_changed(self, value):
+        key = self.balance_spinbox.property("current_key")
+        if not key:
+            return
+
+        old_value = self.balance_data.get(key, 0.0)
+        if value != old_value:
+            self.balance_data[key] = value
+            self.modified = True
+        
+        if self.window():
+            expenses_window = self.window()
+            self.update_chart(expenses_window.current_date.year(), expenses_window.current_date.month())
+
+    def save_if_modified(self):
+        if self.modified:
+            os.makedirs(os.path.dirname(self.data_path), exist_ok=True)
+            with open(self.data_path, 'w', encoding='utf-8') as f:
+                json.dump(self.balance_data, f, ensure_ascii=False, indent=4)
+            self.modified = False
+
+
 class ExpensesWindow(BaseWindow):
     """记账管理窗口，用于管理月度费用预算和支出记录"""
 
@@ -989,7 +1129,7 @@ class ExpensesWindow(BaseWindow):
         self.record_widget = ExpenseRecordWidget(self)
         self.tab_widget.addTab(self.record_widget, "记账")
 
-        self.trend_widget = QWidget()
+        self.trend_widget = TrendWidget(self)
         self.tab_widget.addTab(self.trend_widget, "余额趋势")
 
         os.makedirs(self.data_dir, exist_ok=True)
@@ -1015,6 +1155,7 @@ class ExpensesWindow(BaseWindow):
             self.try_init_from_last_month(year, month)
 
         self.record_widget.load_month_data(year, month)
+        self.trend_widget.update_view(year, month)
 
     @classmethod
     def get_data_path(cls, year, month):
@@ -1079,4 +1220,5 @@ class ExpensesWindow(BaseWindow):
     def closeEvent(self, event):
         """窗口关闭时保存所有被修改过的数据"""
         self.record_widget.data_manager.save_all_modified()
+        self.trend_widget.save_if_modified()
         super().closeEvent(event)
