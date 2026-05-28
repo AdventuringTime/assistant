@@ -912,8 +912,15 @@ class TaskWindow(BaseWindow):
 
     def update_floating_widget(self):
         """更新悬浮窗口显示当前追踪任务"""
-        if self.tracking_task_id is not None and 0 <= self.tracking_task_id < len(self.tasks):
-            task = self.tasks[self.tracking_task_id]
+        if self.tracking_task_id is not None:
+            if self.tracking_task_id < len(self.tasks):
+                # 追踪待办任务
+                task = self.tasks[self.tracking_task_id]
+            else:
+                # 追踪已完成任务
+                completed_index = self.tracking_task_id - len(self.tasks)
+                task = self.completed_tasks[completed_index]
+
             task_type = task.get('type', 0)
             color = '#00CC66' if task_type == 0 else '#FFCC00'
 
