@@ -354,6 +354,16 @@ class TaskItem(QWidget):
             self.name_label.setStyleSheet("color: #808080; text-decoration: line-through;")
         self.top_layout.addWidget(self.name_label)
 
+        # 完成按钮（追踪模式下且满足条件时显示）
+        self.complete_button = QPushButton('完成')
+        self.complete_button.clicked.connect(self.on_complete_clicked)
+        self.top_layout.addWidget(self.complete_button)
+
+        # 前往按钮（追踪模式下显示）
+        self.go_button = QPushButton('前往')
+        self.go_button.clicked.connect(self.on_go_clicked)
+        self.top_layout.addWidget(self.go_button)
+
         # 删除按钮（已完成任务显示）
         self.delete_button = QPushButton('删除')
         self.delete_button.clicked.connect(self.delete_task)
@@ -370,16 +380,6 @@ class TaskItem(QWidget):
             }
         """)
         self.top_layout.addWidget(self.delete_button)
-
-        # 完成按钮（追踪模式下且满足条件时显示）
-        self.complete_button = QPushButton('完成')
-        self.complete_button.clicked.connect(self.on_complete_clicked)
-        self.top_layout.addWidget(self.complete_button)
-
-        # 前往按钮（追踪模式下显示）
-        self.go_button = QPushButton('前往')
-        self.go_button.clicked.connect(self.on_go_clicked)
-        self.top_layout.addWidget(self.go_button)
 
         # 编辑按钮
         self.edit_button = QPushButton('编辑')
