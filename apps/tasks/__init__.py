@@ -285,8 +285,9 @@ class TaskItem(QWidget):
     task_deleted = Signal()           # 任务删除信号
     task_copy_created = Signal(dict)  # 任务副本创建信号
     tracking_changed = Signal(int)    # 追踪状态改变信号
+    task_completed = Signal(int)      # 任务完成信号
 
-    def __init__(self, task, id_, is_tracking=False, parent=None):
+    def __init__(self, task, id_, is_tracking=False, is_completed=False, parent=None):
         """
         初始化任务项部件
 
@@ -294,12 +295,14 @@ class TaskItem(QWidget):
             task (dict): 任务数据字典
             id_ (int): 任务索引ID
             is_tracking (bool, optional): 是否正在追踪，默认为False
+            is_completed (bool, optional): 是否在已完成列表中，默认为False
             parent (QWidget, optional): 父控件
         """
         super().__init__(parent)
         self.task = task
         self.id_ = id_
         self.is_tracking = is_tracking
+        self.is_completed = is_completed
         self.task_type = task.get('type', 0)
 
         # 任务类型颜色：主线黄色，支线绿色
@@ -337,11 +340,15 @@ class TaskItem(QWidget):
         self.name_label.setFont(font)
         self.top_layout.addWidget(self.name_label)
 
+        # 完成按钮（追踪模式下且满足条件时显示）
+        self.complete_button = QPushButton('完成')
+        self.complete_button.clicked.connect(self.on_complete_clicked)
+        self.top_layout.addWidget(self.complete_button)
+
         # 前往按钮（追踪模式下显示）
         self.go_button = QPushButton('前往')
         self.go_button.clicked.connect(self.on_go_clicked)
         self.top_layout.addWidget(self.go_button)
-        self.go_button.setVisible(is_tracking and bool(self.task.get('link')))
 
         # 编辑按钮
         self.edit_button = QPushButton('编辑')
@@ -352,6 +359,8 @@ class TaskItem(QWidget):
         self.track_button = QPushButton('开始追踪' if not is_tracking else '停止追踪')
         self.track_button.clicked.connect(self.on_track_clicked)
         self.top_layout.addWidget(self.track_button)
+
+        self.update_buttons_visibility()
 
         self.content_layout.addLayout(self.top_layout)
 
@@ -414,6 +423,13 @@ class TaskItem(QWidget):
                 }}
             """)
 
+    def update_buttons_visibility(self):
+        """更新完成按钮及前往按钮的可见性"""
+        required = self.task.get('required')
+        completed = self.task.get('completed')
+        self.complete_button.setVisible(self.is_tracking and not self.is_completed and (required <= 0 or completed >= required))
+        self.go_button.setVisible(self.is_tracking and bool(self.task.get('link')))
+
     def set_tracking(self, is_tracking):
         """
         设置追踪状态
@@ -427,7 +443,11 @@ class TaskItem(QWidget):
         else:
             self.track_button.setText('开始追踪')
         self.update_style()
-        self.go_button.setVisible(is_tracking and bool(self.task.get('link')))
+        self.update_buttons_visibility()
+
+    def on_complete_clicked(self):
+        """触发任务完成信号"""
+        self.task_completed.emit(self.id_)
 
     def on_go_clicked(self):
         """打开任务关联的链接"""
@@ -476,6 +496,7 @@ class TaskItem(QWidget):
         if ok:
             self.task['completed'] = self.completed
             self.update_progress_percent()
+            self.update_buttons_visibility()
             self.task_updated.emit()
 
     def on_edit_clicked(self, event):
@@ -521,7 +542,7 @@ class TaskItem(QWidget):
         # 更新进度
         self.required = data['required']
         self.update_progress_percent()
-        self.go_button.setVisible(self.is_tracking and bool(self.task.get('link')))
+        self.update_buttons_visibility()
         self.task_updated.emit()
 
 
@@ -650,6 +671,7 @@ class TaskWindow(BaseWindow):
 
         # 任务数据和追踪状态
         self.tasks = []
+        self.completed_tasks = []
         self.tracking_task_id = None
         self.floating_widget = None
         self.load_tasks()
@@ -719,7 +741,8 @@ class TaskWindow(BaseWindow):
 
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            self.tasks = data['tasks']
+            self.tasks = data.get('tasks', [])
+            self.completed_tasks = data.get('completed_tasks', [])
             self.tracking_task_id = data.get('tracking_task_id', None)
 
     def save_tasks(self):
@@ -730,11 +753,31 @@ class TaskWindow(BaseWindow):
 
         data = {
             'tasks': self.tasks,
+            'completed_tasks': self.completed_tasks,
             'tracking_task_id': self.tracking_task_id
         }
 
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+
+    def _create_task_item(self, task, id_, is_tracking=False, is_completed=False):
+        """
+        创建任务项并连接信号
+        
+        Parameters:
+            task (dict): 任务数据
+            id_ (int): 任务项在列表中的ID
+            is_tracking (bool, optional): 是否正在追踪该任务，默认False
+            is_completed (bool, optional): 是否已完成该任务，默认False
+        """
+        task_item = TaskItem(task, id_, is_tracking, is_completed)
+        task_item.task_updated.connect(self.on_task_updated)
+        task_item.task_deleted.connect(self.on_task_deleted)
+        task_item.task_copy_created.connect(self.on_creation_via_dialog)
+        task_item.tracking_changed.connect(self.on_tracking_changed)
+        task_item.task_completed.connect(self.on_task_completed)
+        self.task_items.append(task_item)
+        self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
 
     def refresh_ui(self):
         """刷新任务列表UI"""
@@ -743,35 +786,80 @@ class TaskWindow(BaseWindow):
             item.deleteLater()
         self.task_items.clear()
 
-        # 重新创建任务项
+        # 显示待办任务
         for id_, task in enumerate(self.tasks):
             is_tracking = (self.tracking_task_id == id_)
-            task_item = TaskItem(task, id_, is_tracking)
-            task_item.task_updated.connect(self.on_task_updated)
-            task_item.task_deleted.connect(self.on_task_deleted)
-            task_item.task_copy_created.connect(self.on_creation_via_dialog)
-            task_item.tracking_changed.connect(self.on_tracking_changed)
-            self.task_items.append(task_item)
-            self.content_layout.insertWidget(id_, task_item)
+            self._create_task_item(task, id_, is_tracking, False)
+
+        # 显示已完成任务（在待办任务后面）
+        for id_old, task in enumerate(self.completed_tasks):
+            id_ = len(self.tasks) + id_old
+            is_tracking = (self.tracking_task_id == id_)
+            self._create_task_item(task, id_, is_tracking, True)
 
     def on_task_updated(self):
         """任务更新后的处理"""
         self.update_floating_widget()
 
+    def remove_task(self, display_index):
+        """
+        删除任务并更新追踪ID
+        
+        Parameters:
+            display_index (int): 任务项在显示列表中的索引
+        """
+        if display_index < len(self.tasks):
+            # 删除待办任务
+            del self.tasks[display_index]
+        else:
+            # 删除已完成任务
+            completed_index = display_index - len(self.tasks)
+            del self.completed_tasks[completed_index]
+
+        # 更新追踪ID
+        if self.tracking_task_id == display_index:
+            self.tracking_task_id = None
+        elif self.tracking_task_id is not None and self.tracking_task_id > display_index:
+            self.tracking_task_id -= 1
+
     def on_task_deleted(self):
         """任务删除后的处理"""
         sender = self.sender()
         if sender in self.task_items:
-            index = self.task_items.index(sender)
-            # 更新追踪ID
-            if self.tracking_task_id == index:
-                self.tracking_task_id = None
-            elif self.tracking_task_id is not None and self.tracking_task_id > index:
-                self.tracking_task_id -= 1
-            # 删除任务
-            del self.tasks[index]
+            display_index = self.task_items.index(sender)
+            self.remove_task(display_index)
             self.refresh_ui()
             self.update_floating_widget()
+
+    def on_task_completed(self, index):
+        """
+        任务完成后的处理
+        
+        Parameters:
+            index (int): 任务项在列表中的索引
+        """
+        task = self.tasks[index]
+        
+        # 将任务追加到已完成任务列表
+        self.completed_tasks.append(task.copy())
+        
+        # 获取子任务内容
+        subtasks = task.get('subtasks', task.get('description', ''))
+        lines = [line.strip() for line in subtasks.split('\n') if line.strip()]
+        
+        if len(lines) > 1:
+            # 子任务不仅一行，移除第一行
+            remaining_lines = lines[1:]
+            task['subtasks'] = '\n'.join(remaining_lines)
+            task['completed'] = 0.0
+            task['required'] = 1.0
+        else:
+            # 子任务只有一行或没有，删除此任务
+            self.remove_task(index)
+        
+        # 重新加载列表
+        self.refresh_ui()
+        self.update_floating_widget()
 
     def on_add_task(self):
         """打开添加任务对话框"""
@@ -780,7 +868,12 @@ class TaskWindow(BaseWindow):
         dialog.show()
 
     def on_creation_via_dialog(self, data):
-        """通过对话框创建新任务"""
+        """
+        通过对话框创建新任务
+        
+        Parameters:
+            data (dict): 任务数据
+        """
         if data['name'].strip():
             self.tasks.append(data)
             self.refresh_ui()
@@ -822,7 +915,12 @@ class TaskWindow(BaseWindow):
             self.floating_widget.move(x, y)
 
     def on_tracking_changed(self, index):
-        """追踪状态改变处理"""
+        """
+        追踪状态改变处理
+        
+        Parameters:
+            index (int): 任务项在列表中的索引
+        """
         old_index = self.tracking_task_id
 
         if self.tracking_task_id == index:
