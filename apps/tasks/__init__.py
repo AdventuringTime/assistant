@@ -283,10 +283,20 @@ class TaskDialog(BaseDialog):
         """
         if event.type() == QEvent.Type.FocusIn:
             if obj == self.required_spin:
-                QTimer.singleShot(0, self.required_spin.selectAll)
+                QTimer.singleShot(0, self.on_select_all_required)
             elif obj == self.link_edit:
-                QTimer.singleShot(0, self.link_edit.selectAll)
+                QTimer.singleShot(0, self.on_select_all_link)
         return super().eventFilter(obj, event)
+
+    def on_select_all_required(self):
+        """延迟选择 required_spin 的全部内容（安全版本）"""
+        if self.required_spin and not self.required_spin.isDeleted():
+            self.required_spin.selectAll()
+
+    def on_select_all_link(self):
+        """延迟选择 link_edit 的全部内容（安全版本）"""
+        if self.link_edit and not self.link_edit.isDeleted():
+            self.link_edit.selectAll()
 
 
 class TaskItem(QWidget):
