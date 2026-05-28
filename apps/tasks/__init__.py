@@ -190,7 +190,18 @@ class TaskDialog(BaseDialog):
         # 编辑模式显示删除和保存副本按钮
         if task:
             self.delete_button = QPushButton('删除')
-            self.delete_button.setStyleSheet("background-color: #CC0000; color: #FFFFFF;")
+            self.delete_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #CC0000;
+                    color: #FFFFFF;
+                }
+                QPushButton:hover {
+                    background-color: #FF3333;
+                }
+                QPushButton:pressed {
+                    background-color: #990000;
+                }
+            """)
             self.delete_button.clicked.connect(self.on_delete)
             self.button_layout.addWidget(self.delete_button)
 
@@ -338,7 +349,27 @@ class TaskItem(QWidget):
         font = QFont()
         font.setPointSize(14)
         self.name_label.setFont(font)
+        # 已完成任务显示暗色
+        if self.is_completed:
+            self.name_label.setStyleSheet("color: #808080; text-decoration: line-through;")
         self.top_layout.addWidget(self.name_label)
+
+        # 删除按钮（已完成任务显示）
+        self.delete_button = QPushButton('删除')
+        self.delete_button.clicked.connect(self.delete_task)
+        self.delete_button.setStyleSheet("""
+            QPushButton {
+                background-color: #641A1A;
+                color: #FFFFFF;
+            }
+            QPushButton:hover {
+                background-color: #6B2020;
+            }
+            QPushButton:pressed {
+                background-color: #4A1515;
+            }
+        """)
+        self.top_layout.addWidget(self.delete_button)
 
         # 完成按钮（追踪模式下且满足条件时显示）
         self.complete_button = QPushButton('完成')
@@ -367,7 +398,7 @@ class TaskItem(QWidget):
         # 子任务（显示第一行）
         self.subtask_label = QLabel(get_subtasks_first_line(self.task))
         self.subtask_label.setWordWrap(True)
-        self.subtask_label.setStyleSheet("font-size: 15px; color: #AAAAAA;")
+        self.subtask_label.setStyleSheet("font-size: 15px; color: #808080;")
         self.content_layout.addWidget(self.subtask_label)
         if not self.subtask_label.text():
             self.subtask_label.hide()
@@ -383,7 +414,7 @@ class TaskItem(QWidget):
 
         # 进度标签
         self.progress_label = QLabel()
-        self.progress_label.setStyleSheet("font-size: 14px; color: #888888;")
+        self.progress_label.setStyleSheet("font-size: 14px; color: #808080;")
 
         # 进度区域（可点击修改进度）
         self.progress_widget = QWidget()
@@ -424,11 +455,12 @@ class TaskItem(QWidget):
             """)
 
     def update_buttons_visibility(self):
-        """更新完成按钮及前往按钮的可见性"""
+        """更新按钮可见性"""
         required = self.task.get('required')
         completed = self.task.get('completed')
         self.complete_button.setVisible(self.is_tracking and not self.is_completed and (required <= 0 or completed >= required))
         self.go_button.setVisible(self.is_tracking and bool(self.task.get('link')))
+        self.delete_button.setVisible(self.is_completed)
 
     def set_tracking(self, is_tracking):
         """
@@ -504,15 +536,15 @@ class TaskItem(QWidget):
         dialog = TaskDialog(self.task, self)
         dialog.on_save_signal.connect(self.on_dialog_save)
         dialog.on_save_copy_signal.connect(self.on_dialog_save_copy)
-        dialog.on_delete_signal.connect(self.on_dialog_delete)
+        dialog.on_delete_signal.connect(self.delete_task)
         dialog.show()
 
     def on_dialog_save_copy(self, data):
         """处理保存副本操作"""
         self.task_copy_created.emit(data)
 
-    def on_dialog_delete(self):
-        """处理删除操作"""
+    def delete_task(self):
+        """删除任务"""
         self.task_deleted.emit()
 
     def on_dialog_save(self, data):
