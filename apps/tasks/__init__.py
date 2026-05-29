@@ -343,7 +343,6 @@ class TaskItem(QWidget):
             self.current_color = self.color_main
 
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.update_style()
 
         # 主布局
         self.layout_ = QHBoxLayout(self)
@@ -409,8 +408,6 @@ class TaskItem(QWidget):
         self.track_button.clicked.connect(self.on_track_clicked)
         self.top_layout.addWidget(self.track_button)
 
-        self.update_buttons_visibility()
-
         self.content_layout.addLayout(self.top_layout)
 
         # 子任务（显示第一行）
@@ -418,8 +415,6 @@ class TaskItem(QWidget):
         self.subtask_label.setWordWrap(True)
         self.subtask_label.setStyleSheet("font-size: 15px; color: #808080;")
         self.content_layout.addWidget(self.subtask_label)
-        if not self.subtask_label.text():
-            self.subtask_label.hide()
 
         # 进度信息
         self.completed = self.task.get('completed', 0.0)
@@ -451,7 +446,12 @@ class TaskItem(QWidget):
         self.content_layout.addWidget(self.progress_widget)
         self.layout_.addWidget(self.content_widget)
 
+        # 集中初始化各组件数值和可见性等状态，避免窗口闪烁
+        self.update_style()
         self.update_progress_percent()
+        self.update_buttons_visibility()
+        if not self.subtask_label.text():
+            self.subtask_label.hide()
 
     def update_style(self):
         """根据追踪状态更新样式"""
