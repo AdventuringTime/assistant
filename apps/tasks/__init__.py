@@ -289,14 +289,22 @@ class TaskDialog(BaseDialog):
         return super().eventFilter(obj, event)
 
     def on_select_all_required(self):
-        """延迟选择 required_spin 的全部内容（安全版本）"""
-        if self.required_spin and not self.required_spin.isDeleted():
-            self.required_spin.selectAll()
+        """延迟选择 required_spin 的全部内容"""
+        try:
+            if self.required_spin:
+                self.required_spin.selectAll()
+        except RuntimeError:
+            # 控件已被删除，忽略
+            pass
 
     def on_select_all_link(self):
-        """延迟选择 link_edit 的全部内容（安全版本）"""
-        if self.link_edit and not self.link_edit.isDeleted():
-            self.link_edit.selectAll()
+        """延迟选择 link_edit 的全部内容"""
+        try:
+            if self.link_edit:
+                self.link_edit.selectAll()
+        except RuntimeError:
+            # 控件已被删除，忽略
+            pass
 
 
 class TaskItem(QWidget):
