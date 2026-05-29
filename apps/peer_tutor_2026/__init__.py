@@ -93,8 +93,8 @@ class TaskDialog(BaseDialog):
     def on_delete(self):
         """删除任务，需用户确认"""
         reply = QMessageBox.question(self, '删除任务', '删除任务？',
-                    QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-        if reply == QMessageBox.Yes:
+                    QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
             self.on_delete_signal.emit()
             self.close()
 

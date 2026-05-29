@@ -208,7 +208,7 @@ class ScheduleEditorWindow(BaseWindow):
         if self.duration < 0:
             reply = QMessageBox.question(self, "保存日程",
                                     "结束时间早于开始时间，是否继续保存？",
-                                    QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes)
+                                    QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
             if reply == QMessageBox.StandardButton.No:
                 return
 
@@ -254,9 +254,9 @@ class ScheduleEditorWindow(BaseWindow):
         """删除当前日程（需用户确认）"""
         reply = QMessageBox.question(self, "确认删除",
                                    "确认删除？",
-                                   QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
+                                   QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
 
-        if reply == QMessageBox.StandardButton.Ok:
+        if reply == QMessageBox.StandardButton.Yes:
             # 调用父窗口的删除方法
             self.parent().window().delete_schedule_from_editor(self)
 

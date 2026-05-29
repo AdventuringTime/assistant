@@ -143,9 +143,9 @@ class EditorWindow(BaseDialog):
         """删除当前工作时间记录，需用户确认"""
         reply = QMessageBox.question(self, "确认删除",
                                    "确认删除？",
-                                   QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
+                                   QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
 
-        if reply == QMessageBox.StandardButton.Ok:
+        if reply == QMessageBox.StandardButton.Yes:
             # 调用父窗口的删除方法
             self.parent().window().delete_worktime_of_editor(self)
 
