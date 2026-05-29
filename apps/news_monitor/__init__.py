@@ -164,10 +164,10 @@ def check_news_update():
             last_news_ids[i] = current_ids
             save_current_ids()
 
-        if network_error:
-            return DISCONNECT_DELAY  # 网络异常时返回延迟时间
-        else:
-            return CHECK_INTERVAL  # 正常情况返回默认间隔时间
+    if network_error:
+        return DISCONNECT_DELAY  # 网络异常时返回延迟时间
+    else:
+        return CHECK_INTERVAL  # 正常情况返回默认间隔时间
 
 def load_saved_ids():
     """
