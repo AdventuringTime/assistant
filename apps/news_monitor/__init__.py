@@ -141,17 +141,9 @@ def check_news_update():
         stored_ids = last_news_ids[i]
 
         # 检查前CHECK_THRESHOLD条新闻中是否有新ID
-        new_news = []
         for news_id, news_title, news_link in current_news_list[:CHECK_THRESHOLD]:
             if news_id not in set(stored_ids):
-                # 找到所有未记载的ID
-                new_news.append((news_id, news_title, news_link))
-                break
-
-        # 如果有新ID，推送通知
-        if new_news:
-            for news_id, news_title, news_link in new_news:
-                # 推送系统通知
+                # 找到所有未记载的ID，推送系统通知
                 notification_system.notify(
                     title=name + "更新",
                     content=news_title,
