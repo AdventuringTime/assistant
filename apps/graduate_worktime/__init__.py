@@ -154,9 +154,12 @@ class GraduateWorktimeWindow(BaseWindow):
 
     def on_clear_clicked(self):
         """清空所有工时记录"""
-        self.records = []
-        self.save_records()
-        self.refresh_table()
+        reply = QMessageBox.question(self, "确认清空", "确定要清空所有工时记录吗？",
+                                 QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.records = []
+            self.save_records()
+            self.refresh_table()
 
     def on_export_clicked(self):
         """导出工时记录到剪贴板，包含总时长统计"""
@@ -184,10 +187,24 @@ class GraduateWorktimeWindow(BaseWindow):
 
     def on_delete_clicked(self):
         """删除选中的工时记录行"""
-        selected_items = self.table.selectedItems()
-        if selected_items:
-            row = selected_items[0].row()
-            self.records.pop(row)
+        selected_rows = set()
+        for item in self.table.selectedItems():
+            selected_rows.add(item.row())
+
+        if not selected_rows:
+            return
+
+        row_count = len(selected_rows)
+        if row_count == 1:
+            reply = QMessageBox.question(self, "确认删除", "确定要删除选中的记录吗？",
+                                 QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+        else:
+            reply = QMessageBox.question(self, "确认删除", f"确定要删除选中的 {row_count} 条记录吗？",
+                                 QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
+
+        if reply == QMessageBox.StandardButton.Yes:
+            for row in sorted(selected_rows, reverse=True):
+                self.records.pop(row)
             self.save_records()
             self.refresh_table()
 
