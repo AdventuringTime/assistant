@@ -33,9 +33,11 @@ class Heartbeat(QObject):
 
     def stop(self):
         """停止心跳器"""
-        if hasattr(self, 'timer'):
-            self.timer.stop()
-        self.stopped.emit()
+        try:
+            if hasattr(self, 'timer'):
+                self.timer.stop()
+        finally:
+            self.stopped.emit()
 
 class DynamicHeartbeat(Heartbeat):
     """动态心跳器，支持根据执行结果调整间隔时间"""

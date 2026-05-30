@@ -64,7 +64,8 @@ class BaseThread(QThread):
                 要移动到线程的worker对象。
                 - 支持start方法：线程会在启动时自动调用start方法，无需connect启动事件。
                 - 支持stop方法：线程会在退出时自动调用stop方法，使工作对象安全退出。
-                - stop方法结束应发射stopped信号。
+                - stop方法结束应使用`try-finally`语句发射stopped信号：  
+                `try: <your code> finally: self.stopped.emit()`。
 
             parent (QObject, optional): 父对象
         """
