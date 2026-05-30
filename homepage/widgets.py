@@ -529,6 +529,7 @@ class TopStatusWidget(QWidget):
 
         # 定期更新显示（每5分钟自动更新）
         self.updater = Heartbeat(self.update_time_display, interval=300, immediate=False)
+        self.updater.start()
         self.update_display()  # 初始化时加载时期季节等数据
 
     def update_weeks_collapsed(self):
@@ -914,7 +915,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
     """通知系统部件，管理多个通知项，支持线程安全的通知添加"""
 
     # 定义信号，用于线程安全的通知添加
-    notify_signal = Signal(str, str, object, str, bool)
+    _notifying = Signal(str, str, object, str, bool)
 
     def __init__(self, parent=None):
         """
@@ -933,7 +934,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         os.makedirs(os.path.dirname(self.notifications_file), exist_ok=True)
 
         # 连接信号到槽函数（用于线程安全的通知添加）
-        self.notify_signal.connect(self._notify)
+        self._notifying.connect(self._notify)
 
         # 添加未读消息计数标签到标题
         self.add_unread_count_label()
@@ -1013,7 +1014,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         """
         # 如果当前线程不是主线程，使用信号槽机制
         if QThread.currentThread() != self.thread():
-            self.notify_signal.emit(title, content, click_action, icon_path, is_read)
+            self._notifying.emit(title, content, click_action, icon_path, is_read)
             return
 
         # 在主线程中直接执行

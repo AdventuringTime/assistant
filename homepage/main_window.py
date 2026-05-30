@@ -1,6 +1,3 @@
-from core.heartbeat import DynamicHeartbeat
-import json
-
 """
 主窗口类，包含系统托盘和内容部件
 
@@ -8,13 +5,18 @@ import json
 - content_widgets：要在主窗口显示的内容部件列表。
 """
 
+import json
+import os
+
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QScrollArea
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer, QThread, QObject
 from PySide6.QtGui import QAction
 
 from core.base_window import BaseWindow, WindowsManager
+from core.base_thread import ThreadManager, BaseThread
 from core.functions import get_today
 from core.global_constants import app_name
+from core.heartbeat import DynamicHeartbeat
 from homepage.widgets import top_status, app_entry, notification_system
 
 
@@ -101,13 +103,6 @@ class MainWindow(BaseWindow):
         event.ignore()  # 忽略关闭事件
         self.hide()     # 隐藏窗口
 
-    def quit_(self):
-        """退出应用程序，关闭所有窗口"""
-        # 关闭所有注册的窗口
-        WindowsManager.close_all_windows()
-        # 退出应用程序
-        QApplication.quit()
-
     def init_content(self):
         """初始化窗口内容，创建滚动区域和内容部件布局"""
         # 创建滚动区域
@@ -161,20 +156,23 @@ class MainWindow(BaseWindow):
         self.auto_start = {}
 
         # news_monitor - 新闻监控心跳器，定期检查新闻更新
-        with open("apps/news_monitor/data/settings.json", "r") as f:
-            news_monitor_settings = json.load(f)
-        if news_monitor_settings["activated"]:
-            from apps import news_monitor
-            self.auto_start["news_monitor"] = (
-                DynamicHeartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])
-            )
+        if os.path.exists("apps/news_monitor/data/settings.json"):
+            with open("apps/news_monitor/data/settings.json", "r") as f:
+                news_monitor_settings = json.load(f)
+            if news_monitor_settings["activated"]:
+                from apps import news_monitor
+                self.news_monitor_worker = DynamicHeartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])
+                self.news_monitor_thread = BaseThread(self.news_monitor_worker)
+                self.news_monitor_thread.start()
+                self.auto_start["news_monitor"] = self.news_monitor_thread
 
         # daily_year - 每日年度事记，导入时自动推送当天年度事记通知
-        with open("apps/daily_year/data/settings.json", "r") as f:
-            daily_year_settings = json.load(f)
-        if daily_year_settings["activated"]:
-            from apps import daily_year
-            self.auto_start["daily_year"] = daily_year
+        if os.path.exists("apps/daily_year/data/settings.json"):
+            with open("apps/daily_year/data/settings.json", "r") as f:
+                daily_year_settings = json.load(f)
+            if daily_year_settings["activated"]:
+                from apps import daily_year
+                self.auto_start["daily_year"] = daily_year
 
         # calendar_repeat_schedules - 日历重复事件管理器，初始化历史重复事件
         from apps.calendar import CalendarSchedulesManager
@@ -182,3 +180,12 @@ class MainWindow(BaseWindow):
         manager.init_repeat_events_until_today(get_today())
         top_status.update_time_display(force_update_calendar=True)
         self.auto_start["calendar_repeat_schedules"] = manager
+
+    def quit_(self):
+        """退出应用程序，关闭所有窗口"""
+        # 关闭所有注册的窗口
+        WindowsManager.close_all_windows()
+        # 停止所有后台线程
+        ThreadManager().stop_all_threads()
+        # 退出应用程序
+        QApplication.quit()
