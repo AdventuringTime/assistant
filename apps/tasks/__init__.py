@@ -596,6 +596,56 @@ class TaskItem(QWidget):
         self.task_updated.emit()
 
 
+class TaskDataManager:
+    """任务数据管理类，单例模式，管理所有任务数据"""
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(TaskDataManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        self.tasks = []
+        self.completed_tasks = []
+        self.tracking_task_id = None
+        self._initialized = True
+        self.load_tasks()
+
+    def load_tasks(self):
+        """从文件加载任务数据"""
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        json_path = os.path.join(data_dir, 'tasks.json')
+
+        if not os.path.exists(json_path):
+            return
+
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            self.tasks = data.get('tasks', [])
+            self.completed_tasks = data.get('completed_tasks', [])
+            self.tracking_task_id = data.get('tracking_task_id', None)
+
+    def save_tasks(self):
+        """保存任务数据到文件"""
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        os.makedirs(data_dir, exist_ok=True)
+        json_path = os.path.join(data_dir, 'tasks.json')
+
+        data = {
+            'tasks': self.tasks,
+            'completed_tasks': self.completed_tasks,
+            'tracking_task_id': self.tracking_task_id
+        }
+
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
+
 class FloatingWidget(QWidget):
     """悬浮窗口部件，显示当前追踪任务的进度信息"""
 
@@ -719,12 +769,9 @@ class TaskWindow(BaseWindow):
         self.setMinimumSize(600, 400)
         self.resize(1000, 800)
 
-        # 任务数据和追踪状态
-        self.tasks = []
-        self.completed_tasks = []
-        self.tracking_task_id = None
+        # 使用数据管理器
+        self.data_manager = TaskDataManager()
         self.floating_widget = None
-        self.load_tasks()
 
         # 主布局
         self.central_widget = QWidget()
@@ -837,14 +884,14 @@ class TaskWindow(BaseWindow):
         self.task_items.clear()
 
         # 显示待办任务
-        for id_, task in enumerate(self.tasks):
-            is_tracking = (self.tracking_task_id == id_)
+        for id_, task in enumerate(self.data_manager.tasks):
+            is_tracking = (self.data_manager.tracking_task_id == id_)
             self._create_task_item(task, id_, is_tracking, False)
 
         # 显示已完成任务（在待办任务后面）
-        for id_old, task in enumerate(self.completed_tasks):
-            id_ = len(self.tasks) + id_old
-            is_tracking = (self.tracking_task_id == id_)
+        for id_old, task in enumerate(self.data_manager.completed_tasks):
+            id_ = len(self.data_manager.tasks) + id_old
+            is_tracking = (self.data_manager.tracking_task_id == id_)
             self._create_task_item(task, id_, is_tracking, True)
 
     def on_task_updated(self):
@@ -858,19 +905,19 @@ class TaskWindow(BaseWindow):
         Parameters:
             display_index (int): 任务项在显示列表中的索引
         """
-        if display_index < len(self.tasks):
+        if display_index < len(self.data_manager.tasks):
             # 删除待办任务
-            del self.tasks[display_index]
+            del self.data_manager.tasks[display_index]
         else:
             # 删除已完成任务
-            completed_index = display_index - len(self.tasks)
-            del self.completed_tasks[completed_index]
+            completed_index = display_index - len(self.data_manager.tasks)
+            del self.data_manager.completed_tasks[completed_index]
 
         # 更新追踪ID
-        if self.tracking_task_id == display_index:
-            self.tracking_task_id = None
-        elif self.tracking_task_id is not None and self.tracking_task_id > display_index:
-            self.tracking_task_id -= 1
+        if self.data_manager.tracking_task_id == display_index:
+            self.data_manager.tracking_task_id = None
+        elif self.data_manager.tracking_task_id is not None and self.data_manager.tracking_task_id > display_index:
+            self.data_manager.tracking_task_id -= 1
 
     def on_task_deleted(self):
         """任务删除后的处理"""
@@ -888,10 +935,10 @@ class TaskWindow(BaseWindow):
         Parameters:
             index (int): 任务项在列表中的索引
         """
-        task = self.tasks[index]
+        task = self.data_manager.tasks[index]
         
         # 将任务追加到已完成任务列表
-        self.completed_tasks.append(task.copy())
+        self.data_manager.completed_tasks.append(task.copy())
         
         # 获取子任务内容
         subtasks = task.get('subtasks', task.get('description', ''))
@@ -925,19 +972,19 @@ class TaskWindow(BaseWindow):
             data (dict): 任务数据
         """
         if data['name'].strip():
-            self.tasks.append(data)
+            self.data_manager.tasks.append(data)
             self.refresh_ui()
 
     def update_floating_widget(self):
         """更新悬浮窗口显示当前追踪任务"""
-        if self.tracking_task_id is not None:
-            if self.tracking_task_id < len(self.tasks):
+        if self.data_manager.tracking_task_id is not None:
+            if self.data_manager.tracking_task_id < len(self.data_manager.tasks):
                 # 追踪待办任务
-                task = self.tasks[self.tracking_task_id]
+                task = self.data_manager.tasks[self.data_manager.tracking_task_id]
             else:
                 # 追踪已完成任务
-                completed_index = self.tracking_task_id - len(self.tasks)
-                task = self.completed_tasks[completed_index]
+                completed_index = self.data_manager.tracking_task_id - len(self.data_manager.tasks)
+                task = self.data_manager.completed_tasks[completed_index]
 
             task_type = task.get('type', 0)
             color = '#00CC66' if task_type == 0 else '#FFCC00'
@@ -960,8 +1007,8 @@ class TaskWindow(BaseWindow):
 
     def on_floating_clicked(self):
         """悬浮窗口点击处理，打开进度修改对话框"""
-        if self.tracking_task_id is not None and 0 <= self.tracking_task_id < len(self.task_items):
-            self.task_items[self.tracking_task_id].set_completed_from_input()
+        if self.data_manager.tracking_task_id is not None and 0 <= self.data_manager.tracking_task_id < len(self.task_items):
+            self.task_items[self.data_manager.tracking_task_id].set_completed_from_input()
 
     def set_floating_position(self):
         """设置悬浮窗口位置（屏幕右上角）"""
@@ -978,15 +1025,15 @@ class TaskWindow(BaseWindow):
         Parameters:
             index (int): 任务项在列表中的索引
         """
-        old_index = self.tracking_task_id
+        old_index = self.data_manager.tracking_task_id
 
-        if self.tracking_task_id == index:
+        if self.data_manager.tracking_task_id == index:
             # 停止追踪当前任务
-            self.tracking_task_id = None
+            self.data_manager.tracking_task_id = None
             self.task_items[index].set_tracking(False)
         else:
             # 开始追踪新任务
-            self.tracking_task_id = index
+            self.data_manager.tracking_task_id = index
             if old_index is not None:
                 self.task_items[old_index].set_tracking(False)
             self.task_items[index].set_tracking(True)
@@ -1000,7 +1047,7 @@ class TaskWindow(BaseWindow):
         Parameters:
             event (QCloseEvent): 关闭事件
         """
-        self.save_tasks()
+        self.data_manager.save_tasks()
         if self.floating_widget:
             self.floating_widget.close()
         super().closeEvent(event)

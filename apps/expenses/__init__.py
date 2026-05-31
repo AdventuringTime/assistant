@@ -42,9 +42,20 @@ def evaluate_estimated_amount(expression="0", constants=None):
 class ExpenseDataManager:
     """数据维护类，管理所有月份的记账数据，支持内存优先读取和延迟保存"""
 
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(ExpenseDataManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self):
+        if self._initialized:
+            return
         self.month_data = {}
         self.modified = set()
+        self._initialized = True
 
     def load_month_data(self, year, month):
         """

@@ -16,6 +16,114 @@ from math import floor
 
 icon = QIcon('apps/peer_tutor_2026/assets/icon.ico')
 
+
+class TaskDataManager:
+    """任务数据管理类，单例模式，管理所有周的任务数据"""
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(TaskDataManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        self._tasks = {}  # {week_num: [tasks_list]}
+        self.modified_weeks = set()  # 记录被修改的周
+        self._initialized = True
+
+    def get_tasks(self, week):
+        """
+        获取指定周的任务数据
+        
+        Parameters:
+            week (int): 周数
+        """
+        if week in self._tasks:
+            return self._tasks[week]
+
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(week))
+        json_path = os.path.join(data_dir, 'tasks.json')
+
+        if not os.path.exists(json_path):
+            self._tasks[week] = []
+            return self._tasks[week]
+
+        with open(json_path, 'r', encoding='utf-8') as f:
+            self._tasks[week] = json.load(f)
+        return self._tasks[week]
+
+    def save_tasks(self):
+        """保存所有被修改过的周的任务数据"""
+        for week in self.modified_weeks:
+            if week in self._tasks:
+                data_dir = os.path.join(os.path.dirname(__file__), 'data', str(week))
+                os.makedirs(data_dir, exist_ok=True)
+                json_path = os.path.join(data_dir, 'tasks.json')
+
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(self._tasks[week], f, ensure_ascii=False, indent=4)
+
+        self.modified_weeks.clear()
+
+    def mark_modified(self, week):
+        """
+        标记指定周的数据已被修改
+
+        Parameters:
+            week (int): 周数
+        """
+        self.modified_weeks.add(week)
+
+
+class ExpensesDataManager:
+    """流水数据管理类，单例模式，管理所有流水数据"""
+
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(ExpensesDataManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+
+        # 加载流水数据
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        expenses_path = os.path.join(data_dir, 'expenses.json')
+
+        if os.path.exists(expenses_path):
+            with open(expenses_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.expenses = data.get('expenses', {})
+                self.target = data.get('target', 0.0)
+        else:
+            self.expenses = {}
+            self.target = 0.0
+
+        self._initialized = True
+
+    def save_expenses_data(self):
+        """保存流水数据"""
+        data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        os.makedirs(data_dir, exist_ok=True)
+
+        expenses_path = os.path.join(data_dir, 'expenses.json')
+
+        data = {
+            'target': self.target,
+            'expenses': self.expenses
+        }
+
+        with open(expenses_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+
 class TaskDialog(BaseDialog):
     """任务编辑对话框，支持创建和编辑任务"""
 
@@ -281,7 +389,7 @@ class TaskWidget(QWidget):
             start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
         self.week_displayed = self.this_week_num
         self.is_showing_this_week = True
-        self.tasks = []
+        self.data_manager = TaskDataManager()
         self.task_items = []
 
         self.inherit_tasks_from_last_week_if_not_exist()
@@ -363,25 +471,6 @@ class TaskWidget(QWidget):
             with open(this_week_json_path, 'w', encoding='utf-8') as f:
                 json.dump(tasks, f, ensure_ascii=False, indent=4)
 
-    def load_tasks(self):
-        """从文件加载指定周的任务数据"""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
-        json_path = os.path.join(data_dir, 'tasks.json')
-
-        if not os.path.exists(json_path):
-            return
-
-        with open(json_path, 'r', encoding='utf-8') as f:
-            self.tasks = json.load(f)
-
-    def save_tasks(self):
-        """保存当前周的任务数据到文件"""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.week_displayed))
-        json_path = os.path.join(data_dir, 'tasks.json')
-
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(self.tasks, f, ensure_ascii=False, indent=4)
-
     def update_total_progress(self):
         """更新加权总进度显示"""
         total_percent = 0
@@ -452,8 +541,8 @@ class TaskWidget(QWidget):
         TaskWidget.open_folder_of_the_day(datetime.datetime.now() - datetime.timedelta(days=1))
 
     def on_task_updated(self):
-        """任务更新处理，保存任务并更新总进度"""
-        self.save_tasks()
+        """任务更新处理，标记数据已修改并更新总进度"""
+        self.data_manager.mark_modified(self.week_displayed)
         self.update_total_progress()
 
     def on_task_deleted(self):
@@ -462,9 +551,9 @@ class TaskWidget(QWidget):
         if sender in self.task_items:
             index = self.task_items.index(sender)
             self.task_items.remove(sender)
-            self.tasks.pop(index)
+            self.data_manager.get_tasks(self.week_displayed).pop(index)
             sender.deleteLater()
-            self.save_tasks()
+            self.data_manager.mark_modified(self.week_displayed)
             self.update_total_progress()
 
     def on_add_task(self):
@@ -481,13 +570,13 @@ class TaskWidget(QWidget):
             data (dict): 新任务数据
         """
         if data['name'].strip():
-            self.tasks.append(data)
+            self.data_manager.get_tasks(self.week_displayed).append(data)
             task_item = TaskItem(data)
             task_item.task_updated.connect(self.on_task_updated)
             task_item.task_deleted.connect(self.on_task_deleted)
             self.task_items.append(task_item)
             self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
-            self.save_tasks()
+            self.data_manager.mark_modified(self.week_displayed)
             self.update_total_progress()
 
     def toggle_week(self):
@@ -506,9 +595,8 @@ class TaskWidget(QWidget):
         for item in self.task_items:
             item.deleteLater()
         self.task_items.clear()
-        self.tasks.clear()
-        self.load_tasks()
-        for task in self.tasks:
+        tasks = self.data_manager.get_tasks(self.week_displayed)
+        for task in tasks:
             task_item = TaskItem(task)
             task_item.task_updated.connect(self.on_task_updated)
             task_item.task_deleted.connect(self.on_task_deleted)
@@ -524,7 +612,7 @@ class ExpensesWidget(QWidget):
     def __init__(self, parent=None):
         """
         初始化流水管理组件
-        
+
         Parameters:
             parent (QWidget, optional): 父窗口
         """
@@ -533,9 +621,8 @@ class ExpensesWidget(QWidget):
         self.today = get_today(datetime.datetime.now())
         # 前天昨天今天
         self.days = [self.today + datetime.timedelta(days=i) for i in range(-2, 1)]
-        
-        self.target = 0.0
-        self.expenses = {}
+
+        self.data_manager = ExpensesDataManager()
 
         self.selected_circle = 2
 
@@ -631,66 +718,60 @@ class ExpensesWidget(QWidget):
 
         self.main_layout.addLayout(row_layout)
 
-        self.load_data()
         self.update_target_spinbox_values()
         self.update_expense_spinbox_values()
         self.update_circle_colors()
 
         self.main_layout.addStretch()
 
-    def load_data(self):
-        """加载存储的数据"""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data')
-        expenses_path = os.path.join(data_dir, 'expenses.json')
-
-        if os.path.exists(expenses_path):
-            with open(expenses_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.expenses = data.get('expenses', {})
-                self.target = data.get('target', 0.0)
-
     def update_target_spinbox_values(self):
         """更新目标输入框数值"""
         with block_signals([self.target_spinbox]):
-            self.target_spinbox.setValue(self.target)
-        
+            self.target_spinbox.setValue(self.data_manager.target)
+
     def update_expense_spinbox_values(self):
         """更新实际消费输入框数值"""
         date_selected = self.days[self.selected_circle]
         year = str(date_selected.year)
         month = str(date_selected.month)
         day = str(date_selected.day)
-        
+
         with block_signals([self.expense_spinbox]):
-            if year in self.expenses and month in self.expenses[year] and day in self.expenses[year][month]:
-                self.expense_spinbox.setValue(self.expenses[year][month][day])
+            if (year in self.data_manager.expenses
+                and month in self.data_manager.expenses[year]
+                and day in self.data_manager.expenses[year][month]
+            ):
+                self.expense_spinbox.setValue(self.data_manager.expenses[year][month][day])
             else:
                 self.expense_spinbox.setValue(0.0)
 
     def update_circle_color(self, circle_index):
         """
         根据对应日期的消费情况更新指定圆形的颜色
-        
+
         Parameters:
             circle_index (int): 要更新颜色的圆形索引（0-2，对应前天、昨天、今天）
         """
         year = str(self.days[circle_index].year)
         month = str(self.days[circle_index].month)
         day = str(self.days[circle_index].day)
-        
-        if year in self.expenses and month in self.expenses[year] and day in self.expenses[year][month]:
-            expense = self.expenses[year][month][day]
+
+        if (year in self.data_manager.expenses
+            and month in self.data_manager.expenses[year]
+            and day in self.data_manager.expenses[year][month]
+        ):
+            expense = self.data_manager.expenses[year][month][day]
         else:
             expense = 0.0
-        
+
         circle = self.circles[circle_index]
         is_selected = (circle_index == self.selected_circle)
-        
-        if expense <= self.target:
+
+        if expense <= self.data_manager.target:
             if is_selected:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 20px; 
+                        border-radius: 20px;
                         background-color: #008000;
                         border: 2px solid #00b000;
                     }
@@ -706,7 +787,7 @@ class ExpensesWidget(QWidget):
             else:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 20px; 
+                        border-radius: 20px;
                         background-color: #008000;
                         border: none;
                     }
@@ -721,7 +802,7 @@ class ExpensesWidget(QWidget):
             if is_selected:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 20px; 
+                        border-radius: 20px;
                         background-color: #800000;
                         border: 2px solid #b00000;
                     }
@@ -737,7 +818,7 @@ class ExpensesWidget(QWidget):
             else:
                 circle.setStyleSheet("""
                     QPushButton {
-                        border-radius: 20px; 
+                        border-radius: 20px;
                         background-color: #800000;
                         border: none;
                     }
@@ -754,25 +835,10 @@ class ExpensesWidget(QWidget):
         for circle_index in range(3):
             self.update_circle_color(circle_index)
 
-    def save_data(self):
-        """保存数据到文件"""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data')
-        os.makedirs(data_dir, exist_ok=True)
-        
-        expenses_path = os.path.join(data_dir, 'expenses.json')
-
-        data = {
-            'target': self.target,
-            'expenses': self.expenses
-        }
-        
-        with open(expenses_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
     def on_circle_clicked(self, index):
         """
         点击圆形时切换选中状态并更新输入框
-        
+
         Parameters:
             index (int): 被点击的圆形索引（0-2，对应前天、昨天、今天）
         """
@@ -785,7 +851,7 @@ class ExpensesWidget(QWidget):
     def on_expense_changed(self, value):
         """
         实际消费变化时更新存储数据
-        
+
         Parameters:
             value (float): 新的消费金额
         """
@@ -793,26 +859,24 @@ class ExpensesWidget(QWidget):
         year = str(date_selected.year)
         month = str(date_selected.month)
         day = str(date_selected.day)
-        
-        if year not in self.expenses:
-            self.expenses[year] = {}
-        if month not in self.expenses[year]:
-            self.expenses[year][month] = {}
-        
-        self.expenses[year][month][day] = value
+
+        if year not in self.data_manager.expenses:
+            self.data_manager.expenses[year] = {}
+        if month not in self.data_manager.expenses[year]:
+            self.data_manager.expenses[year][month] = {}
+
+        self.data_manager.expenses[year][month][day] = value
         self.update_circle_color(self.selected_circle)
-        self.save_data()
 
     def on_target_changed(self, value):
         """
         目标变化时更新存储数据
-        
+
         Parameters:
             value (float): 新的目标金额
         """
-        self.target = value
+        self.data_manager.target = value
         self.update_circle_colors()
-        self.save_data()
 
 
 class FurinaWindow(BaseWindow):
@@ -838,3 +902,14 @@ class FurinaWindow(BaseWindow):
 
         self.expenses_widget = ExpensesWidget(self)
         self.tab_widget.addTab(self.expenses_widget, '流水')
+
+    def closeEvent(self, event):
+        """
+        关闭窗口时保存所有数据
+
+        Parameters:
+            event (QCloseEvent): 关闭事件
+        """
+        TaskDataManager().save_tasks()
+        ExpensesDataManager().save_expenses_data()
+        super().closeEvent(event)
