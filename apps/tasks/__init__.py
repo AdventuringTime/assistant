@@ -5,12 +5,13 @@ from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
                                QTextEdit, QSizePolicy, QListWidget, QDialog, QComboBox,
-                               QDateEdit)
+                               QDateEdit, QCheckBox)
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl, QDate
 from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtGui import QDesktopServices
 
 from core.base_window import BaseWindow, BaseDialog
+from core.functions import get_today
 
 
 def _hex_to_rgb(hex_color):
@@ -169,20 +170,33 @@ class TaskDialog(BaseDialog):
         self.layout_.addWidget(self.required_spin)
 
         # 截止日期（可选）
+        self.deadline_layout = QHBoxLayout()
         self.deadline_label = QLabel('截止日期（可选）:')
+        self.deadline_checkbox = QCheckBox()
         self.deadline_edit = QDateEdit()
         self.deadline_edit.setDisplayFormat('yyyy-MM-dd')
         self.deadline_edit.setCalendarPopup(True)
-        self.deadline_edit.setSpecialValueText(" ")
+        self.deadline_edit.hide()
+
         if task:
-            deadline = task.get('deadline', '')
+            deadline = task.get('deadline')
             if deadline:
+                self.deadline_checkbox.setChecked(True)
+                self.deadline_edit.show()
                 self.deadline_edit.setDate(QDate.fromString(deadline, 'yyyy-MM-dd'))
             else:
-                self.deadline_edit.clear()
+                today = get_today()
+                self.deadline_edit.setDate(QDate(today.year, today.month, today.day))
         else:
-            self.deadline_edit.clear()
-        self.layout_.addWidget(self.deadline_label)
+            today = get_today()
+            self.deadline_edit.setDate(QDate(today.year, today.month, today.day))
+
+        self.deadline_checkbox.stateChanged.connect(self.on_deadline_checkbox_changed)
+
+        self.deadline_layout.addWidget(self.deadline_label)
+        self.deadline_layout.addStretch()
+        self.deadline_layout.addWidget(self.deadline_checkbox)
+        self.layout_.addLayout(self.deadline_layout)
         self.layout_.addWidget(self.deadline_edit)
 
         # 链接（支持文件路径转换）
@@ -269,6 +283,13 @@ class TaskDialog(BaseDialog):
             file_url = 'file://' + path
             self.link_edit.setText(file_url)
 
+    def on_deadline_checkbox_changed(self, state):
+        """处理截止日期复选框状态变化"""
+        if state == 2:
+            self.deadline_edit.show()
+        elif state == 0:
+            self.deadline_edit.hide()
+
     def get_task_data(self):
         """
         获取当前表单中的任务数据
@@ -283,7 +304,7 @@ class TaskDialog(BaseDialog):
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
             'required': self.required_spin.value()
         }
-        if self.deadline_edit.date().isValid() and self.deadline_edit.date() != QDate(2000, 1, 1):
+        if self.deadline_checkbox.isChecked():
             deadline = self.deadline_edit.date().toString('yyyy-MM-dd')
             data['deadline'] = deadline
         link = self.link_edit.text().strip()
@@ -759,7 +780,7 @@ class FloatingWidget(QWidget):
                 progress_text = f'({completed}/{required})'
         else:
             progress_text = f'({completed}/{required})'
-        
+
         self.top_label.setText(f"{name}{progress_text}")
         self.bottom_label.setText(subtask)
         self.bottom_label.setVisible(bool(subtask.strip()))
@@ -900,7 +921,7 @@ class TaskWindow(BaseWindow):
     def _create_task_item(self, task, id_, is_tracking=False, is_completed=False):
         """
         创建任务项并连接信号
-        
+
         Parameters:
             task (dict): 任务数据
             id_ (int): 任务项在列表中的ID
@@ -941,7 +962,7 @@ class TaskWindow(BaseWindow):
     def remove_task(self, display_index):
         """
         删除任务并更新追踪ID
-        
+
         Parameters:
             display_index (int): 任务项在显示列表中的索引
         """
@@ -971,19 +992,19 @@ class TaskWindow(BaseWindow):
     def on_task_completed(self, index):
         """
         任务完成后的处理
-        
+
         Parameters:
             index (int): 任务项在列表中的索引
         """
         task = self.data_manager.tasks[index]
-        
+
         # 将任务追加到已完成任务列表
         self.data_manager.completed_tasks.append(task.copy())
-        
+
         # 获取子任务内容
         subtasks = task.get('subtasks', task.get('description', ''))
         lines = [line.strip() for line in subtasks.split('\n') if line.strip()]
-        
+
         if len(lines) > 1:
             # 子任务不仅一行，移除第一行
             remaining_lines = lines[1:]
@@ -993,7 +1014,7 @@ class TaskWindow(BaseWindow):
         else:
             # 子任务只有一行或没有，删除此任务
             self.remove_task(index)
-        
+
         # 重新加载列表
         self.refresh_ui()
         self.update_floating_widget()
@@ -1007,7 +1028,7 @@ class TaskWindow(BaseWindow):
     def on_creation_via_dialog(self, data):
         """
         通过对话框创建新任务
-        
+
         Parameters:
             data (dict): 任务数据
         """
@@ -1061,7 +1082,7 @@ class TaskWindow(BaseWindow):
     def on_tracking_changed(self, index):
         """
         追踪状态改变处理
-        
+
         Parameters:
             index (int): 任务项在列表中的索引
         """
