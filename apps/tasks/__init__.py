@@ -4,8 +4,9 @@ import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
-                               QTextEdit, QSizePolicy, QListWidget, QDialog, QComboBox)
-from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl
+                               QTextEdit, QSizePolicy, QListWidget, QDialog, QComboBox,
+                               QDateEdit)
+from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl, QDate
 from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtGui import QDesktopServices
 
@@ -167,6 +168,23 @@ class TaskDialog(BaseDialog):
         self.layout_.addWidget(self.required_label)
         self.layout_.addWidget(self.required_spin)
 
+        # 截止日期（可选）
+        self.deadline_label = QLabel('截止日期（可选）:')
+        self.deadline_edit = QDateEdit()
+        self.deadline_edit.setDisplayFormat('yyyy-MM-dd')
+        self.deadline_edit.setCalendarPopup(True)
+        self.deadline_edit.setSpecialValueText(" ")
+        if task:
+            deadline = task.get('deadline', '')
+            if deadline:
+                self.deadline_edit.setDate(QDate.fromString(deadline, 'yyyy-MM-dd'))
+            else:
+                self.deadline_edit.clear()
+        else:
+            self.deadline_edit.clear()
+        self.layout_.addWidget(self.deadline_label)
+        self.layout_.addWidget(self.deadline_edit)
+
         # 链接（支持文件路径转换）
         self.link_label = QLabel('链接:')
         self.link_edit = QLineEdit()
@@ -265,6 +283,9 @@ class TaskDialog(BaseDialog):
             'completed': self.task.get('completed', 0.0) if self.task else 0.0,
             'required': self.required_spin.value()
         }
+        if self.deadline_edit.date().isValid() and self.deadline_edit.date() != QDate(2000, 1, 1):
+            deadline = self.deadline_edit.date().toString('yyyy-MM-dd')
+            data['deadline'] = deadline
         link = self.link_edit.text().strip()
         if link:
             data['link'] = link
@@ -416,6 +437,12 @@ class TaskItem(QWidget):
         self.subtask_label.setStyleSheet("font-size: 15px; color: #808080;")
         self.content_layout.addWidget(self.subtask_label)
 
+        # 截止日期（如果有）
+        self.deadline_label = QLabel()
+        self.deadline_label.setWordWrap(True)
+        self.deadline_label.setStyleSheet("font-size: 15px; color: #808080;")
+        self.content_layout.addWidget(self.deadline_label)
+
         # 进度信息
         self.completed = self.task.get('completed', 0.0)
         self.required = self.task.get('required', 1.0)
@@ -452,6 +479,12 @@ class TaskItem(QWidget):
         self.update_buttons_visibility()
         if not self.subtask_label.text():
             self.subtask_label.hide()
+
+        deadline = self.task.get('deadline')
+        if deadline:
+            self.deadline_label.setText(f'截止日期: {deadline}')
+        else:
+            self.deadline_label.hide()
 
     def update_style(self):
         """根据追踪状态更新样式"""
@@ -588,6 +621,13 @@ class TaskItem(QWidget):
             self.subtask_label.show()
         else:
             self.subtask_label.hide()
+
+        deadline = self.task.get('deadline')
+        if deadline:
+            self.deadline_label.setText(f'截止日期: {deadline}')
+            self.deadline_label.show()
+        else:
+            self.deadline_label.hide()
 
         # 更新进度
         self.required = data['required']
