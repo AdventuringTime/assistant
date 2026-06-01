@@ -877,46 +877,17 @@ class TaskWindow(BaseWindow):
 
     def open_sort_dialog(self):
         """打开任务排序对话框"""
-        if not self.tasks:
+        if not self.data_manager.tasks:
             return
 
-        dialog = SortDialog(self, self.tasks, "排序")
+        dialog = SortDialog(self, self.data_manager.tasks, "排序")
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # 排序后暂时移除追踪
-            if self.tracking_task_id is not None:
-                self.on_tracking_changed(self.tracking_task_id)
-            self.tasks = dialog.result
+            if self.data_manager.tracking_task_id is not None:
+                self.on_tracking_changed(self.data_manager.tracking_task_id)
+            self.data_manager.tasks = dialog.result
             self.refresh_ui()
-
-    def load_tasks(self):
-        """从文件加载任务数据"""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data')
-        json_path = os.path.join(data_dir, 'tasks.json')
-
-        if not os.path.exists(json_path):
-            return
-
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            self.tasks = data.get('tasks', [])
-            self.completed_tasks = data.get('completed_tasks', [])
-            self.tracking_task_id = data.get('tracking_task_id', None)
-
-    def save_tasks(self):
-        """保存任务数据到文件"""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data')
-        os.makedirs(data_dir, exist_ok=True)
-        json_path = os.path.join(data_dir, 'tasks.json')
-
-        data = {
-            'tasks': self.tasks,
-            'completed_tasks': self.completed_tasks,
-            'tracking_task_id': self.tracking_task_id
-        }
-
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
 
     def _create_task_item(self, task, id_, is_tracking=False, is_completed=False):
         """
