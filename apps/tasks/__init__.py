@@ -176,6 +176,13 @@ class TaskDialog(BaseDialog):
         self.deadline_edit = QDateEdit()
         self.deadline_edit.setDisplayFormat('yyyy-MM-dd')
         self.deadline_edit.setCalendarPopup(True)
+
+        self.deadline_layout.addWidget(self.deadline_label)
+        self.deadline_layout.addStretch()
+        self.deadline_layout.addWidget(self.deadline_checkbox)
+        self.layout_.addLayout(self.deadline_layout)
+        self.layout_.addWidget(self.deadline_edit)
+
         self.deadline_edit.hide()
 
         if task:
@@ -190,14 +197,7 @@ class TaskDialog(BaseDialog):
         else:
             today = get_today()
             self.deadline_edit.setDate(QDate(today.year, today.month, today.day))
-
         self.deadline_checkbox.stateChanged.connect(self.on_deadline_checkbox_changed)
-
-        self.deadline_layout.addWidget(self.deadline_label)
-        self.deadline_layout.addStretch()
-        self.deadline_layout.addWidget(self.deadline_checkbox)
-        self.layout_.addLayout(self.deadline_layout)
-        self.layout_.addWidget(self.deadline_edit)
 
         # 链接（支持文件路径转换）
         self.link_label = QLabel('链接:')
