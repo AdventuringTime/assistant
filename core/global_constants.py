@@ -1,6 +1,3 @@
-import os
-
-
 app_name = "探索酱的小助手"
 icon_path = "assets/logo.ico"
 

@@ -1,7 +1,8 @@
-from core.base_window import BaseDialog
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
+from core.base_objects import BaseDialog
+from PySide6.QtWidgets import (QVBoxLayout, QHBoxLayout,
                               QPushButton, QMessageBox)
 from PySide6.QtCore import QTime
+from core.base_objects import DeleteButton
 from core.widgets import SettingItemWidget
 
 
@@ -59,9 +60,8 @@ class EditorWindow(BaseDialog):
         button_layout = QHBoxLayout()
 
         if not self.is_new:
-            self.delete_button = QPushButton("删除")
+            self.delete_button = DeleteButton("删除")
             self.delete_button.clicked.connect(self.delete)
-            self.delete_button.setStyleSheet("background-color: #ff6b6b; color: white;")
             button_layout.addWidget(self.delete_button)
 
         button_layout.addStretch()

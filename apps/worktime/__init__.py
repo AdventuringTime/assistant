@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout,
                                QPushButton, QDateEdit, QDateTimeEdit)
 from PySide6.QtCore import Qt, QDate, QDateTime
 
-from core.base_window import BaseWindow
+from core.base_objects import BaseWindow
 from core.functions import get_today
 from .editor import EditorWindow
 
@@ -40,7 +40,7 @@ class ItemWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet("""
             ItemWidget:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
             }
         """)
 
@@ -338,20 +338,6 @@ class WorktimeWindow(BaseWindow):
         self.backfill_button = QPushButton("补卡")
         self.backfill_button.setFixedSize(100, 30)
         self.backfill_button.clicked.connect(self.on_backfill_clicked)
-        self.backfill_button.setStyleSheet("""
-            QPushButton {
-                background-color: #0078D4;
-                color: white;
-                font-size: 14px;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #106EBE;
-            }
-            QPushButton:pressed {
-                background-color: #005A9E;
-            }
-        """)
         self.backfill_layout.addWidget(self.backfill_button)
 
         self.clock_layout.addWidget(self.backfill_widget, alignment=Qt.AlignCenter)

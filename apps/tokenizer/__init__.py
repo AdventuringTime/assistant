@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QTextEdit, QPushButton
 
-from core.base_window import BaseWindow
+from core.base_objects import BaseWindow
 from .deepseek_tokenizer import tokenize
 
 

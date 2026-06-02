@@ -1,10 +1,11 @@
 from datetime import datetime
 
-from core.base_window import BaseWindow
+from core.base_objects import BaseWindow
 from core.functions import get_today, block_signals
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                               QPushButton, QMessageBox)
 from PySide6.QtCore import QDateTime, QDate, QTime
+from core.base_objects import DeleteButton
 from core.widgets import SettingItemWidget
 
 
@@ -93,9 +94,8 @@ class ScheduleEditorWindow(BaseWindow):
         button_layout = QHBoxLayout()
 
         if not self.is_new_schedule:
-            self.delete_button = QPushButton("删除")
+            self.delete_button = DeleteButton("删除")
             self.delete_button.clicked.connect(self.delete_schedule)
-            self.delete_button.setStyleSheet("background-color: #ff6b6b; color: white;")
             button_layout.addWidget(self.delete_button)
 
         button_layout.addStretch()

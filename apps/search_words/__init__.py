@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 
-from core.base_window import BaseWindow
+from core.base_objects import BaseWindow, DeleteButton
 
 
 class SearchWordsWindow(BaseWindow):
@@ -46,19 +46,10 @@ class SearchWordsWindow(BaseWindow):
                 border-bottom: 1px solid #3D3D3D;
             }
             QListWidget::item:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QListWidget::item:selected {
-                background-color: rgba(255, 255, 255, 0.2);
-            }
-            QPushButton#deleteButton {
-                background-color: #D13438;
-            }
-            QPushButton#deleteButton:hover {
-                background-color: #C02B2F;
-            }
-            QPushButton#deleteButton:pressed {
-                background-color: #A8282C;
+                background-color: rgba(255, 255, 255, 0.1);
             }
         """)
 
@@ -87,8 +78,7 @@ class SearchWordsWindow(BaseWindow):
         self.rename_button.clicked.connect(self.on_rename_clicked)
         buttons_layout.addWidget(self.rename_button)
 
-        self.delete_button = QPushButton("删除")
-        self.delete_button.setObjectName("deleteButton")
+        self.delete_button = DeleteButton("删除")
         self.delete_button.clicked.connect(self.on_delete_clicked)
         buttons_layout.addWidget(self.delete_button)
 

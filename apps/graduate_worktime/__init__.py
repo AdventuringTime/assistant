@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 
-from core.base_window import BaseWindow
+from core.base_objects import BaseWindow, DeleteButton
 
 
 class GraduateWorktimeWindow(BaseWindow):
@@ -46,34 +46,16 @@ class GraduateWorktimeWindow(BaseWindow):
                 border-bottom: 1px solid #3D3D3D;
             }
             QTableWidget::item:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
             }
             QTableWidget::item:selected {
-                background-color: rgba(255, 255, 255, 0.2);
+                background-color: rgba(255, 255, 255, 0.1);
             }
             QHeaderView::section {
                 color: #CCCCCC;
                 padding: 8px;
                 border: none;
                 font-weight: bold;
-            }
-            QPushButton#clearButton {
-                background-color: #D13438;
-            }
-            QPushButton#clearButton:hover {
-                background-color: #C02B2F;
-            }
-            QPushButton#clearButton:pressed {
-                background-color: #A8282C;
-            }
-            QPushButton#deleteButton {
-                background-color: #D13438;
-            }
-            QPushButton#deleteButton:hover {
-                background-color: #C02B2F;
-            }
-            QPushButton#deleteButton:pressed {
-                background-color: #A8282C;
             }
         """)
 
@@ -93,8 +75,7 @@ class GraduateWorktimeWindow(BaseWindow):
 
         buttons_layout = QHBoxLayout()
 
-        self.clear_button = QPushButton("清空")
-        self.clear_button.setObjectName("clearButton")
+        self.clear_button = DeleteButton("清空")
         self.clear_button.clicked.connect(self.on_clear_clicked)
         buttons_layout.addWidget(self.clear_button)
 
@@ -104,8 +85,7 @@ class GraduateWorktimeWindow(BaseWindow):
 
         buttons_layout.addStretch()
 
-        self.delete_button = QPushButton("删除行")
-        self.delete_button.setObjectName("deleteButton")
+        self.delete_button = DeleteButton("删除行")
         self.delete_button.clicked.connect(self.on_delete_clicked)
         buttons_layout.addWidget(self.delete_button)
 

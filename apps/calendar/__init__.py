@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QLabel, QWidget, QHBoxLayout, QVBoxLayout,
                                QTextEdit, QMessageBox, QDialogButtonBox)
 from PySide6.QtCore import Qt, QDate, QEvent, QDateTime
 
-from core.base_window import BaseWindow
+from core.base_objects import BaseWindow
 from core.functions import get_today
 from .schedule_editor import ScheduleEditorWindow
 
@@ -103,7 +103,7 @@ class ScheduleItemWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet("""
             ScheduleItemWidget:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
             }
         """)
 

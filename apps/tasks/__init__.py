@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl, QDate
 from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtGui import QDesktopServices
 
-from core.base_window import BaseWindow, BaseDialog
+from core.base_objects import BaseWindow, BaseDialog, DeleteButton
 from core.functions import get_today
 
 
@@ -221,19 +221,7 @@ class TaskDialog(BaseDialog):
 
         # 编辑模式显示删除和保存副本按钮
         if task:
-            self.delete_button = QPushButton('删除')
-            self.delete_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #CC0000;
-                    color: #FFFFFF;
-                }
-                QPushButton:hover {
-                    background-color: #FF3333;
-                }
-                QPushButton:pressed {
-                    background-color: #990000;
-                }
-            """)
+            self.delete_button = DeleteButton('删除')
             self.delete_button.clicked.connect(self.on_delete)
             self.button_layout.addWidget(self.delete_button)
 
@@ -424,20 +412,8 @@ class TaskItem(QWidget):
         self.top_layout.addWidget(self.go_button)
 
         # 删除按钮（已完成任务显示）
-        self.delete_button = QPushButton('删除')
+        self.delete_button = DeleteButton('删除')
         self.delete_button.clicked.connect(self.delete_task)
-        self.delete_button.setStyleSheet("""
-            QPushButton {
-                background-color: #641A1A;
-                color: #FFFFFF;
-            }
-            QPushButton:hover {
-                background-color: #6B2020;
-            }
-            QPushButton:pressed {
-                background-color: #4A1515;
-            }
-        """)
         self.top_layout.addWidget(self.delete_button)
 
         # 编辑按钮

@@ -12,8 +12,7 @@ from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout,
 from PySide6.QtCore import Qt, QTimer, QThread, QObject
 from PySide6.QtGui import QAction
 
-from core.base_window import BaseWindow, WindowsManager
-from core.base_thread import ThreadManager, BaseThread
+from core.base_objects import BaseWindow, WindowsManager, ThreadManager, BaseThread
 from core.functions import get_today
 from core.global_constants import app_name
 from core.heartbeat import DynamicHeartbeat

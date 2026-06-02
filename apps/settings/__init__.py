@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QWidget, QHBoxLayout,
                               QListWidget, QListWidgetItem,
                               QScrollArea, QStackedWidget)
 
-from core.base_window import BaseWindow
+from core.base_objects import BaseWindow
 from core.widgets import SettingCategoryWidget
 
 

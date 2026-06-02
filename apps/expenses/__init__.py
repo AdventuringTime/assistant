@@ -12,7 +12,7 @@ from PySide6.QtGui import QDesktopServices, QPainter, QColor
 from PySide6.QtCharts import (QChart, QChartView, QLineSeries, QValueAxis,
                               QBarCategoryAxis)
 
-from core.base_window import BaseWindow, BaseDialog
+from core.base_objects import BaseWindow, BaseDialog, DeleteButton
 from core.functions import get_today, block_signals
 
 
@@ -239,9 +239,8 @@ class ConstantEditWindow(BaseWindow):
             value_edit.setValue(value)
             row_layout.addWidget(value_edit)
 
-            delete_button = QPushButton("删除")
+            delete_button = DeleteButton("🗑️")
             delete_button.setFixedWidth(24)
-            delete_button.setStyleSheet("QPushButton { background-color: #FF4D4D; color: #FFFFFF; } QPushButton:hover { background-color: #FF3333; } QPushButton:pressed { background-color: #FF2222; }")
             row_layout.addWidget(delete_button)
 
             # 预存 name，防止全部连接到最后一项
@@ -343,12 +342,23 @@ class ExpenseItemWidget(QWidget):
         self.rename_button.setFixedSize(24, 24)
         self.bottom_row.addWidget(self.rename_button)
 
-        self.delete_button = QPushButton("🗑️")
-        self.delete_button.setStyleSheet("padding: 0;")
+        self.delete_button = DeleteButton("🗑️")
+        self.delete_button.setStyleSheet("""
+            QPushButton {
+                background-color: #641A1A;
+                color: #FFFFFF;
+                padding: 0;
+            }
+            QPushButton:hover {
+                background-color: #6B2020;
+            }
+            QPushButton:pressed {
+                background-color: #4A1515;
+            }
+        """)
         self.delete_button.setToolTip("删除")
         self.delete_button.clicked.connect(self.delete)
         self.delete_button.setFixedSize(24, 24)
-        self.delete_button.setStyleSheet("QPushButton { background-color: #FF4D4D; color: #FFFFFF; } QPushButton:hover { background-color: #FF3333; } QPushButton:pressed { background-color: #FF2222; }")
         self.bottom_row.addWidget(self.delete_button)
 
         self.modify_budget_button = QPushButton("🎯")
@@ -513,11 +523,22 @@ class ExpenseTypeWidget(QWidget):
         bottom_row.addWidget(self.rename_button)
 
         self.delete_button = QPushButton("🗑️")
-        self.delete_button.setStyleSheet("padding: 0;")
+        self.delete_button.setStyleSheet("""
+            QPushButton {
+                background-color: #641A1A;
+                color: #FFFFFF;
+                padding: 0;
+            }
+            QPushButton:hover {
+                background-color: #6B2020;
+            }
+            QPushButton:pressed {
+                background-color: #4A1515;
+            }
+        """)
         self.delete_button.setToolTip("删除")
         self.delete_button.clicked.connect(self.delete)
         self.delete_button.setFixedSize(24, 24)
-        self.delete_button.setStyleSheet("QPushButton { background-color: #FF4D4F; color: #FFFFFF; }")
         bottom_row.addWidget(self.delete_button)
 
         self.add_item_button = QPushButton("➕")

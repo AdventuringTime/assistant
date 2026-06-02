@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QVBoxLayout, QTextEdit,
                                QLabel, QApplication)
 from PySide6.QtGui import QFont
 
-from core.base_window import BaseDialog
+from core.base_objects import BaseDialog
 
 
 class ErrorWindow(BaseDialog):

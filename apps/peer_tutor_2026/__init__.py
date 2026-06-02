@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer
 from PySide6.QtGui import QIcon
 
-from core.base_window import BaseWindow, BaseDialog
+from core.base_objects import BaseWindow, BaseDialog, DeleteButton
 from core.functions import get_this_week, get_today, block_signals
 import datetime
 from math import floor
@@ -178,8 +178,7 @@ class TaskDialog(BaseDialog):
         self.button_layout.addStretch()
 
         if task:
-            self.delete_button = QPushButton('删除')
-            self.delete_button.setStyleSheet("background-color: #CC0000; color: #FFFFFF;")
+            self.delete_button = DeleteButton('删除')
             self.delete_button.clicked.connect(self.on_delete)
             self.button_layout.addWidget(self.delete_button)
 
@@ -255,13 +254,6 @@ class TaskItem(QWidget):
         """
         super().__init__(parent)
         self.task = task
-
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet("""
-            TaskItem:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-            }
-        """)
 
         self.layout_ = QVBoxLayout(self)
 

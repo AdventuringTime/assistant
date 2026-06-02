@@ -612,7 +612,7 @@ class CollapsibleContainerWidget(QWidget):
         self.title_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.title_widget.setStyleSheet("""
             CollapsibleTitleWidget:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
             }
         """)
 
@@ -729,7 +729,7 @@ class NotificationItemWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet("""
             NotificationItemWidget:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
             }
         """)
 
@@ -812,7 +812,7 @@ class NotificationItemWidget(QWidget):
                     background-color: transparent;
                 }
                 QPushButton:hover {
-                    background-color: rgba(255, 255, 255, 0.1);
+                    background-color: rgba(255, 255, 255, 0.05);
                 }
             """)
             self.status_button.setToolTip("标记未读")
@@ -1263,7 +1263,7 @@ class AppItemWidget(QWidget):
                 border-radius: 10px;
             }
             AppItemWidget:hover {
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.05);
             }
         """)
 

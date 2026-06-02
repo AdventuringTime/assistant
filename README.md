@@ -6,7 +6,7 @@
 
 ```
 ├── core/                    # 核心模块
-│   ├── base_window.py       # 基础窗口类
+│   ├── base_objects.py      # 基础对象类
 │   ├── error_window.py      # 错误处理窗口
 │   ├── heartbeat.py         # 定时任务支持
 │   ├── widgets.py           # 通用组件
