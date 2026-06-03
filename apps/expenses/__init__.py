@@ -308,7 +308,6 @@ class ExpenseItemWidget(QWidget):
         super().__init__(parent)
         self.item_data = item_data
         self.constants = constants
-        self.recording = False
 
         self.main_layout = QVBoxLayout(self)
 
@@ -371,7 +370,7 @@ class ExpenseItemWidget(QWidget):
         self.record_button = QPushButton("📝")
         self.record_button.setStyleSheet("padding: 0;")
         self.record_button.setToolTip("记账")
-        self.record_button.clicked.connect(self.toggle_record)
+        self.record_button.clicked.connect(self.record)
         self.record_button.setFixedSize(24, 24)
         self.bottom_row.addWidget(self.record_button)
 
@@ -426,36 +425,13 @@ class ExpenseItemWidget(QWidget):
             self.update_progress()
             self.window().record_widget.mark_modified_and_reload()
 
-    def toggle_record(self):
-        """切换记账输入状态，显示/隐藏金额输入框"""
-        if not self.recording:
-            self.recording = True
-            self.record_input = QDoubleSpinBox()
-            self.record_input.setRange(-1e18, 1e18)
-            self.record_input.setDecimals(2)
-
-            index = self.bottom_row.count() - 1
-            self.bottom_row.insertWidget(index, self.record_input)
-            self.record_button.setText("✅")
-            self.record_button.setToolTip("确认")
-
-            self.record_input.returnPressed.connect(self.toggle_record)
-            self.record_input.setFocus()
-            self.record_input.selectAll()
-        else:
-            amount = self.record_input.value()
-            if amount != 0:
-                self.item_data['actual_amount'] = self.item_data.get('actual_amount', 0) + amount
-                self.actual_label.setText(f"{self.item_data['actual_amount']:.2f}")
-                self.update_progress()
-                self.window().record_widget.mark_modified_and_reload()
-
-            self.bottom_row.removeWidget(self.record_input)
-            self.record_input.deleteLater()
-            self.record_input = None
-            self.recording = False
-            self.record_button.setText("📝")
-            self.record_button.setToolTip("记账")
+    def record(self):
+        """记账，使实际消费增加指定金额"""
+        amount, ok = QInputDialog.getDouble(self, "记账", f"记账:", value=0, decimals=2)
+        if ok and amount != 0:
+            self.item_data['actual_amount'] = round(self.item_data['actual_amount'] + amount, 2)
+            self.update_progress()
+            self.window().record_widget.mark_modified_and_reload()
 
 
 class ExpenseTypeWidget(QWidget):
