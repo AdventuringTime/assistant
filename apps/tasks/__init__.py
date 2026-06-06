@@ -485,22 +485,15 @@ class TaskItem(QWidget):
 
     def update_style(self):
         """根据追踪状态更新样式"""
-        r, g, b = _hex_to_rgb(self.current_color)
         if self.is_tracking:
+            r, g, b = _hex_to_rgb(self.current_color)
             self.setStyleSheet(f"""
                 TaskItem {{
-                    background-color: rgba({r}, {g}, {b}, 0.15);
-                }}
-                TaskItem:hover {{
-                    background-color: rgba({r}, {g}, {b}, 0.22);
+                    background-color: rgba({r}, {g}, {b}, 0.25);
                 }}
             """)
         else:
-            self.setStyleSheet(f"""
-                TaskItem:hover {{
-                    background-color: rgba({r}, {g}, {b}, 0.08);
-                }}
-            """)
+            self.setStyleSheet("")
 
     def update_buttons_visibility(self):
         """更新按钮可见性"""
