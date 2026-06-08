@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 import webbrowser
-from homepage.widgets import notification_system
+from homepage.widgets import NotificationSystemWidget
 
 from core.functions import is_first_run_today
 
@@ -144,7 +144,7 @@ def check_news_update():
         for news_id, news_title, news_link in current_news_list[:CHECK_THRESHOLD]:
             if news_id not in set(stored_ids):
                 # 找到所有未记载的ID，推送系统通知
-                notification_system.notify(
+                NotificationSystemWidget().notify(
                     title=name + "更新",
                     content=news_title,
                     click_action={"type": "open_url", "value": url}  # 打开主界面
@@ -185,7 +185,7 @@ def save_current_ids():
 if is_first_run_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
     # 每天第一次运行时，打开所有目标网页
     for url, name in TARGETS:
-        notification_system.notify(
+        NotificationSystemWidget().notify(
             title=name,
             content="检查一下哦",
             click_action={"type": "open_url", "value": url} # 打开主界面

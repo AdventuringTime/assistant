@@ -914,8 +914,15 @@ class NotificationItemWidget(QWidget):
 class NotificationSystemWidget(CollapsibleContainerWidget):
     """通知系统部件，管理多个通知项，支持线程安全的通知添加"""
 
+    _instance = None
+
     # 定义信号，用于线程安全的通知添加
     _notifying = Signal(str, str, object, str, bool)
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
 
     def __init__(self, parent=None):
         """
@@ -1221,8 +1228,6 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
 
         # 更新未读计数
         self.update_unread_count()
-
-notification_system = NotificationSystemWidget()
 
 
 class AppItemWidget(QWidget):

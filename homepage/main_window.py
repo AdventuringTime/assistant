@@ -16,7 +16,7 @@ from core.base_objects import BaseWindow, WindowsManager, ThreadManager, BaseThr
 from core.functions import get_today
 from core.global_constants import app_name
 from core.heartbeat import DynamicHeartbeat
-from homepage.widgets import top_status, app_entry, notification_system
+from homepage.widgets import top_status, app_entry, NotificationSystemWidget
 
 
 class MainWindow(BaseWindow):
@@ -120,7 +120,7 @@ class MainWindow(BaseWindow):
         if self.test_button:
             self.test_button.clicked.connect(self.test_function)
 
-        self.notification_system = notification_system
+        self.notification_system = NotificationSystemWidget()
         self.app_entry_widget = app_entry
         self.content_widgets = [
             self.top_status_widget,
@@ -146,11 +146,6 @@ class MainWindow(BaseWindow):
     def init_auto_start(self):
         """
         初始化自启动模块
-
-        启动以下三个模块：
-        1. news_monitor - 定期检查研究生院新闻更新的心跳器
-        2. daily_year - 每天第一次运行时推送年度事记通知
-        3. calendar_repeat_schedules - 初始化日历重复事件（从上次更新到今天）
         """
         self.auto_start = {}
 

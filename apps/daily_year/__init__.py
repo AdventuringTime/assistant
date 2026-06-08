@@ -1,7 +1,7 @@
 from datetime import date
 import os
 
-from homepage.widgets import notification_system
+from homepage.widgets import NotificationSystemWidget
 from core.functions import is_first_run_today
 
 # 百度百科年度事记URL模板
@@ -29,7 +29,7 @@ def get_timedelta(today=None, target_day=None):
 # 每天第一次运行时，推送年度事记通知
 if is_first_run_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
     year = get_timedelta()
-    notification_system.notify(
+    NotificationSystemWidget().notify(
         title="每日年度事记",
         content="今天带来的是{}年哦".format(year),
         click_action={"type": "open_url", "value": base_url_format.format(year=year)}
