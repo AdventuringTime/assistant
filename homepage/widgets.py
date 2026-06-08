@@ -3,11 +3,11 @@ import json
 import numpy as np
 import os
 from PySide6.QtCore import QRectF, Qt, Signal, QThread
-from PySide6.QtGui import QPainter, QPen, QBrush, QColor, QPixmap, QIcon, QFontMetrics
+from PySide6.QtGui import (QPainter, QPen, QBrush, QColor, QPixmap, QIcon,
+                           QDesktopServices)
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QPushButton, QApplication)
-import webbrowser
 from winotify import Notification
 
 from core.functions import get_today, get_this_week
@@ -15,6 +15,20 @@ from core.global_constants import app_name
 from core.heartbeat import Heartbeat
 from core.user_interface import QFlowLayout
 from apps import APP_LIST
+
+
+def open_app(app_name):
+    """
+    打开指定应用对应的窗口
+
+    Raises:
+        TypeError: 如果应用未定义或没有窗口函数
+    """
+    app_info = APP_LIST.get(app_name)
+    if app_info and "window" in app_info:
+        app_info["window"]().show()
+    else:
+        raise TypeError(f"应用 {app_name} 未定义或没有窗口函数")
 
 
 class ClockWidget(QWidget):
@@ -855,13 +869,13 @@ class NotificationItemWidget(QWidget):
             if self.click_action:
                 if self.click_action["type"] == "open_url":
                     url = self.click_action["value"]
-                    webbrowser.open(url)
+                    QDesktopServices.openUrl(url)
                 elif self.click_action["type"] == "open_file":
                     file_path = self.click_action["value"]
                     os.startfile(file_path)
                 elif self.click_action["type"] == "open_app":
                     app_name = self.click_action["value"]
-                    exec(f"import {app_name}")
+                    open_app(app_name)
                 else:
                     raise ValueError(f"未知点击操作类型: {self.click_action['type']}")
         self.mark_as_read()
@@ -915,6 +929,7 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
     """通知系统部件，管理多个通知项，支持线程安全的通知添加"""
 
     _instance = None
+    _initialized = False
 
     # 定义信号，用于线程安全的通知添加
     _notifying = Signal(str, str, object, str, bool)
@@ -931,6 +946,9 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         Parameters:
             parent (QWidget, optional): 父组件，默认为None
         """
+        if self._initialized:
+            return
+
         super().__init__("通知", True, parent)  # 默认展开状态
         self.notifications = []
 
@@ -958,6 +976,8 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
 
         # 加载保存的通知
         self.load_notifications()
+
+        self._initialized = True
 
     def add_unread_count_label(self):
         """添加未读消息计数标签到标题栏"""
@@ -1010,11 +1030,11 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         添加新通知（线程安全版本）
 
         Parameters:
-            title (str): 通知标题，默认为"来自助手的通知"
-            content (str): 通知内容，默认为"助手没收到更多内容哦"
-            click_action (dict, optional): 点击操作配置
-            icon_path (str): 图标路径，默认为空
-            is_read (bool): 是否已读，默认为False
+            title (str, optional): 通知标题，默认为"来自助手的通知"
+            content (str, optional): 通知内容，默认为"助手没收到更多内容哦"
+            click_action (dict, optional): 点击操作，格式为{"type": "open_url|open_file|open_app", "value": ...}
+            icon_path (str, optional): 图标路径，默认为空
+            is_read (bool, optional): 是否已读，默认为False
 
         Returns:
             NotificationItemWidget: 创建的通知项部件
@@ -1037,11 +1057,11 @@ class NotificationSystemWidget(CollapsibleContainerWidget):
         线程安全的通知添加方法（在主线程中执行）
 
         Parameters:
-            title (str): 通知标题，默认为"来自助手的通知"
-            content (str): 通知内容，默认为"助手没收到更多内容哦"
-            click_action (dict, optional): 点击操作配置
-            icon_path (str): 图标路径，默认为空
-            is_read (bool): 是否已读，默认为False
+            title (str, optional): 通知标题，默认为"来自助手的通知"
+            content (str, optional): 通知内容，默认为"助手没收到更多内容哦"
+            click_action (dict, optional): 点击操作，格式为{"type": "open_url|open_file|open_app", "value": ...}
+            icon_path (str, optional): 图标路径，默认为空
+            is_read (bool, optional): 是否已读，默认为False
 
         Returns:
             NotificationItemWidget: 创建的通知项部件
@@ -1342,12 +1362,7 @@ class AppItemWidget(QWidget):
         Raises:
             TypeError: 如果应用未定义或没有窗口函数
         """
-        app_info = APP_LIST.get(self.app_name)
-        if app_info and "window" in app_info:
-            app_info["window"]().show()
-        else:
-            raise TypeError(f"应用 {self.app_name} 未定义或没有窗口函数")
-
+        open_app(self.app_name)
 
 class AppEntryWidget(CollapsibleContainerWidget):
     """应用入口部件，支持折叠/展开显示应用图标，使用流式布局自动换行"""

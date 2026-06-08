@@ -26,6 +26,8 @@ class MainWindow(BaseWindow):
         """初始化主窗口，包括系统托盘、自启动程序和窗口内容"""
         super().__init__()
 
+        self.auto_start = {}
+
         # 设置窗口标题
         self.setWindowTitle(app_name)
 
@@ -147,7 +149,11 @@ class MainWindow(BaseWindow):
         """
         初始化自启动模块
         """
-        self.auto_start = {}
+
+        # scheduled_notifications - 定时通知
+        from homepage import scheduled_notifications
+        scheduled_notifications.start()
+        self.auto_start["scheduled_notifications"] = scheduled_notifications
 
         # news_monitor - 新闻监控心跳器，定期检查新闻更新
         if os.path.exists("apps/news_monitor/data/settings.json"):
