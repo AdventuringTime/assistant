@@ -218,7 +218,7 @@ class ClockWidget(QWidget):
                      radius * 2, radius * 2)
 
         # 先绘制灰色背景圆环
-        bg_pen = QPen(QColor(128, 128, 128, 128))
+        bg_pen = QPen(QColor(128, 128, 128, 32))
         bg_pen.setWidth(self.ring_width)
         bg_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(bg_pen)
@@ -253,7 +253,7 @@ class ClockWidget(QWidget):
                      radius * 2, radius * 2)
 
         # 先绘制灰色背景圆环
-        bg_pen = QPen(QColor(128, 128, 128, 128))
+        bg_pen = QPen(QColor(128, 128, 128, 32))
         bg_pen.setWidth(self.ring_width)
         bg_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(bg_pen)
@@ -288,7 +288,7 @@ class ClockWidget(QWidget):
                      radius * 2, radius * 2)
 
         # 绘制灰色背景圆环
-        bg_pen = QPen(QColor(128, 128, 128, 128))
+        bg_pen = QPen(QColor(128, 128, 128, 32))
         bg_pen.setWidth(self.ring_width)
         bg_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
         painter.setPen(bg_pen)
