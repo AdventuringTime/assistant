@@ -16,6 +16,7 @@ from core.base_objects import BaseWindow, WindowsManager, ThreadManager, BaseThr
 from core.functions import get_today
 from core.global_constants import app_name
 from core.heartbeat import DynamicHeartbeat
+from core.settings_loader import get_setting_value
 from homepage.widgets import top_status, app_entry, NotificationSystemWidget
 
 
@@ -155,24 +156,24 @@ class MainWindow(BaseWindow):
         scheduled_notifications.start()
         self.auto_start["scheduled_notifications"] = scheduled_notifications
 
+        # 加载设置数据
+        startup_settings = get_setting_value("startup")
+
         # news_monitor - 新闻监控心跳器，定期检查新闻更新
-        if os.path.exists("apps/news_monitor/data/settings.json"):
-            with open("apps/news_monitor/data/settings.json", "r") as f:
-                news_monitor_settings = json.load(f)
-            if news_monitor_settings["activated"]:
-                from apps import news_monitor
-                self.news_monitor_worker = DynamicHeartbeat(news_monitor.check_news_update, news_monitor_settings["interval"])
-                self.news_monitor_thread = BaseThread(self.news_monitor_worker)
-                self.news_monitor_thread.start()
-                self.auto_start["news_monitor"] = self.news_monitor_thread
+        news_monitor_settings = startup_settings.get("news_monitor", {})
+        if news_monitor_settings.get("activated", False):
+            from apps import news_monitor
+            interval = news_monitor_settings.get("interval", 1800)
+            self.news_monitor_worker = DynamicHeartbeat(news_monitor.check_news_update, interval)
+            self.news_monitor_thread = BaseThread(self.news_monitor_worker)
+            self.news_monitor_thread.start()
+            self.auto_start["news_monitor"] = self.news_monitor_thread
 
         # daily_year - 每日年度事记，导入时自动推送当天年度事记通知
-        if os.path.exists("apps/daily_year/data/settings.json"):
-            with open("apps/daily_year/data/settings.json", "r") as f:
-                daily_year_settings = json.load(f)
-            if daily_year_settings["activated"]:
-                from apps import daily_year
-                self.auto_start["daily_year"] = daily_year
+        daily_year_settings = startup_settings.get("daily_year", {})
+        if daily_year_settings.get("activated", False):
+            from apps import daily_year
+            self.auto_start["daily_year"] = daily_year
 
         # calendar_repeat_schedules - 日历重复事件管理器，初始化历史重复事件
         from apps.calendar import CalendarSchedulesManager

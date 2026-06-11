@@ -6,6 +6,8 @@ from glom import glom, Assign
 import json
 import os
 
+from core.settings_loader import load_settings, save_settings
+
 
 class SettingItemWidget(QWidget):
     """通用设置项编辑组件，支持多种输入类型"""
@@ -252,17 +254,13 @@ class SettingItemWidget_Config(SettingItemWidget):
         从配置文件中获取字段的当前值
 
         Parameters:
-            field (dict): 字段配置信息，包含"path"(文件路径)、"json_path"(JSON路径)、"default"(默认值)
+            field (dict): 字段配置信息，包含"json_path"(JSON路径)、"default"(默认值)
 
         Returns:
             字段当前值，如果文件不存在则返回默认值
         """
-        file_path = field["path"]
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            return self.get_json_value(data, field["json_path"])
-        return field.get("default")
+        data = load_settings()
+        return self.get_json_value(data, field["json_path"]) if data else field.get("default")
 
     def save_field_value(self, field, value):
         """
@@ -272,15 +270,8 @@ class SettingItemWidget_Config(SettingItemWidget):
             field (dict): 字段配置信息
             value: 要保存的值
         """
-        file_path = field["path"]
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
         # 读取现有数据
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-        else:
-            data = {}
+        data = load_settings()
 
         # 处理布尔值（Qt的QCheckBox stateChanged信号返回0/1/2，对应False/None/True）
         if field["type"] == "bool":
@@ -291,8 +282,7 @@ class SettingItemWidget_Config(SettingItemWidget):
         data = self.set_json_value(data, field["json_path"], value)
 
         # 保存文件
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+        save_settings(data)
 
     def on_setting_changed(self, field, value):
         """

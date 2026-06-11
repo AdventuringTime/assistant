@@ -8,15 +8,13 @@
                     {
                         "label": "时期",
                         "type": "text",
-                        "path": "data/homepage/PeriodSeason.json",
-                        "json_path": "period",
+                        "json_path": "homepage.period_season.period",
                         "default": "萌镇"
                     },
                     {
                         "label": "季节",
                         "type": "text",
-                        "path": "data/homepage/PeriodSeason.json",
-                        "json_path": "season",
+                        "json_path": "homepage.period_season.season",
                         "default": "樱绽"
                     }
                 ]
@@ -27,16 +25,8 @@
                     {
                         "label": "用户版本",
                         "type": "text",
-                        "path": "data/homepage/Version.json",
-                        "json_path": "user_version",
+                        "json_path": "homepage.version.user_version",
                         "default": "5.1.0"
-                    },
-                    {
-                        "label": "系统版本",
-                        "type": "text",
-                        "path": "assets/version.json",
-                        "json_path": "",
-                        "default": "0.0.0"
                     }
                 ]
             ]
@@ -51,15 +41,13 @@
                     {
                         "label": "激活",
                         "type": "bool",
-                        "path": "apps/news_monitor/data/settings.json",
-                        "json_path": "activated",
+                        "json_path": "startup.news_monitor.activated",
                         "default": false
                     },
                     {
                         "label": "检查间隔（秒）",
                         "type": "int",
-                        "path": "apps/news_monitor/data/settings.json",
-                        "json_path": "interval",
+                        "json_path": "startup.news_monitor.interval",
                         "min": 1,
                         "max": 2147483647,
                         "default": 1800
@@ -67,8 +55,7 @@
                     {
                         "label": "网络异常时重试间隔（秒）",
                         "type": "int",
-                        "path": "apps/news_monitor/data/settings.json",
-                        "json_path": "disconnect_delay",
+                        "json_path": "startup.news_monitor.disconnect_delay",
                         "min": 1,
                         "max": 2147483647,
                         "default": 300
@@ -81,8 +68,7 @@
                     {
                         "label": "激活",
                         "type": "bool",
-                        "path": "apps/daily_year/data/settings.json",
-                        "json_path": "activated",
+                        "json_path": "startup.daily_year.activated",
                         "default": false
                     }
                 ]

@@ -14,6 +14,7 @@ from core.functions import get_today, get_this_week
 from core.global_constants import app_name
 from core.heartbeat import Heartbeat
 from core.user_interface import QFlowLayout
+from core.settings_loader import get_setting_value
 from apps import APP_LIST
 
 
@@ -392,35 +393,11 @@ class PeriodSeasonLabel(QLabel):
         如果文件不存在、损坏或读取失败，使用默认值("原初期 夏季")并尝试创建文件。
         """
 
-        # 构建文件路径
-        json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                'data', 'homepage', 'PeriodSeason.json')
+        # 从统一设置文件读取时期和季节数据
+        period = get_setting_value("homepage.period_season.period", "原初")
+        season = get_setting_value("homepage.period_season.season", "夏")
 
-        # 尝试读取并解析JSON文件
-        try:
-            with open(json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            # 获取时期和季节数据
-            period = data['period']
-            season = data['season']
-
-        except (FileNotFoundError, json.JSONDecodeError, IOError, KeyError, TypeError):
-            # 如果文件不存在、损坏、读取失败或数据格式错误，尝试创建目录并写入默认数据
-            default_data = {
-                "period": "原初",
-                "season": "夏"
-            }
-            period = "原初"
-            season = "夏"
-            try:
-                os.makedirs(os.path.dirname(json_path), exist_ok=True)
-                with open(json_path, 'w', encoding='utf-8') as f:
-                    json.dump(default_data, f, ensure_ascii=False, indent=4)
-            except IOError:
-                pass  # 如果无法写入，继续使用默认数据
-
-        # 设置显示文本（无论是否发生异常都会执行）
+        # 设置显示文本
         display_text = f"{period}期 {season}季"
         self.setText(display_text)
 
@@ -441,19 +418,12 @@ class VersionLabel(QLabel):
 
     def _read_user_version(self):
         """
-        从 data/homepage/Version.json 读取 user_version
+        从统一设置文件读取 user_version
 
         Returns:
             str: user_version 值，如果读取失败返回"未知"
         """
-        json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                'data', 'homepage', 'Version.json')
-        try:
-            with open(json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            return data.get('user_version', '未知')
-        except (FileNotFoundError, json.JSONDecodeError, IOError, KeyError, TypeError):
-            return '未知'
+        return get_setting_value("homepage.version.user_version", "未知")
 
     def _read_app_version(self):
         """
