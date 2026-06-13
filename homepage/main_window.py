@@ -16,7 +16,7 @@ from core.base_objects import BaseWindow, WindowsManager, ThreadManager, BaseThr
 from core.functions import get_today
 from core.global_constants import app_name
 from core.heartbeat import DynamicHeartbeat
-from core.settings_loader import get_setting_value
+from core.settings_manager import SettingsManager
 from homepage.widgets import top_status, app_entry, NotificationSystemWidget
 
 
@@ -157,7 +157,7 @@ class MainWindow(BaseWindow):
         self.auto_start["scheduled_notifications"] = scheduled_notifications
 
         # 加载设置数据
-        startup_settings = get_setting_value("startup")
+        startup_settings = SettingsManager().get_value("startup", {})
 
         # news_monitor - 新闻监控心跳器，定期检查新闻更新
         news_monitor_settings = startup_settings.get("news_monitor", {})

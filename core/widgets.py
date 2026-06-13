@@ -6,7 +6,7 @@ from glom import glom, Assign
 import json
 import os
 
-from core.settings_loader import load_settings, save_settings
+from core.settings_manager import SettingsManager
 
 
 class SettingItemWidget(QWidget):
@@ -206,83 +206,32 @@ class SettingItemWidget_Config(SettingItemWidget):
         else:
             raise ValueError(f"未知字段类型: {field_type}")
 
-    def get_json_value(self, data, json_path):
-        """
-        使用glom根据JSON路径从数据中获取值
-
-        Parameters:
-            data (dict): 要查询的JSON数据
-            json_path (str): glom支持的JSON路径表达式。若为空，则将数据原样返回。
-
-        Returns:
-            路径对应的值
-        """
-        if json_path:
-            return glom(data, json_path)
-        else:
-            return data
-
-    def set_json_value(self, data, json_path, value):
-        """
-        使用glom根据JSON路径设置值
-
-        Parameters:
-            data: 要修改的JSON数据
-            json_path (str): glom支持的JSON路径表达式
-            value: 要设置的值
-
-        Returns:
-            data: 修改后的JSON数据或设置的值
-
-        Examples:
-        ```
-            data = {"user": {"name": "Alice", "age": 30}}
-            self.set_json_value(data, "user.age", 31)
-            # data 现在为 {"user": {"name": "Alice", "age": 31}}
-            self.set_json_value(data, "user.phone", "123-456-7890")
-            # data 现在为 {"user": {"name": "Alice", "age": 31}, "phone": "123-456-7890"}
-        ```
-        """
-        if json_path:
-            glom(data, Assign(json_path, value))
-            return data
-        else:
-            return value
-
     def get_field_value(self, field):
         """
-        从配置文件中获取字段的当前值
+        从设置管理器的内存数据中获取字段的当前值
 
         Parameters:
             field (dict): 字段配置信息，包含"json_path"(JSON路径)、"default"(默认值)
 
         Returns:
-            字段当前值，如果文件不存在则返回默认值
+            字段当前值，如果路径不存在则返回默认值
         """
-        data = load_settings()
-        return self.get_json_value(data, field["json_path"]) if data else field.get("default")
+        return SettingsManager().get_value(field["json_path"], field.get("default"))
 
     def save_field_value(self, field, value):
         """
-        将字段值保存到对应的配置文件
+        将字段值保存到设置管理器的内存数据并持久化
 
         Parameters:
             field (dict): 字段配置信息
             value: 要保存的值
         """
-        # 读取现有数据
-        data = load_settings()
-
         # 处理布尔值（Qt的QCheckBox stateChanged信号返回0/1/2，对应False/None/True）
         if field["type"] == "bool":
             bool_map = {0: False, 1: None, 2: True}
             value = bool_map.get(value, value)
 
-        # 更新数据
-        data = self.set_json_value(data, field["json_path"], value)
-
-        # 保存文件
-        save_settings(data)
+        SettingsManager().set_value(field["json_path"], value)
 
     def on_setting_changed(self, field, value):
         """

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QWidget, QHBoxLayout,
 
 from core.base_objects import BaseWindow
 from core.widgets import SettingCategoryWidget
+from core.settings_manager import SettingsManager
 
 
 class SettingsWindow(BaseWindow):
@@ -98,3 +99,14 @@ class SettingsWindow(BaseWindow):
         """
         if row >= 0:
             self.stacked_widget.setCurrentIndex(row)
+
+    def closeEvent(self, event):
+        """
+        关闭事件处理
+
+        Parameters:
+            event (QCloseEvent): 关闭事件对象
+        """
+        # 保存当前设置
+        SettingsManager().save()
+        super().closeEvent(event)

@@ -14,7 +14,7 @@ from core.functions import get_today, get_this_week
 from core.global_constants import app_name
 from core.heartbeat import Heartbeat
 from core.user_interface import QFlowLayout
-from core.settings_loader import get_setting_value
+from core.settings_manager import SettingsManager
 from apps import APP_LIST
 
 
@@ -388,14 +388,12 @@ class PeriodSeasonLabel(QLabel):
 
     def load_data(self):
         """
-        从JSON文件加载时期和季节数据并更新显示
-
-        如果文件不存在、损坏或读取失败，使用默认值("原初期 夏季")并尝试创建文件。
+        加载时期和季节数据并更新显示。默认值为"原初期 夏季"。
         """
 
-        # 从统一设置文件读取时期和季节数据
-        period = get_setting_value("homepage.period_season.period", "原初")
-        season = get_setting_value("homepage.period_season.season", "夏")
+        # 读取时期和季节数据
+        period = SettingsManager().get_value("homepage.period_season.period", "原初")
+        season = SettingsManager().get_value("homepage.period_season.season", "夏")
 
         # 设置显示文本
         display_text = f"{period}期 {season}季"
@@ -418,12 +416,12 @@ class VersionLabel(QLabel):
 
     def _read_user_version(self):
         """
-        从统一设置文件读取 user_version
+        读取 user_version
 
         Returns:
             str: user_version 值，如果读取失败返回"未知"
         """
-        return get_setting_value("homepage.version.user_version", "未知")
+        return SettingsManager().get_value("homepage.version.user_version", "未知")
 
     def _read_app_version(self):
         """
