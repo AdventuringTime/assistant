@@ -8,6 +8,7 @@ import webbrowser
 from homepage.widgets import NotificationSystemWidget
 
 from core.functions import is_first_run_today
+from core.settings_manager import SettingsManager
 
 
 # -------------------------- 配置参数 --------------------------
@@ -17,8 +18,7 @@ TARGETS = [
     ("https://gradschool.ustc.edu.cn/column/9", "研究生院公告通知")
 ]
 # 2. 检查间隔时间
-with open("apps/news_monitor/data/settings.json", "r") as f:
-    news_monitor_settings = json.load(f)
+news_monitor_settings = SettingsManager().get_value("startup.news_monitor")
 CHECK_INTERVAL = news_monitor_settings["interval"]
 DISCONNECT_DELAY = news_monitor_settings["disconnect_delay"]
 # 3. 存储文件路径
