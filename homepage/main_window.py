@@ -5,15 +5,11 @@
 - content_widgets：要在主窗口显示的内容部件列表。
 """
 
-import json
-import os
-
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout, QWidget, QScrollArea
-from PySide6.QtCore import Qt, QTimer, QThread, QObject
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
 from core.base_objects import BaseWindow, WindowsManager, ThreadManager, BaseThread
-from core.functions import get_today
 from core.global_constants import app_name
 from core.heartbeat import DynamicHeartbeat
 from core.settings_manager import SettingsManager
@@ -174,13 +170,6 @@ class MainWindow(BaseWindow):
         if daily_year_settings.get("activated", False):
             from apps import daily_year
             self.auto_start["daily_year"] = daily_year
-
-        # calendar_repeat_schedules - 日历重复事件管理器，初始化历史重复事件
-        from apps.calendar import CalendarSchedulesManager
-        manager = CalendarSchedulesManager()
-        manager.init_repeat_events_until_today(get_today())
-        top_status.update_time_display(force_update_calendar=True)
-        self.auto_start["calendar_repeat_schedules"] = manager
 
     def quit_(self):
         """退出应用程序，关闭所有窗口"""

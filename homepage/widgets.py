@@ -15,6 +15,7 @@ from core.global_constants import app_name
 from core.heartbeat import Heartbeat
 from core.user_interface import QFlowLayout
 from core.settings_manager import SettingsManager
+from apps.calendar.calendar_schedule_manager import CalendarSchedulesManager
 from apps import APP_LIST
 
 
@@ -63,21 +64,18 @@ class ClockWidget(QWidget):
             QColor(100, 255, 100, 128)   # 课程 - 绿色
         ]
 
-    def calculate_progress(self, weeks_collapsed, force_update_calendar=False):
+    def calculate_progress(self, weeks_collapsed):
         """
         计算三个环的进度值
 
         Parameters:
             weeks_collapsed (int): 已过周数
-            force_update_calendar (bool, optional): 是否强制更新日历数据，默认False
         """
         current_time = datetime.datetime.now()
         current_day = get_today(current_time)
 
-        # 检查日期是否改变，如果改变则重新加载日历数据
-        if force_update_calendar or self.current_day != current_day:
-            self.current_day = current_day
-            self.load_calendar_data()
+        self.current_day = current_day
+        self.load_calendar_data()
 
         # 计算内环：周次进度条（蓝色）
         total_weeks = 300
@@ -101,22 +99,14 @@ class ClockWidget(QWidget):
         """
         加载当天的日历数据并计算事件圆弧位置
 
-        从 apps/calendar/data/年/月/日.json 文件加载日历事件数据，
+        通过 CalendarSchedulesManager 加载日历事件数据，
         然后计算每个事件在外环上对应的圆弧位置。
         """
-
-        # 构建日历数据文件路径
         year = self.current_day.year
         month = self.current_day.month
         day = self.current_day.day
 
-        calendar_file = os.path.join("apps", "calendar", "data", str(year), str(month), f"{day}.json")
-
-        if os.path.exists(calendar_file):
-            with open(calendar_file, 'r', encoding='utf-8') as f:
-                self.calendar_data = json.load(f)
-        else:
-            self.calendar_data = {}
+        self.calendar_data = CalendarSchedulesManager().get_schedules(year, month, day)
 
         # 计算每个事件的圆弧起终点
         self.calculate_event_arcs()
@@ -510,30 +500,20 @@ class TopStatusWidget(QWidget):
         main_layout.addLayout(right_layout, 1)
 
         # 定期更新显示（每5分钟自动更新）
-        self.updater = Heartbeat(self.update_time_display, interval=300, immediate=False)
+        self.updater = Heartbeat(self.update_display, interval=300)
         self.updater.start()
-        self.update_display()  # 初始化时加载时期季节等数据
 
     def update_weeks_collapsed(self):
         """更新自身存储的周次进度"""
         # 获取当前周数进度
         self.weeks_collapsed = get_this_week()
 
-    def update_time_display(self, force_update_calendar=False):
-        """
-        更新时间显示
-
-        Parameters:
-            force_update_calendar (bool, optional): 是否强制更新日历数据，默认False
-        """
-        self.update_weeks_collapsed()
-        self.clock_widget.calculate_progress(self.weeks_collapsed, force_update_calendar)
-        self.clock_widget.update()
-        self.date_week_label.update_display(self.weeks_collapsed)
-
     def update_display(self):
         """更新所有显示内容，包括时间、时期季节和版本信息"""
-        self.update_time_display(force_update_calendar=True)
+        self.update_weeks_collapsed()
+        self.clock_widget.calculate_progress(self.weeks_collapsed)
+        self.clock_widget.update()
+        self.date_week_label.update_display(self.weeks_collapsed)
         self.period_season_label.load_data()
         self.version_label.load_data()
 
