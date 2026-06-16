@@ -14,6 +14,75 @@ from .editor import EditorWindow
 
 data_dir = "apps/worktime/data"
 
+
+class WorktimeDataManager:
+    """工作时间数据管理器（单例），负责缓存所有月份的工作时间记录，关闭窗口时统一保存修改"""
+
+    _instance = None
+    _initialized = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        # 缓存结构：{year: {month: {day_str: [record_dict, ...]}}}
+        self._cache = {}
+        # 记录有修改的月份，格式为 {(year, month)}
+        self._dirty_months = set()
+        self._initialized = True
+
+    def get_worktimes_of_month(self, year, month):
+        """
+        获取指定月份的工作时间记录，优先从缓存读取，缓存未命中则从文件加载
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+
+        Returns:
+            dict: 该月份的工作时间记录字典
+        """
+        if year in self._cache and month in self._cache[year]:
+            return self._cache[year][month]
+
+        file_path = os.path.join(data_dir, str(year)[2:], str(month) + ".json")
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            data = {}
+
+        self._cache.setdefault(year, {})[month] = data
+        return data
+
+    def mark_dirty(self, year, month):
+        """
+        标记指定月份的数据已被修改，关闭窗口时统一写入磁盘
+        
+        Parameters:
+            year (int): 年份
+            month (int): 月份
+        """
+        self._dirty_months.add((year, month))
+
+    def flush_to_disk(self):
+        """将所有被修改过的月份数据一次性写入磁盘"""
+        for year, month in self._dirty_months:
+            data = self._cache.get(year, {}).get(month)
+            file_path = os.path.join(data_dir, str(year)[2:], str(month) + ".json")
+            if data:
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=4)
+            else:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+        self._dirty_months.clear()
+
 class ItemWidget(QWidget):
     """工作时间记录项部件，显示单个工作时间记录的详细信息"""
 
@@ -95,7 +164,7 @@ class WorktimeWindow(BaseWindow):
         """
         super().__init__(parent)
 
-        self.worktimes = {}
+        self.data_manager = WorktimeDataManager()
         self.loaded_pages = set()
 
         self.setWindowTitle("工作时间记录")
@@ -126,6 +195,16 @@ class WorktimeWindow(BaseWindow):
         # 默认加载第一个标签
         self.init_clock_ui()
         self.loaded_pages = {0}
+
+    def closeEvent(self, event):
+        """
+        窗口关闭时触发，将内存中的所有脏数据一次性写入磁盘
+
+        Parameters:
+            event (QCloseEvent): 关闭事件
+        """
+        self.data_manager.flush_to_disk()
+        super().closeEvent(event)
 
     def on_tab_changed(self, index):
         """
@@ -241,11 +320,13 @@ class WorktimeWindow(BaseWindow):
         }
 
         # 读取现有数据
-        worktimes_of_month = self.get_worktimes_of_month(year, month)
-        if str(day) not in worktimes_of_month:
-            worktimes_of_month[str(day)] = []
-        worktimes_of_month[str(day)].append(worktime_record)
-        self.save_worktimes(year, month, worktimes_of_month)
+        worktimes_of_month = self.data_manager.get_worktimes_of_month(year, month)
+        day_str = str(day)
+        if day_str not in worktimes_of_month:
+            worktimes_of_month[day_str] = []
+        worktimes_of_month[day_str].append(worktime_record)
+        self.data_manager.mark_dirty(year, month)
+
         if (hasattr(self, "scroll_layout")
             and self.year_displayed == year
             and self.month_displayed == month
@@ -358,7 +439,7 @@ class WorktimeWindow(BaseWindow):
         Returns:
             tuple: (hours, minutes) 总工作时长
         """
-        worktime_records = self.get_worktimes_of_month(year, month)
+        worktime_records = self.data_manager.get_worktimes_of_month(year, month)
         total_worktime = 0
         for record in worktime_records.get(str(day), []):
             if "total_work" not in record:
@@ -419,64 +500,6 @@ class WorktimeWindow(BaseWindow):
         editor = EditorWindow(self, self.year_displayed, self.month_displayed, self.day_displayed)
         editor.show()
 
-    def load_worktimes(self, year, month):
-        """
-        从文件加载指定月份的工作时间记录
-
-        Parameters:
-            year (int): 年份
-            month (int): 月份
-
-        Returns:
-            dict: 该月份的工作时间记录字典
-        """
-        file_path = os.path.join(data_dir, str(year)[2:], str(month) + ".json")
-
-        if year not in self.worktimes:
-            self.worktimes[year] = {}
-
-        if os.path.exists(file_path):
-            # 若文件读取失败，应报错
-            with open(file_path, 'r', encoding='utf-8') as f:
-                self.worktimes[year][month] = json.load(f)
-        else:
-            self.worktimes[year][month] = {}
-
-        return self.worktimes[year][month]
-
-    def save_worktimes(self, year, month, data):
-        """
-        保存工作时间记录数据到文件
-
-        Parameters:
-            year (int): 年份
-            month (int): 月份
-            data (dict): 工作时间记录数据
-        """
-        file_path = os.path.join(data_dir, str(year)[2:], str(month) + ".json")
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-
-    def get_worktimes_of_month(self, year, month):
-        """
-        获取指定月份的工作时间记录，优先从缓存读取
-
-        Parameters:
-            year (int): 年份
-            month (int): 月份
-
-        Returns:
-            dict: 该月份的工作时间记录字典
-        """
-        if (year in self.worktimes
-            and month in self.worktimes[year]
-        ):
-            return self.worktimes[year][month]
-        else:
-            return self.load_worktimes(year, month)
-
     def refresh_data(self):
         """刷新当前日期的工作时间记录列表显示"""
         # 清空现有布局（包括所有widget和stretch）
@@ -486,7 +509,7 @@ class WorktimeWindow(BaseWindow):
                 item.widget().deleteLater()
 
         # 根据需要加载数据
-        self.worktimes_of_month = self.get_worktimes_of_month(self.year_displayed, self.month_displayed)
+        self.worktimes_of_month = self.data_manager.get_worktimes_of_month(self.year_displayed, self.month_displayed)
 
         # 添加工作时间记录项
         if str(self.day_displayed) in self.worktimes_of_month:
@@ -514,7 +537,7 @@ class WorktimeWindow(BaseWindow):
 
     def save_worktime_of_editor(self, worktime_editor, copy=False):
         """
-        保存编辑器中的工作时间记录到文件
+        保存编辑器中的工作时间记录
 
         Parameters:
             worktime_editor (EditorWindow): 工作时间记录编辑器窗口实例
@@ -526,18 +549,17 @@ class WorktimeWindow(BaseWindow):
         id_ = worktime_editor.id_
 
         # 读取工作时间记录
-        worktimes_of_month = self.get_worktimes_of_month(year, month)
+        worktimes_of_month = self.data_manager.get_worktimes_of_month(year, month)
 
         # 修改工作时间记录
-        if str(day) not in worktimes_of_month:
-            worktimes_of_month[str(day)] = []
+        day_str = str(day)
+        if day_str not in worktimes_of_month:
+            worktimes_of_month[day_str] = []
         if not copy and id_ is not None:
-            worktimes_of_month[str(day)][id_] = worktime_editor.data_dict
+            worktimes_of_month[day_str][id_] = worktime_editor.data_dict
         else:
-            worktimes_of_month[str(day)].append(worktime_editor.data_dict)
-
-        # 保存修改
-        self.save_worktimes(year, month, worktimes_of_month)
+            worktimes_of_month[day_str].append(worktime_editor.data_dict)
+        self.data_manager.mark_dirty(year, month)
 
         if (self.year_displayed == year
             and self.month_displayed == month
@@ -558,21 +580,17 @@ class WorktimeWindow(BaseWindow):
         id_ = worktime_editor.id_
 
         # 读取现有数据
-        worktimes_of_month = self.get_worktimes_of_month(year, month)
+        worktimes_of_month = self.data_manager.get_worktimes_of_month(year, month)
 
         # 删除记录项
-        if len(worktimes_of_month.get(str(day), [])) > id_:
-            del worktimes_of_month[str(day)][id_]
-        else:
+        day_str = str(day)
+        records = worktimes_of_month.get(day_str, [])
+        if id_ is None or id_ >= len(records):
             return
-
-        # 保存文件；如果记录被清空，删除文件
-        if not worktimes_of_month[str(day)]:
-            del worktimes_of_month[str(day)]
-        if worktimes_of_month:
-            self.save_worktimes(year, month, worktimes_of_month)
-        else:
-            os.remove(os.path.join(data_dir, str(year)[2:], str(month) + ".json"))
+        del records[id_]
+        if not records:
+            del worktimes_of_month[day_str]
+        self.data_manager.mark_dirty(year, month)
 
         if (self.year_displayed == year
             and self.month_displayed == month
