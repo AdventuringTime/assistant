@@ -112,6 +112,9 @@ class CalendarSchedulesManager:
             updating_date += datetime.timedelta(days=1)
             self.init_repeat_events_of_date(updating_date)
 
+        # 保存至文件
+        self.flush_to_disk()
+
         # 保存最新的上次更新时间
         with open(last_update_date_file, 'w', encoding='utf-8') as f:
             json.dump(str(today), f, indent=4)
