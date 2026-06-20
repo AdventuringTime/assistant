@@ -1,12 +1,51 @@
 import sys
 import json
 import os
+import re
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
                                QTextEdit, QSizePolicy, QListWidget, QDialog, QComboBox,
                                QDateEdit, QCheckBox)
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer, QUrl, QDate
+
+
+def _get_unique_task_name(name, existing_names):
+    """
+    生成唯一的任务名，避免与已有未完成任务重复
+
+    规则：
+    - 如果任务名已存在且是 -N 格式（如 task-1），先尝试移除 -N 后缀
+    - 如果仍重复或不是 -N 格式，依次尝试添加 -1、-2 等后缀
+
+    Parameters:
+        name (str): 原始任务名
+        existing_names (set): 已有任务名集合
+
+    Returns:
+        str: 唯一的任务名
+    """
+    if name not in existing_names:
+        return name
+
+    # 尝试移除 -N 后缀（如果任务名本来就是 -N 格式）
+    match = re.match(r'^(.*)-(\d+)$', name)
+    if match:
+        base_name = match.group(1)
+        if base_name not in existing_names:
+            return base_name
+        # 从 base_name 开始尝试加后缀
+        name = base_name
+
+    # 依次尝试添加 -1、-2 等后缀
+    counter = 1
+    while True:
+        new_name = f"{name}-{counter}"
+        if new_name not in existing_names:
+            return new_name
+        counter += 1
+
+
 from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtGui import QDesktopServices
 
@@ -590,8 +629,21 @@ class TaskItem(QWidget):
 
     def on_dialog_save(self, data):
         """处理保存操作，更新任务数据"""
+        # 编辑未完成任务且任务名有变动时，进行重名去重
+        if not self.is_completed and data.get('name', '').strip():
+            name = data['name'].strip()
+            existing_names = set()
+            for task in _data_manager.tasks:
+                task_name = task.get('name')
+                if task_name:
+                    existing_names.add(task_name)
+            # 排除自身
+            existing_names.discard(self.task.get('name'))
+            data['name'] = _get_unique_task_name(name, existing_names)
+
         self.task.clear()
         self.task.update(data)
+            # self.task 是更大字典的子字典项，只能原位操作，否则会破坏指针关联
         self.name_label.setText(data['name'])
 
         # 更新任务类型和颜色
@@ -674,6 +726,8 @@ class TaskDataManager:
 
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+
+_data_manager = TaskDataManager()
 
 
 class FloatingWidget(QWidget):
@@ -797,8 +851,7 @@ class TaskWindow(BaseWindow):
         self.setMinimumSize(600, 400)
         self.resize(1000, 800)
 
-        # 使用数据管理器
-        self.data_manager = TaskDataManager()
+        self.data_manager = _data_manager
         self.floating_widget = None
 
         # 主布局
@@ -972,9 +1025,19 @@ class TaskWindow(BaseWindow):
         Parameters:
             data (dict): 任务数据
         """
-        if data['name'].strip():
-            self.data_manager.tasks.append(data)
-            self.refresh_ui()
+        if not data['name'].strip():
+            data['name'] = '未命名任务'
+
+        # 重名去重
+        existing_names = set()
+        for task in self.data_manager.tasks:
+            task_name = task.get('name')
+            if task_name:
+                existing_names.add(task_name)
+        data['name'] = _get_unique_task_name(data['name'].strip(), existing_names)
+
+        self.data_manager.tasks.append(data)
+        self.refresh_ui()
 
     def update_floating_widget(self):
         """更新悬浮窗口显示当前追踪任务"""
