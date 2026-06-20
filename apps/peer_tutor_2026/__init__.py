@@ -634,7 +634,11 @@ class ExpensesWidget(QWidget):
 
         circle1 = QPushButton()
         circle1.setFixedSize(40, 40)
-        circle1.setStyleSheet("border-radius: 20px; background-color: gray;")
+        circle1.setStyleSheet("border-radius: 20px; background-color: gray; color: white;")
+        circle1.setText(str(self.days[0].day))
+        font1 = circle1.font()
+        font1.setPointSize(12)
+        circle1.setFont(font1)
         circle1.clicked.connect(lambda: self.on_circle_clicked(0))
 
         line2 = QFrame()
@@ -643,7 +647,11 @@ class ExpensesWidget(QWidget):
 
         circle2 = QPushButton()
         circle2.setFixedSize(40, 40)
-        circle2.setStyleSheet("border-radius: 20px; background-color: gray;")
+        circle2.setStyleSheet("border-radius: 20px; background-color: gray; color: white;")
+        circle2.setText(str(self.days[1].day))
+        font2 = circle2.font()
+        font2.setPointSize(12)
+        circle2.setFont(font2)
         circle2.clicked.connect(lambda: self.on_circle_clicked(1))
 
         line3 = QFrame()
@@ -652,7 +660,11 @@ class ExpensesWidget(QWidget):
 
         circle3 = QPushButton()
         circle3.setFixedSize(40, 40)
-        circle3.setStyleSheet("border-radius: 20px; background-color: gray;")
+        circle3.setStyleSheet("border-radius: 20px; background-color: gray; color: white;")
+        circle3.setText(str(self.days[2].day))
+        font3 = circle3.font()
+        font3.setPointSize(12)
+        circle3.setFont(font3)
         circle3.clicked.connect(lambda: self.on_circle_clicked(2))
 
         self.circles = [circle1, circle2, circle3]
@@ -685,6 +697,7 @@ class ExpensesWidget(QWidget):
         self.expense_spinbox.setDecimals(2)
         self.expense_spinbox.setRange(-1e10, 1e10)
         self.expense_spinbox.valueChanged.connect(self.on_expense_changed)
+        self.expense_spinbox.installEventFilter(self)
 
         row_layout.addWidget(label)
         row_layout.addWidget(self.expense_spinbox)
@@ -704,6 +717,7 @@ class ExpensesWidget(QWidget):
         self.target_spinbox.setDecimals(2)
         self.target_spinbox.setRange(-1e10, 1e10)
         self.target_spinbox.valueChanged.connect(self.on_target_changed)
+        self.target_spinbox.installEventFilter(self)
 
         row_layout.addWidget(label)
         row_layout.addWidget(self.target_spinbox)
@@ -715,6 +729,24 @@ class ExpensesWidget(QWidget):
         self.update_circle_colors()
 
         self.main_layout.addStretch()
+
+    def eventFilter(self, obj, event):
+        """
+        事件过滤器，实现输入框聚焦时自动全选
+
+        Parameters:
+            obj (QObject): 事件源对象
+            event (QEvent): 事件对象
+
+        Returns:
+            bool: 是否拦截事件
+        """
+        if event.type() == QEvent.Type.FocusIn:
+            if obj == self.expense_spinbox:
+                QTimer.singleShot(0, self.expense_spinbox.selectAll)
+            elif obj == self.target_spinbox:
+                QTimer.singleShot(0, self.target_spinbox.selectAll)
+        return super().eventFilter(obj, event)
 
     def update_target_spinbox_values(self):
         """更新目标输入框数值"""
