@@ -54,7 +54,6 @@ class TokenizerWindow(BaseWindow):
         self.tokenize_button = QPushButton("分词")
         self.tokenize_button.clicked.connect(self.tokenize)
         self.tokenize_button.setFixedHeight(30)
-        self.tokenize_button.setStyleSheet("background-color: #4CAF50; color: #ffffff;")
         self.left_layout.addWidget(self.tokenize_button)
 
     def tokenize(self):
