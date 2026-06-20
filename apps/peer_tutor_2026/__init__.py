@@ -906,6 +906,18 @@ class ExpensesWidget(QWidget):
 class FurinaWindow(BaseWindow):
     """芙芙伴学应用主窗口"""
 
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
+
     def __init__(self, parent=None):
         """
         初始化任务窗口
@@ -913,6 +925,8 @@ class FurinaWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口
         """
+        if FurinaWindow._initialized:
+            return
         super().__init__(parent)
         self.setWindowTitle('芙芙伴学')
         self.setWindowIcon(icon)
@@ -926,6 +940,8 @@ class FurinaWindow(BaseWindow):
 
         self.expenses_widget = ExpensesWidget(self)
         self.tab_widget.addTab(self.expenses_widget, '流水')
+        FurinaWindow._instance = self
+        FurinaWindow._initialized = True
 
     def closeEvent(self, event):
         """
@@ -937,3 +953,5 @@ class FurinaWindow(BaseWindow):
         TaskDataManager().save_tasks()
         ExpensesDataManager().save_expenses_data()
         super().closeEvent(event)
+        FurinaWindow._instance = None
+        FurinaWindow._initialized = False

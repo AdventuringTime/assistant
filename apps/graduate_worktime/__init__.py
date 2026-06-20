@@ -47,6 +47,18 @@ class GraduateWorktimeDataManager:
 class GraduateWorktimeWindow(BaseWindow):
     """研招工时统计窗口，用于记录和统计研究生招生工作的工时"""
 
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
+
     def __init__(self, parent=None):
         """
         初始化研招工时统计窗口
@@ -54,6 +66,8 @@ class GraduateWorktimeWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口
         """
+        if GraduateWorktimeWindow._initialized:
+            return
         super().__init__(parent)
 
         self.setWindowTitle("研招工时统计")
@@ -127,6 +141,8 @@ class GraduateWorktimeWindow(BaseWindow):
         main_layout.addLayout(buttons_layout)
 
         self.refresh_table()
+        GraduateWorktimeWindow._instance = self
+        GraduateWorktimeWindow._initialized = True
 
     def refresh_table(self):
         """刷新表格显示，将records数据加载到表格中"""
@@ -243,3 +259,15 @@ class GraduateWorktimeWindow(BaseWindow):
         content_item = self.table.item(new_row, 1)
         if content_item:
             self.table.editItem(content_item)
+
+    def closeEvent(self, event):
+        """
+        窗口关闭时，保存数据并重置单例标志
+
+        Parameters:
+            event (QCloseEvent): 关闭事件
+        """
+        self.data_manager.save_records()
+        super().closeEvent(event)
+        GraduateWorktimeWindow._instance = None
+        GraduateWorktimeWindow._initialized = False

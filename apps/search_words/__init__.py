@@ -48,6 +48,18 @@ class SearchWordsDataManager:
 class SearchWordsWindow(BaseWindow):
     """搜索词管理窗口，用于管理和维护搜索词列表"""
 
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
+
     def __init__(self, parent=None):
         """
         初始化搜索词管理窗口
@@ -55,6 +67,8 @@ class SearchWordsWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口
         """
+        if SearchWordsWindow._initialized:
+            return
         super().__init__(parent)
 
         self.setWindowTitle("搜索词")
@@ -119,6 +133,8 @@ class SearchWordsWindow(BaseWindow):
 
         # 初始化列表显示
         self.refresh_list()
+        SearchWordsWindow._instance = self
+        SearchWordsWindow._initialized = True
 
     def refresh_list(self):
         """刷新搜索词列表显示，将words数据加载到列表控件中"""
@@ -186,3 +202,5 @@ class SearchWordsWindow(BaseWindow):
         """
         self.data_manager.save_words()
         super().closeEvent(event)
+        SearchWordsWindow._instance = None
+        SearchWordsWindow._initialized = False

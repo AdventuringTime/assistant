@@ -1106,7 +1106,18 @@ class TrendWidget(QWidget):
 class ExpensesWindow(BaseWindow):
     """记账管理窗口，用于管理月度费用预算和支出记录"""
 
+    _instance = None
+    _initialized = False
     data_dir = "apps/expenses/data"
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
 
     def __init__(self, parent=None):
         """
@@ -1115,6 +1126,8 @@ class ExpensesWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口
         """
+        if ExpensesWindow._initialized:
+            return
         super().__init__(parent)
         self.setWindowTitle("记账")
         self.setMinimumSize(800, 600)
@@ -1145,6 +1158,8 @@ class ExpensesWindow(BaseWindow):
 
         os.makedirs(self.data_dir, exist_ok=True)
         self.load_month_data()
+        ExpensesWindow._instance = self
+        ExpensesWindow._initialized = True
 
     def on_date_changed(self, date):
         """
@@ -1233,3 +1248,5 @@ class ExpensesWindow(BaseWindow):
         self.record_widget.data_manager.save_all_modified()
         self.trend_widget.save_if_modified()
         super().closeEvent(event)
+        ExpensesWindow._instance = None
+        ExpensesWindow._initialized = False

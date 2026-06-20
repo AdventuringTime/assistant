@@ -155,6 +155,18 @@ class ItemWidget(QWidget):
 class WorktimeWindow(BaseWindow):
     """工作时间管理窗口，提供上下班打卡和工作时间记录管理功能"""
 
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
+
     def __init__(self, parent=None):
         """
         初始化工作时间窗口
@@ -162,6 +174,8 @@ class WorktimeWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口
         """
+        if WorktimeWindow._initialized:
+            return
         super().__init__(parent)
 
         self.data_manager = WorktimeDataManager()
@@ -195,6 +209,8 @@ class WorktimeWindow(BaseWindow):
         # 默认加载第一个标签
         self.init_clock_ui()
         self.loaded_pages = {0}
+        WorktimeWindow._instance = self
+        WorktimeWindow._initialized = True
 
     def closeEvent(self, event):
         """
@@ -205,6 +221,8 @@ class WorktimeWindow(BaseWindow):
         """
         self.data_manager.flush_to_disk()
         super().closeEvent(event)
+        WorktimeWindow._instance = None
+        WorktimeWindow._initialized = False
 
     def on_tab_changed(self, index):
         """

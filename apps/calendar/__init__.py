@@ -258,6 +258,18 @@ class ScheduleImportDialog(QDialog):
 class CalendarWindow(BaseWindow):
     """日历窗口，提供日程的查看、创建和编辑功能"""
 
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
+
     def __init__(self, parent=None):
         """
         初始化日历窗口
@@ -265,6 +277,8 @@ class CalendarWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口，默认为None
         """
+        if CalendarWindow._initialized:
+            return
         super().__init__(parent)
         self.schedule_manager = CalendarSchedulesManager()
 
@@ -300,6 +314,8 @@ class CalendarWindow(BaseWindow):
         # 设置初始日期为今天
         today = get_today()
         self.date_selector.setDate(QDate(today.year, today.month, today.day))
+        CalendarWindow._instance = self
+        CalendarWindow._initialized = True
 
     def closeEvent(self, event):
         """
@@ -310,6 +326,8 @@ class CalendarWindow(BaseWindow):
         """
         self.schedule_manager.flush_to_disk()
         super().closeEvent(event)
+        CalendarWindow._instance = None
+        CalendarWindow._initialized = False
 
     def create_bottom_buttons(self):
         """创建底部按钮布局"""

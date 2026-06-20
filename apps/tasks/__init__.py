@@ -767,8 +767,8 @@ class FloatingWidget(QWidget):
 class TaskWindow(BaseWindow):
     """任务管理窗口，提供任务列表的查看、编辑、排序和追踪功能"""
 
-    _instance = None          # 单例实例
-    _initialized = False      # 防止重复初始化
+    _instance = None
+    _initialized = False
 
     def __new__(cls, *args, **kwargs):
     # 只要实例存在，就激活并返回该实例（无论是否最小化或可见）
@@ -792,8 +792,6 @@ class TaskWindow(BaseWindow):
         if TaskWindow._initialized:
             return
         super().__init__(parent)
-        TaskWindow._instance = self
-        TaskWindow._initialized = True
 
         self.setWindowTitle('任务')
         self.setMinimumSize(600, 400)
@@ -843,6 +841,8 @@ class TaskWindow(BaseWindow):
         # 初始化UI和悬浮窗口
         self.refresh_ui()
         self.update_floating_widget()
+        TaskWindow._instance = self
+        TaskWindow._initialized = True
 
     def open_sort_dialog(self):
         """打开任务排序对话框"""

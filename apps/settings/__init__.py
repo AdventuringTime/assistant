@@ -13,6 +13,18 @@ from core.settings_manager import SettingsManager
 class SettingsWindow(BaseWindow):
     """设置窗口类，提供设置界面的管理和显示"""
 
+    _instance = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            if cls._instance.isMinimized():
+                cls._instance.showNormal()
+            cls._instance.raise_()
+            cls._instance.activateWindow()
+            return cls._instance
+        return super().__new__(cls)
+
     def __init__(self, parent=None):
         """
         初始化设置窗口
@@ -20,6 +32,8 @@ class SettingsWindow(BaseWindow):
         Parameters:
             parent (QWidget, optional): 父窗口，默认为None
         """
+        if SettingsWindow._initialized:
+            return
         super().__init__(parent)
         self.settings_data = self.load_settings()
 
@@ -65,6 +79,8 @@ class SettingsWindow(BaseWindow):
         if self.settings_data:
             self.category_list.setCurrentRow(0)
             self.stacked_widget.setCurrentIndex(0)
+        SettingsWindow._instance = self
+        SettingsWindow._initialized = True
 
     def load_settings(self):
         """
@@ -110,3 +126,5 @@ class SettingsWindow(BaseWindow):
         # 保存当前设置
         SettingsManager().save()
         super().closeEvent(event)
+        SettingsWindow._instance = None
+        SettingsWindow._initialized = False
