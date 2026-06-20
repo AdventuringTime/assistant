@@ -11,10 +11,41 @@ from PySide6.QtGui import QGuiApplication
 from core.base_objects import BaseWindow, DeleteButton
 
 
+class GraduateWorktimeDataManager:
+    """研招工时数据管理器（单例），负责缓存工时记录，统一管理文件读写"""
+
+    _instance = None
+    _initialized = False
+    data_file_path = "apps/graduate_worktime/data/records.json"
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        self.load_records()
+        self._initialized = True
+
+    def load_records(self):
+        """从文件加载工时记录到内存"""
+        if os.path.exists(self.data_file_path):
+            with open(self.data_file_path, 'r', encoding='utf-8') as f:
+                self.records = json.load(f)
+        else:
+            self.records = []
+
+    def save_records(self):
+        """将内存中的工时记录保存到文件"""
+        os.makedirs(os.path.dirname(self.data_file_path), exist_ok=True)
+        with open(self.data_file_path, 'w', encoding='utf-8') as f:
+            json.dump(self.records, f, ensure_ascii=False, indent=4)
+
+
 class GraduateWorktimeWindow(BaseWindow):
     """研招工时统计窗口，用于记录和统计研究生招生工作的工时"""
-
-    data_file_path = "apps/graduate_worktime/data/records.json"
 
     def __init__(self, parent=None):
         """
@@ -28,7 +59,7 @@ class GraduateWorktimeWindow(BaseWindow):
         self.setWindowTitle("研招工时统计")
         self.setMinimumSize(600, 400)
 
-        self.records = self.load_records()
+        self.data_manager = GraduateWorktimeDataManager()
 
         self.container = QWidget()
         self.setCentralWidget(self.container)
@@ -97,29 +128,10 @@ class GraduateWorktimeWindow(BaseWindow):
 
         self.refresh_table()
 
-    def load_records(self):
-        """
-        从文件加载工时记录
-
-        Returns:
-            list: 工时记录列表，每个记录是包含 date, content, duration 的字典
-        """
-        if os.path.exists(self.data_file_path):
-            with open(self.data_file_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        else:
-            return []
-
-    def save_records(self):
-        """保存工时记录到文件"""
-        os.makedirs(os.path.dirname(self.data_file_path), exist_ok=True)
-        with open(self.data_file_path, 'w', encoding='utf-8') as f:
-            json.dump(self.records, f, ensure_ascii=False, indent=4)
-
     def refresh_table(self):
         """刷新表格显示，将records数据加载到表格中"""
         self.table.setRowCount(0)
-        for record in self.records:
+        for record in self.data_manager.records:
             row = self.table.rowCount()
             self.table.insertRow(row)
             for col in range(3):
@@ -137,15 +149,15 @@ class GraduateWorktimeWindow(BaseWindow):
         reply = QMessageBox.question(self, "确认清空", "确定要清空所有工时记录吗？",
                                  QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes, QMessageBox.StandardButton.Yes)
         if reply == QMessageBox.StandardButton.Yes:
-            self.records = []
-            self.save_records()
+            self.data_manager.records = []
+            self.data_manager.save_records()
             self.refresh_table()
 
     def on_export_clicked(self):
         """导出工时记录到剪贴板，包含总时长统计"""
         lines = []
         total_hours = 0.0
-        for record in self.records:
+        for record in self.data_manager.records:
             date_str = record["date"]
             content = record["content"]
             hours = record["duration"]
@@ -184,8 +196,8 @@ class GraduateWorktimeWindow(BaseWindow):
 
         if reply == QMessageBox.StandardButton.Yes:
             for row in sorted(selected_rows, reverse=True):
-                self.records.pop(row)
-            self.save_records()
+                self.data_manager.records.pop(row)
+            self.data_manager.save_records()
             self.refresh_table()
 
     def on_item_changed(self, item):
@@ -197,22 +209,22 @@ class GraduateWorktimeWindow(BaseWindow):
         """
         row = self.table.row(item)
         col = self.table.column(item)
-        if 0 <= row < len(self.records):
+        if 0 <= row < len(self.data_manager.records):
             if col == 0:
                 try:
                     datetime.strptime(item.text(), "%Y-%m-%d")
-                    self.records[row]["date"] = item.text()
+                    self.data_manager.records[row]["date"] = item.text()
                 except ValueError:
                     QMessageBox.warning(self, "输入非标准格式", "日期格式不是 YYYY-MM-DD，会造成导出时发生异常")
             elif col == 1:
-                self.records[row]["content"] = item.text()
+                self.data_manager.records[row]["content"] = item.text()
             elif col == 2:
                 try:
                     float(item.text())
                 except ValueError:
                     QMessageBox.warning(self, "输入非标准格式", "时长不是有效数字，将影响导出")
-                self.records[row]["duration"] = item.text()
-            self.save_records()
+                self.data_manager.records[row]["duration"] = item.text()
+            self.data_manager.save_records()
 
     def on_add_clicked(self):
         """添加新的工时记录行，默认日期为今天，时长为1.5小时"""
@@ -222,8 +234,8 @@ class GraduateWorktimeWindow(BaseWindow):
             "content": "",
             "duration": "1.5"
         }
-        self.records.append(new_record)
-        self.save_records()
+        self.data_manager.records.append(new_record)
+        self.data_manager.save_records()
         self.refresh_table()
 
         # 自动进入对新添加行的内容的编辑
