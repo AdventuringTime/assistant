@@ -72,6 +72,17 @@
                         "default": false
                     }
                 ]
+            ],
+            [
+                "考试提醒",
+                [
+                    {
+                        "label": "激活",
+                        "type": "bool",
+                        "json_path": "startup.exam_reminder.activated",
+                        "default": false
+                    }
+                ]
             ]
         ]
     ]

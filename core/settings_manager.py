@@ -58,7 +58,7 @@ class SettingsManager:
 
     def set_value(self, json_path, value):
         """
-        使用glom根据JSON路径设置值
+        使用glom根据JSON路径设置值，自动创建中间缺失的字典层级。
 
         Parameters:
             json_path (str): glom支持的JSON路径表达式
@@ -66,17 +66,20 @@ class SettingsManager:
 
         Examples:
         ```
-            data = {"user": {"name": "Alice", "age": 30}}
-            self.set_json_value(data, "user.age", 31)
-            # data 现在为 {"user": {"name": "Alice", "age": 31}}
-            self.set_json_value(data, "user.phone", "123-456-7890")
-            # data 现在为 {"user": {"name": "Alice", "age": 31}, "phone": "123-456-7890"}
+            # 已有路径直接修改
+            data = {"user": {"name": "Alice"}}
+            self.set_value("user.name", "Bob")
+            # data 现在为 {"user": {"name": "Bob"}}
+
+            # 路径不存在时自动创建中间字典
+            self.set_value("startup.exam_reminder.activated", True)
+            # data 现在为 {"startup": {"exam_reminder": {"activated": True}}}
         ```
         """
         data = self.data
 
         if json_path:
-            glom(data, Assign(json_path, value))
+            glom(data, Assign(json_path, value, missing=dict))
             self.data = data
         else:
             self.data = value

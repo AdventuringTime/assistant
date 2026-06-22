@@ -809,6 +809,7 @@ class NotificationItemWidget(QWidget):
         - open_url: 打开URL链接
         - open_file: 打开本地文件
         - open_app: 打开应用
+        - copy_to_clipboard: 将内容复制到剪贴板
 
         Parameters:
             event (QMouseEvent): 鼠标事件
@@ -824,6 +825,9 @@ class NotificationItemWidget(QWidget):
                 elif self.click_action["type"] == "open_app":
                     app_name = self.click_action["value"]
                     open_app(app_name)
+                elif self.click_action["type"] == "copy_to_clipboard":
+                    clipboard_text = self.click_action["value"]
+                    QApplication.clipboard().setText(clipboard_text)
                 else:
                     raise ValueError(f"未知点击操作类型: {self.click_action['type']}")
         self.mark_as_read()

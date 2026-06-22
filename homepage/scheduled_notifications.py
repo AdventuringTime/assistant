@@ -1,19 +1,98 @@
 import datetime
+import json
+import os
 from PySide6.QtCore import QTimer
 
+from core.functions import get_today, isnt_executed_at_day
 from homepage.widgets import NotificationSystemWidget
-notification_system = NotificationSystemWidget()
+
+
+class ScheduledTask:
+    """
+    定时任务，在指定时间执行一次回调函数。
+
+    如果应用在指定时间正在运行，则在那个时间执行回调；
+    如果应用在指定时间之后启动，则在启动时立即执行回调（每天仅一次）。
+
+    通过 data_file 记录上次执行日期，确保每天只执行一次。
+    通过 boundary_hour 指定日界，与 get_today() 语义一致。
+    """
+
+    def __init__(self, time, callback, data_file=None):
+        """
+        初始化定时任务
+
+        Parameters:
+            time (datetime.time): 每日触发时间
+            callback (callable): 要执行的回调函数（无参数）
+            data_file (str, optional): 用于记录上次执行日期的文件路径。
+                提供此参数后，若应用在指定时间之后启动，会检查今天是否已执行，
+                未执行则立即执行。不提供则仅在指定时间触发，错过则等待次日。
+            boundary_hour (int, optional): 日界小时（0-23）。默认与 time.hour 一致，
+                即日界与任务触发时间对齐。
+        """
+        self.time = time
+        self.callback = callback
+        self.data_file = data_file
+        self._boundary_hour = time.hour
+        self._running = False
+        self.timer = QTimer()
+
+    def start(self):
+        """启动定时任务"""
+        now = datetime.datetime.now()
+        today = get_today(boundary_hour=self._boundary_hour)
+        target = datetime.datetime.combine(today, self.time) + datetime.timedelta(days=1)
+
+        if self.data_file and isnt_executed_at_day(self.data_file, today):
+            # 有记录文件且当天未执行 → 立即执行
+            self.callback()
+
+        wait_ms = int((target - now).total_seconds() * 1000)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self._on_timeout)
+        self.timer.start(wait_ms)
+        self._running = True
+
+    def _on_timeout(self):
+        """定时器触发时的处理"""
+        self._execute()
+        if self._running:
+            # 安排明天的执行（24小时后）
+            self.timer.start(86400000)
+
+    def _execute(self):
+        """执行回调并记录执行日期"""
+        if self.data_file:
+            self._mark_executed_today()
+        self.callback()
+
+    def _mark_executed_today(self):
+        """记录今天已执行"""
+        os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
+        with open(self.data_file, 'w', encoding='utf-8') as f:
+            json.dump(get_today(boundary_hour=self._boundary_hour).isoformat(), f, indent=4)
+
+    def stop(self):
+        """停止定时任务"""
+        self._running = False
+        self.timer.stop()
+
 
 class ScheduledNotificationItem:
+    """
+    定时通知项，使用 ScheduledTask 实现每天固定时间的通知触发。
+    """
+
     def __init__(self,
-            time,
-            title="来自助手的通知",
-            content="助手没收到更多内容哦",
-            click_action=None,
-            icon_path='',
-            is_read=False):
+                 time,
+                 title="来自助手的通知",
+                 content="助手没收到更多内容哦",
+                 click_action=None,
+                 icon_path='',
+                 is_read=False):
         """
-        初始化定时通知项。目前支持每天触发通知。
+        初始化定时通知项。
 
         Parameters:
             time (datetime.time): 通知触发时间
@@ -29,29 +108,18 @@ class ScheduledNotificationItem:
         self.click_action = click_action
         self.icon_path = icon_path
         self.is_read = is_read
-        self.timer = QTimer()
+        self._task = ScheduledTask(
+            time=self.time,
+            callback=self._notify
+        )
 
     def start(self):
-        """开始定时任务调度循环"""
-        self._running = True
-        now = datetime.datetime.now()
-        target_time = datetime.datetime.combine(now.date(), self.time)
+        """开始定时通知"""
+        self._task.start()
 
-        if now >= target_time:
-            target_time = target_time + datetime.timedelta(days=1)
-
-        wait_seconds = (target_time - now).total_seconds()
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.on_timer_timeout)
-        self.timer.start(int(wait_seconds*1000))
-
-    def on_timer_timeout(self):
-        self.notify()
-        if self._running:
-            self.timer.start(86400000)
-
-    def notify(self):
+    def _notify(self):
         """发送通知"""
+        notification_system = NotificationSystemWidget()
         notification_system.notify(
             title=self.title,
             content=self.content,
@@ -61,9 +129,9 @@ class ScheduledNotificationItem:
         )
 
     def stop(self):
-        """停止定时任务"""
-        self._running = False
-        self.timer.stop()
+        """停止定时通知"""
+        if self._task:
+            self._task.stop()
 
 
 def start():

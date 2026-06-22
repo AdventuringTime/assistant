@@ -171,6 +171,13 @@ class MainWindow(BaseWindow):
             from apps import daily_year
             self.auto_start["daily_year"] = daily_year
 
+        # exam_reminder - 每晚提醒明日考试，使用定时任务检查
+        exam_reminder_settings = startup_settings.get("exam_reminder", {})
+        if exam_reminder_settings.get("activated", False):
+            from apps import exam_reminder
+            exam_reminder.start()
+            self.auto_start["exam_reminder"] = exam_reminder
+
     def quit_(self):
         """退出应用程序，关闭所有窗口"""
         # 关闭所有注册的窗口

@@ -6,12 +6,13 @@ from contextlib import contextmanager
 # 模块级别的缓存字典，用于存储不同模块的调用状态
 _cached_dates = {}
 
-def get_today(dt: datetime.datetime=None) -> datetime.date:
+def get_today(dt: datetime.datetime=None, boundary_hour: int=4) -> datetime.date:
     """
-    给定一个datetime，返回一个date为今天的日期，以凌晨四点为界
+    给定一个datetime，返回一个date为今天的日期，以指定时间为界
 
     Parameters:
         dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
+        boundary_hour (int, optional): 日界小时，可超出 0-23 范围，默认4（凌晨4点）
 
     Returns:
         datetime.date: 表示今天的日期
@@ -19,30 +20,34 @@ def get_today(dt: datetime.datetime=None) -> datetime.date:
     if dt is None:
         dt = datetime.datetime.now()
 
-    # 如果当前时间在凌晨0点到4点之间，则日期算作前一天
-    if dt.hour < 4:
-        today = dt.date() - datetime.timedelta(days=1)
+    if 0 <= boundary_hour < 24:
+        if dt.hour < boundary_hour:
+            today = dt.date() - datetime.timedelta(days=1)
+        else:
+            today = dt.date()
     else:
-        today = dt.date()
+        days_offset, hour = divmod(boundary_hour, 24)
+        if dt.hour < hour:
+            today = dt.date() - datetime.timedelta(days=days_offset + 1)
+        else:
+            today = dt.date() - datetime.timedelta(days=days_offset)
 
     return today
 
-def is_first_run_today(data_file: str, dt: datetime.datetime=None) -> bool:
+def isnt_executed_at_day(data_file: str, today: datetime.date) -> bool:
     """
-    判断指定模块是否为今天首次调用
+    判断指定模块是否为指定日期首次调用
     使用内部缓存减少重复读取文件操作
 
     Parameters:
         data_file (str): 数据文件路径，用于存储模块的独立判定
         dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
+        boundary_hour (int, optional): 日界小时（0-23），默认4（凌晨4点）
 
     Returns:
         bool: 如果是今天首次调用则返回True，否则返回False
     """
     global _cached_dates
-
-    today = get_today(dt)
-
 
     # # 检查缓存中是否有该模块的记录
     if data_file not in _cached_dates:
@@ -67,6 +72,25 @@ def is_first_run_today(data_file: str, dt: datetime.datetime=None) -> bool:
         return True
     else:
         return False
+
+def isnt_executed_today(data_file: str, dt: datetime.datetime=None, boundary_hour: int=4) -> bool:
+    """
+    判断指定模块是否为今天首次调用
+    使用内部缓存减少重复读取文件操作
+
+    Parameters:
+        data_file (str): 数据文件路径，用于存储模块的独立判定
+        dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
+        boundary_hour (int, optional): 日界小时（0-23），默认4（凌晨4点）
+
+    Returns:
+        bool: 如果是今天首次调用则返回True，否则返回False
+    """
+    global _cached_dates
+
+    today = get_today(dt, boundary_hour)
+    return isnt_executed_at_day(data_file, today)
+
 
 def get_this_week(dt: datetime.datetime=None, start_date: datetime.datetime=None) -> float:
     """

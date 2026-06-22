@@ -2,7 +2,7 @@ from datetime import date
 import os
 
 from homepage.widgets import NotificationSystemWidget
-from core.functions import is_first_run_today
+from core.functions import isnt_executed_today
 
 # 百度百科年度事记URL模板
 base_url_format = "https://baike.baidu.com/item/{year}%E5%B9%B4"
@@ -27,7 +27,7 @@ def get_timedelta(today=None, target_day=None):
 
 
 # 每天第一次运行时，推送年度事记通知
-if is_first_run_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
+if isnt_executed_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
     year = get_timedelta()
     NotificationSystemWidget().notify(
         title="每日年度事记",
