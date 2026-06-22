@@ -49,11 +49,14 @@ def check_and_notify():
     # 合成剪贴板文本
     lines = [f"明天（{tomorrow.month}月{tomorrow.day}日）的考试科目"]
     for grade_idx, subjects in enumerate(grouped):
-        lines.append("")  # 年级间空行
         if not subjects:
             continue
+
+        lines.append("")  # 年级间空行
+
         grade_name = GRADE_MAP[grade_idx]
         lines.append(f"{grade_name}：")
+
         for time, subject in subjects:
             time_display = TIME_MAP[time]
             lines.append(f"{time_display} {subject}")
