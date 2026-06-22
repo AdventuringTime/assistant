@@ -401,6 +401,9 @@ class VersionLabel(QLabel):
         """
         super().__init__(parent)
 
+        # 只在初始化时读取一次 app version
+        self.app_version = self._read_app_version()
+
         # 加载并显示数据
         self.load_data()
 
@@ -431,10 +434,10 @@ class VersionLabel(QLabel):
 
     def load_data(self):
         """
-        加载版本数据并更新显示
+        加载版本数据并更新显示（应用版本暂不更新）
         """
         user_version = self._read_user_version()
-        app_version = self._read_app_version()
+        app_version = self.app_version
 
         display_text = f"版本：user: {user_version} app: {app_version}"
         self.setText(display_text)
