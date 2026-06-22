@@ -1,10 +1,5 @@
 import datetime
-import json
-import os
 from contextlib import contextmanager
-
-# 模块级别的缓存字典，用于存储不同模块的调用状态
-_cached_dates = {}
 
 def get_today(dt: datetime.datetime=None, boundary_hour: int=4) -> datetime.date:
     """
@@ -33,63 +28,6 @@ def get_today(dt: datetime.datetime=None, boundary_hour: int=4) -> datetime.date
             today = dt.date() - datetime.timedelta(days=days_offset)
 
     return today
-
-def isnt_executed_at_day(data_file: str, today: datetime.date) -> bool:
-    """
-    判断指定模块是否为指定日期首次调用
-    使用内部缓存减少重复读取文件操作
-
-    Parameters:
-        data_file (str): 数据文件路径，用于存储模块的独立判定
-        dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
-        boundary_hour (int, optional): 日界小时（0-23），默认4（凌晨4点）
-
-    Returns:
-        bool: 如果是今天首次调用则返回True，否则返回False
-    """
-    global _cached_dates
-
-    # # 检查缓存中是否有该模块的记录
-    if data_file not in _cached_dates:
-        # 若缓存无效，读取文件
-        try:
-            # 读取上次调用的日期
-            with open(data_file, 'r', encoding='utf-8') as f:
-                last_date_str = json.load(f)
-            _cached_dates[data_file] = datetime.datetime.strptime(last_date_str, '%Y-%m-%d').date()
-        except Exception:
-            # 读取文件出错，视为首次调用
-            os.makedirs(os.path.dirname(data_file), exist_ok=True)
-            with open(data_file, 'w', encoding='utf-8') as f:
-                json.dump(str(today), f, indent=4)
-            _cached_dates[data_file] = today
-            return True
-
-    if _cached_dates[data_file] != today:
-        with open(data_file, 'w', encoding='utf-8') as f:
-            json.dump(str(today), f, indent=4)
-        _cached_dates[data_file] = today
-        return True
-    else:
-        return False
-
-def isnt_executed_today(data_file: str, dt: datetime.datetime=None, boundary_hour: int=4) -> bool:
-    """
-    判断指定模块是否为今天首次调用
-    使用内部缓存减少重复读取文件操作
-
-    Parameters:
-        data_file (str): 数据文件路径，用于存储模块的独立判定
-        dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
-        boundary_hour (int, optional): 日界小时（0-23），默认4（凌晨4点）
-
-    Returns:
-        bool: 如果是今天首次调用则返回True，否则返回False
-    """
-    global _cached_dates
-
-    today = get_today(dt, boundary_hour)
-    return isnt_executed_at_day(data_file, today)
 
 
 def get_this_week(dt: datetime.datetime=None, start_date: datetime.datetime=None) -> float:

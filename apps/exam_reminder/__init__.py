@@ -79,11 +79,10 @@ _task = None
 def start():
     """启动考试提醒定时任务（每日 18:00 检查次日考试）"""
     global _task
-    data_file = os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")
     _task = ScheduledTask(
         time=datetime.time(18, 0),
         callback=check_and_notify,
-        data_file=data_file
+        key_str="exam_reminder"
     )
     _task.start()
 

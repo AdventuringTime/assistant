@@ -7,7 +7,7 @@ import os
 import webbrowser
 from homepage.widgets import NotificationSystemWidget
 
-from core.functions import isnt_executed_today
+from core.isnt_executed_today import isnt_executed_today
 from core.settings_manager import SettingsManager
 
 
@@ -182,7 +182,7 @@ def save_current_ids():
         json.dump(last_news_ids, f, ensure_ascii=False, indent=4)
 
 
-if isnt_executed_today(os.path.join(os.path.dirname(__file__), "data", "last_run_date.json")):
+if isnt_executed_today("news_monitor"):
     # 每天第一次运行时，打开所有目标网页
     for url, name in TARGETS:
         NotificationSystemWidget().notify(

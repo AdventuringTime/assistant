@@ -1,9 +1,8 @@
 import datetime
-import json
-import os
 from PySide6.QtCore import QTimer
 
-from core.functions import get_today, isnt_executed_at_day
+from core.functions import get_today
+from core.isnt_executed_today import isnt_executed_at_day, mark_executed_at_day
 from homepage.widgets import NotificationSystemWidget
 
 
@@ -14,18 +13,18 @@ class ScheduledTask:
     如果应用在指定时间正在运行，则在那个时间执行回调；
     如果应用在指定时间之后启动，则在启动时立即执行回调（每天仅一次）。
 
-    通过 data_file 记录上次执行日期，确保每天只执行一次。
+    通过 key_str 记录上次执行日期，确保每天只执行一次。
     通过 boundary_hour 指定日界，与 get_today() 语义一致。
     """
 
-    def __init__(self, time, callback, data_file=None):
+    def __init__(self, time, callback, key_str=None):
         """
         初始化定时任务
 
         Parameters:
             time (datetime.time): 每日触发时间
             callback (callable): 要执行的回调函数（无参数）
-            data_file (str, optional): 用于记录上次执行日期的文件路径。
+            key_str (str, optional): 用于记录上次执行日期的键名。
                 提供此参数后，若应用在指定时间之后启动，会检查今天是否已执行，
                 未执行则立即执行。不提供则仅在指定时间触发，错过则等待次日。
             boundary_hour (int, optional): 日界小时（0-23）。默认与 time.hour 一致，
@@ -33,7 +32,7 @@ class ScheduledTask:
         """
         self.time = time
         self.callback = callback
-        self.data_file = data_file
+        self.key_str = key_str
         self._boundary_hour = time.hour
         self._running = False
         self.timer = QTimer()
@@ -44,7 +43,7 @@ class ScheduledTask:
         today = get_today(boundary_hour=self._boundary_hour)
         target = datetime.datetime.combine(today, self.time) + datetime.timedelta(days=1)
 
-        if self.data_file and isnt_executed_at_day(self.data_file, today):
+        if self.key_str and isnt_executed_at_day(self.key_str, today):
             # 有记录文件且当天未执行 → 立即执行
             self.callback()
 
@@ -63,15 +62,15 @@ class ScheduledTask:
 
     def _execute(self):
         """执行回调并记录执行日期"""
-        if self.data_file:
+        if self.key_str:
             self._mark_executed_today()
         self.callback()
 
     def _mark_executed_today(self):
         """记录今天已执行"""
-        os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
-        with open(self.data_file, 'w', encoding='utf-8') as f:
-            json.dump(get_today(boundary_hour=self._boundary_hour).isoformat(), f, indent=4)
+        today = get_today(boundary_hour=self._boundary_hour)
+        if self.key_str:
+            mark_executed_at_day(self.key_str, today)
 
     def stop(self):
         """停止定时任务"""
@@ -86,6 +85,7 @@ class ScheduledNotificationItem:
 
     def __init__(self,
                  time,
+                 key_str=None,
                  title="来自助手的通知",
                  content="助手没收到更多内容哦",
                  click_action=None,
@@ -96,6 +96,9 @@ class ScheduledNotificationItem:
 
         Parameters:
             time (datetime.time): 通知触发时间
+            key_str (str, optional): 用于记录上次执行日期的键名。
+                提供此参数后，若应用在指定时间之后启动，会检查今天是否已执行，
+                未执行则立即执行。不提供则仅在指定时间触发，错过则等待次日。
             title (str, optional): 通知标题
             content (str, optional): 通知内容
             click_action (dict, optional): 点击操作，格式为{"type": "open_url|open_file|open_app", "value": ...}
@@ -103,6 +106,7 @@ class ScheduledNotificationItem:
             is_read (bool, optional): 是否已读，默认 False
         """
         self.time = time
+        self.key_str = key_str
         self.title = title
         self.content = content
         self.click_action = click_action
@@ -110,7 +114,8 @@ class ScheduledNotificationItem:
         self.is_read = is_read
         self._task = ScheduledTask(
             time=self.time,
-            callback=self._notify
+            callback=self._notify,
+            key_str=self.key_str
         )
 
     def start(self):
@@ -140,6 +145,7 @@ def start():
     scheduled_notifications = [
         ScheduledNotificationItem(
             datetime.time(22, 30),
+            "FurinaNotification",
             "芙芙伴学",
             "芙芙喊你来记录今日任务完成情况啦",
             {"type": "open_app", "value": "peer_tutor_2026"}
