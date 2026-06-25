@@ -24,8 +24,8 @@ def check_and_notify():
     with open(exams_file, 'r', encoding='utf-8') as f:
         exams_data = json.load(f)
 
-    # 计算明天的日期（以 18:00 为日界）
-    tomorrow = get_today(boundary_hour=-6)
+    # 计算明天的日期（以 17:00 为日界，因为有时可能提前一秒触发）
+    tomorrow = get_today(boundary_hour=-7)
     tomorrow_str = tomorrow.isoformat()
 
     # 检查明天是否有考试
