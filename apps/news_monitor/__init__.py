@@ -182,14 +182,5 @@ def save_current_ids():
         json.dump(last_news_ids, f, ensure_ascii=False, indent=4)
 
 
-if isnt_executed_today("news_monitor"):
-    # 每天第一次运行时，打开所有目标网页
-    for url, name in TARGETS:
-        NotificationSystemWidget().notify(
-            title=name,
-            content="检查一下哦",
-            click_action={"type": "open_url", "value": url} # 打开主界面
-        )
-
 # 存储每个网页的最新新闻ID
 last_news_ids = load_saved_ids()
