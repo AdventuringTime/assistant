@@ -36,14 +36,37 @@
         "启动项",
         [
             [
-                "新闻监控",
+                "激活",
                 [
                     {
-                        "label": "激活",
+                        "label": "新闻监控",
                         "type": "bool",
-                        "json_path": "startup.news_monitor.activated",
+                        "json_path": "startup.activated.news_monitor",
                         "default": false
                     },
+                    {
+                        "label": "每日年份",
+                        "type": "bool",
+                        "json_path": "startup.activated.daily_year",
+                        "default": false
+                    },
+                    {
+                        "label": "考试提醒",
+                        "type": "bool",
+                        "json_path": "startup.activated.exam_reminder",
+                        "default": false
+                    },
+                    {
+                        "label": "芙芙伴学通知",
+                        "type": "bool",
+                        "json_path": "startup.activated.furina_notification",
+                        "default": false
+                    }
+                ]
+            ],
+            [
+                "新闻监控",
+                [
                     {
                         "label": "检查间隔（秒）",
                         "type": "int",
@@ -59,28 +82,6 @@
                         "min": 1,
                         "max": 2147483647,
                         "default": 300
-                    }
-                ]
-            ],
-            [
-                "每日年份",
-                [
-                    {
-                        "label": "激活",
-                        "type": "bool",
-                        "json_path": "startup.daily_year.activated",
-                        "default": false
-                    }
-                ]
-            ],
-            [
-                "考试提醒",
-                [
-                    {
-                        "label": "激活",
-                        "type": "bool",
-                        "json_path": "startup.exam_reminder.activated",
-                        "default": false
                     }
                 ]
             ]

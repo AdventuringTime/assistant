@@ -3,6 +3,7 @@ from PySide6.QtCore import QTimer
 
 from core.functions import get_today
 from core.isnt_executed_today import isnt_executed_at_day, mark_executed_at_day
+from core.settings_manager import SettingsManager
 from homepage.widgets import NotificationSystemWidget
 
 
@@ -142,15 +143,20 @@ class ScheduledNotificationItem:
 def start():
     """启动预定义列表中的定时通知"""
     global scheduled_notifications
-    scheduled_notifications = [
-        ScheduledNotificationItem(
-            datetime.time(22, 30),
-            "FurinaNotification",
-            "芙芙伴学",
-            "芙芙喊你来记录今日任务完成情况啦",
-            {"type": "open_app", "value": "peer_tutor_2026"}
+    settings = SettingsManager()
+
+    scheduled_notifications = []
+
+    if settings.get_value("startup.activated.furina_notification", True):
+        scheduled_notifications.append(
+            ScheduledNotificationItem(
+                datetime.time(22, 30),
+                "FurinaNotification",
+                "芙芙伴学",
+                "芙芙喊你来记录今日任务完成情况啦",
+                {"type": "open_app", "value": "peer_tutor_2026"}
+            )
         )
-    ]
 
     for item in scheduled_notifications:
         item.start()
