@@ -86,5 +86,21 @@
                 ]
             ]
         ]
+    ],
+    [
+        "任务",
+        [
+            [
+                "浮窗",
+                [
+                    {
+                        "label": "点击时设置完成次数",
+                        "type": "bool",
+                        "json_path": "tasks.floating_widget.click_to_set_completed",
+                        "default": true
+                    }
+                ]
+            ]
+        ]
     ]
 ]

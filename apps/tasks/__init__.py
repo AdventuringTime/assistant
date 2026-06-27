@@ -51,6 +51,7 @@ from PySide6.QtGui import QDesktopServices
 
 from core.base_objects import BaseWindow, BaseDialog, DeleteButton
 from core.functions import get_today
+from core.settings_manager import SettingsManager
 
 
 def _hex_to_rgb(hex_color):
@@ -748,6 +749,12 @@ class FloatingWidget(QWidget):
                            Qt.WindowType.WindowStaysOnBottomHint |
                            Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+
+        self._settings = SettingsManager()
+
+        # 在不启用点击设置完成次数时，穿透点击
+        if not self._settings.get_value("tasks.floating_widget.click_to_set_completed", True):
+            self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowTransparentForInput)
 
         self.layout_ = QVBoxLayout(self)
         self.layout_.setContentsMargins(0, 0, 0, 0)
