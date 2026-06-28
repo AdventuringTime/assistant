@@ -32,6 +32,7 @@ class MainWindow(BaseWindow):
         self.init_system_tray()
 
         # 初始化自启动程序
+        self._settings_manager = SettingsManager()
         self.init_auto_start()
 
         # 初始化窗口内容
@@ -152,28 +153,22 @@ class MainWindow(BaseWindow):
         scheduled_notifications.start()
         self.auto_start["scheduled_notifications"] = scheduled_notifications
 
-        # 加载设置数据
-        startup_settings = SettingsManager().get_value("startup", {})
-
         # news_monitor - 新闻监控心跳器，定期检查新闻更新
-        news_monitor_settings = startup_settings.get("news_monitor", {})
-        if news_monitor_settings.get("activated", False):
+        if self._settings_manager.get_value("startup.activated.news_monitor", False):
             from apps import news_monitor
-            interval = news_monitor_settings.get("interval", 1800)
+            interval = self._settings_manager.get_value("startup.news_monitor.interval", 1800)
             self.news_monitor_worker = DynamicHeartbeat(news_monitor.check_news_update, interval)
             self.news_monitor_thread = BaseThread(self.news_monitor_worker)
             self.news_monitor_thread.start()
             self.auto_start["news_monitor"] = self.news_monitor_thread
 
         # daily_year - 每日年度事记，导入时自动推送当天年度事记通知
-        daily_year_settings = startup_settings.get("daily_year", {})
-        if daily_year_settings.get("activated", False):
+        if self._settings_manager.get_value("startup.activated.daily_year", False):
             from apps import daily_year
             self.auto_start["daily_year"] = daily_year
 
         # exam_reminder - 每晚提醒明日考试，使用定时任务检查
-        exam_reminder_settings = startup_settings.get("exam_reminder", {})
-        if exam_reminder_settings.get("activated", False):
+        if self._settings_manager.get_value("startup.activated.exam_reminder", False):
             from apps import exam_reminder
             exam_reminder.start()
             self.auto_start["exam_reminder"] = exam_reminder
