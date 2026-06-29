@@ -25,9 +25,39 @@ class CalendarSchedulesManager:
         """初始化重复事件（仅首次创建时执行）"""
         if not self._initialized:
             self._cache_dict = {}     # {year: {month: {day: {id: schedule_data}}}
-            self._dirty_dates = set() # {(year, month, day), ...}
+            self._dirty_months = set()  # {(year, month), ...}
             self.init_repeat_events_until_today(get_today())
             self._initialized = True
+
+    def _month_file_path(self, year, month):
+        """
+        获取月度文件的路径
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份（1-12）
+
+        Returns:
+            str: 月度文件路径，如 apps/calendar/data/2026-04.json
+        """
+        return os.path.join(data_dir, f"{year}-{month:02d}.json")
+
+    def _get_month_data_from_file(self, year, month):
+        """
+        从磁盘加载指定月份的完整数据
+
+        Parameters:
+            year (int): 年份
+            month (int): 月份（1-12）
+
+        Returns:
+            dict: {day_str: {id: schedule_data}, ...}
+        """
+        file_path = self._month_file_path(year, month)
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
 
     def init_repeat_events_of_date(self, date):
         """
@@ -123,7 +153,7 @@ class CalendarSchedulesManager:
         """
         从缓存或文件加载指定日期的日程数据
 
-        优先从内存缓存读取，如果缓存中不存在则从文件加载并写入缓存。
+        优先从内存缓存读取，如果缓存中不存在则从月度文件加载并写入缓存。
 
         Parameters:
             year (int): 年份
@@ -134,21 +164,15 @@ class CalendarSchedulesManager:
             dict: 日程字典，key为日程ID，value为日程数据
         """
         # 优先从缓存读取
-        cached = self._cache_dict.get(year, {}).get(month, {}).get(day)
-        if cached is not None:
-            return cached
+        if year in self._cache_dict and month in self._cache_dict[year]:
+            return self._cache_dict[year][month].get(str(day), {})
 
-        # 缓存未命中，从文件加载
-        file_path = os.path.join(data_dir, str(year), str(month), str(day) + ".json")
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding='utf-8') as f:
-                schedules = json.load(f)
-        else:
-            schedules = {}
+        # 该月未加载，从月度文件加载到缓存（day 键保留为字符串）
+        month_data = self._get_month_data_from_file(year, month)
+        self._cache_dict.setdefault(year, {})[month] = month_data
 
-        # 写入缓存以便后续快速访问
-        self._cache_dict.setdefault(year, {}).setdefault(month, {})[day] = schedules
-        return schedules
+        # 返回指定日期的数据（如果不存在返回空字典）
+        return self._cache_dict[year][month].get(str(day), {})
 
     def save_schedule(
             self,
@@ -198,8 +222,8 @@ class CalendarSchedulesManager:
         schedules[id_new] = schedule_data
 
         # 更新缓存并标记为脏数据
-        self._cache_dict.setdefault(year_new, {}).setdefault(month_new, {})[day_new] = dict(schedules)
-        self._dirty_dates.add((year_new, month_new, day_new))
+        self._cache_dict.setdefault(year_new, {}).setdefault(month_new, {})[str(day_new)] = dict(schedules)
+        self._dirty_months.add((year_new, month_new))
 
     def delete_schedule(self, year_old, month_old, day_old, id_old):
         """
@@ -224,29 +248,28 @@ class CalendarSchedulesManager:
         del schedules[id_old]
 
         # 更新缓存并标记为脏数据
-        self._cache_dict.setdefault(year_old, {}).setdefault(month_old, {})[day_old] = schedules
-        self._dirty_dates.add((year_old, month_old, day_old))
+        self._cache_dict.setdefault(year_old, {}).setdefault(month_old, {})[str(day_old)] = schedules
+        self._dirty_months.add((year_old, month_old))
 
     def flush_to_disk(self):
         """
         将所有脏数据一次性写入磁盘。
 
-        遍历所有已修改的日期，将缓存中的日程数据持久化到文件。
-        如果某日日程已被清空，则删除对应的 JSON 文件。
+        遍历所有已修改的月份，将缓存中的月度日程数据直接写入JSON文件。
+        如果某月缓存为空，则删除对应的文件。
         """
-        for year, month, day in self._dirty_dates:
-            schedules = self._cache_dict.get(year, {}).get(month, {}).get(day)
-            file_path = os.path.join(data_dir, str(year), str(month), str(day) + ".json")
+        for year, month in self._dirty_months:
+            month_cache = self._cache_dict.get(year, {}).get(month, {})
+            file_path = self._month_file_path(year, month)
 
-            if schedules:
-                # 有日程数据 -> 写入文件
+            if month_cache:
+                # 有日程数据 -> 写入月度文件
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(schedules, f, ensure_ascii=False, indent=4)
+                    json.dump(month_cache, f, ensure_ascii=False, indent=4)
             else:
-                # 日程已被清空 -> 删除文件（如果存在）
+                # 该月所有日程已被清空 -> 删除文件（如果存在）
                 if os.path.exists(file_path):
                     os.remove(file_path)
 
-        self._dirty_dates.clear()
-
+        self._dirty_months.clear()
