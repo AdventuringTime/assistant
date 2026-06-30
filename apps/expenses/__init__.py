@@ -598,14 +598,10 @@ class ExpenseTypeWidget(QWidget):
             return
 
         dialog = SortDialog(self, children, f"排序 - {self.type_data['name']}")
-        dialog.show()
 
-        def check_result():
-            if dialog.result is not None:
-                self.type_data['children'] = dialog.result
-                self.window().record_widget.mark_modified_and_reload()
-
-        dialog.destroyed.connect(check_result)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.type_data['children'] = dialog.result
+            self.window().record_widget.mark_modified_and_reload()
 
     def load_children(self):
         """加载并显示所有子项和子类型"""
@@ -860,7 +856,7 @@ class ExpenseRecordWidget(QWidget):
         dialog = SortDialog(self, self.children_, "排序")
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.children_ = dialog.result
+            self.children_[:] = dialog.result
             self.mark_modified_and_reload()
 
     def remove_item(self, item_data):
