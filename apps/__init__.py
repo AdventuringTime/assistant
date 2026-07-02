@@ -35,6 +35,10 @@ APP_LIST = {
         "window": lambda: import_module('apps.peer_tutor_2026').FurinaWindow(),
         "icon": "apps/peer_tutor_2026/assets/icon.ico"
     },
+    "dew_point": {
+        "display_name": "露点计算",
+        "window": lambda: import_module('apps.dew_point').DewPointDialog()
+    },
     "tokenizer": {
         "display_name": "词元提取器",
         "window": lambda: import_module('apps.tokenizer').TokenizerWindow()
