@@ -135,3 +135,14 @@ class DewPointDialog(BaseDialog):
             if obj in (self.temp_spinbox, self.humidity_spinbox):
                 QTimer.singleShot(0, obj.selectAll)
         return super().eventFilter(obj, event)
+
+    def closeEvent(self, event):
+        """
+        关闭时重置单例状态
+        
+        Parameters:
+            event (QEvent): 关闭事件对象
+        """
+        DewPointDialog._instance = None
+        DewPointDialog._initialized = False
+        super().closeEvent(event)
