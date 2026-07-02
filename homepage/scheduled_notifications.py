@@ -56,10 +56,10 @@ class ScheduledTask:
 
     def _on_timeout(self):
         """定时器触发时的处理"""
-        self._execute()
         if self._running:
             # 安排明天的执行（24小时后）
             self.timer.start(86400000)
+        self._execute()
 
     def _execute(self):
         """执行回调并记录执行日期"""
