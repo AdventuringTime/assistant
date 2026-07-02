@@ -1153,6 +1153,13 @@ class ExpensesWindow(BaseWindow):
         self.tab_widget.addTab(self.trend_widget, "余额趋势")
 
         os.makedirs(self.data_dir, exist_ok=True)
+        # 首次启动时，若当前月数据不存在，从上个月继承
+        data_path = self.get_data_path(
+            self.current_date.year(), self.current_date.month())
+        if not os.path.exists(data_path):
+            self.try_init_from_last_month(
+                self.current_date.year(), self.current_date.month())
+
         self.load_month_data()
         ExpensesWindow._instance = self
         ExpensesWindow._initialized = True
@@ -1171,10 +1178,6 @@ class ExpensesWindow(BaseWindow):
         """加载指定月份的记账数据"""
         year = self.current_date.year()
         month = self.current_date.month()
-
-        data_path = self.get_data_path(year, month)
-        if not os.path.exists(data_path):
-            self.try_init_from_last_month(year, month)
 
         self.record_widget.load_month_data(year, month)
         self.trend_widget.update_view(year, month)
