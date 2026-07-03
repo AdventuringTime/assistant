@@ -149,9 +149,9 @@ class MainWindow(BaseWindow):
         """
 
         # scheduled_notifications - 定时通知
-        from homepage import scheduled_notifications
-        scheduled_notifications.start()
-        self.auto_start["scheduled_notifications"] = scheduled_notifications
+        from homepage import scheduler
+        scheduler.start()
+        self.auto_start["scheduled_notifications"] = scheduler
 
         # news_monitor - 新闻监控心跳器，定期检查新闻更新
         if self._settings_manager.get_value("startup.activated.news_monitor", False):

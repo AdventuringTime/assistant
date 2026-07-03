@@ -1,7 +1,6 @@
 import datetime
 from PySide6.QtCore import QTimer
 
-from core.functions import get_today
 from core.isnt_executed_today import isnt_executed_at_day, mark_executed_at_day
 from core.settings_manager import SettingsManager
 from homepage.widgets import NotificationSystemWidget
@@ -12,10 +11,10 @@ class ScheduledTask:
     定时任务，在指定时间执行一次回调函数。
 
     如果应用在指定时间正在运行，则在那个时间执行回调；
-    如果应用在指定时间之后启动，则在启动时立即执行回调（每天仅一次）。
+    如果应用在指定时间之后启动，则在启动时立即执行回调（每天仅一次）；
+    如果在次日计划时间之前启动（如错过18:00，次日08:00打开），也会补偿执行。
 
     通过 key_str 记录上次执行日期，确保每天只执行一次。
-    通过 boundary_hour 指定日界，与 get_today() 语义一致。
     """
 
     def __init__(self, time, callback, key_str=None):
@@ -28,24 +27,25 @@ class ScheduledTask:
             key_str (str, optional): 用于记录上次执行日期的键名。
                 提供此参数后，若应用在指定时间之后启动，会检查今天是否已执行，
                 未执行则立即执行。不提供则仅在指定时间触发，错过则等待次日。
-            boundary_hour (int, optional): 日界小时（0-23）。默认与 time.hour 一致，
-                即日界与任务触发时间对齐。
         """
         self.time = time
         self.callback = callback
         self.key_str = key_str
-        self._boundary_hour = time.hour
         self._running = False
         self.timer = QTimer()
 
     def start(self):
         """启动定时任务"""
         now = datetime.datetime.now()
-        today = get_today(boundary_hour=self._boundary_hour)
-        target = datetime.datetime.combine(today, self.time) + datetime.timedelta(days=1)
+        task_date = now.date()
+        target = datetime.datetime.combine(task_date, self.time)
 
-        if self.key_str and isnt_executed_at_day(self.key_str, today):
-            # 有记录文件且当天未执行 → 立即执行
+        if now >= target:
+            target += datetime.timedelta(days=1)
+        else:
+            task_date -= datetime.timedelta(days=1)
+
+        if self.key_str and isnt_executed_at_day(self.key_str, task_date):
             self.callback()
 
         wait_ms = int((target - now).total_seconds() * 1000)
@@ -69,7 +69,7 @@ class ScheduledTask:
 
     def _mark_executed_today(self):
         """记录今天已执行"""
-        today = get_today(boundary_hour=self._boundary_hour)
+        today = datetime.datetime.now().date()
         if self.key_str:
             mark_executed_at_day(self.key_str, today)
 

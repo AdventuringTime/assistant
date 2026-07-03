@@ -4,7 +4,7 @@ import json
 import os
 
 from core.functions import get_today
-from homepage.scheduled_notifications import ScheduledTask
+from homepage.scheduler import ScheduledTask
 from homepage.widgets import NotificationSystemWidget
 
 
