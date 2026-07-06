@@ -504,7 +504,7 @@ class TopStatusWidget(QWidget):
 
         # 定期更新显示（每5分钟自动更新）
         self.updater = Heartbeat(self.update_display, interval=300)
-        self.updater.start()
+        # 不在这里start，因为主窗口初始化后弹出窗口时会自动启动
 
     def update_weeks_collapsed(self):
         """更新自身存储的周次进度"""

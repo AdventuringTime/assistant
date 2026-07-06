@@ -19,10 +19,11 @@ class Heartbeat(QObject):
         self.interval = interval
         self.immediate = immediate
 
-    def start(self):
-        """启动心跳器"""
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._on_timeout)
+
+    def start(self):
+        """启动心跳器"""
         self.timer.start(self.interval * 1000)  # 转换为毫秒
         if self.immediate:
             self._on_timeout()
@@ -34,8 +35,7 @@ class Heartbeat(QObject):
     def stop(self):
         """停止心跳器"""
         try:
-            if hasattr(self, 'timer'):
-                self.timer.stop()
+            self.timer.stop()
         finally:
             self.stopped.emit()
 

@@ -90,6 +90,18 @@ class MainWindow(BaseWindow):
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             self.show_window()
 
+    def showEvent(self, event):
+        """窗口显示时恢复定时任务并立即执行一次"""
+        super().showEvent(event)
+        self.top_status_widget.updater.start()
+        print("Window shown, updater started")
+
+    def hideEvent(self, event):
+        """窗口隐藏时停止定时任务"""
+        self.top_status_widget.updater.stop()
+        print("Window hidden, updater stopped")
+        super().hideEvent(event)
+
     def closeEvent(self, event):
         """
         关闭窗口事件处理
