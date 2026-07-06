@@ -9,41 +9,36 @@ class WindowsManager:
     """窗口管理器，用于统一管理所有打开的窗口"""
 
     _instance = None
-    _windows = []
 
     def __new__(cls):
-        """创建单例实例，确保全局只有一个窗口管理器"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+            cls._instance._windows = []
         return cls._instance
 
-    @classmethod
-    def register_window(cls, window):
+    def register_window(self, window):
         """注册窗口到管理器"""
-        if window not in cls._windows:
-            cls._windows.append(window)
+        if window not in self._windows:
+            self._windows.append(window)
 
-    @classmethod
-    def unregister_window(cls, window):
+    def unregister_window(self, window):
         """从管理器注销窗口"""
-        if window in cls._windows:
-            cls._windows.remove(window)
+        if window in self._windows:
+            self._windows.remove(window)
 
-    @classmethod
-    def close_all_windows(cls):
+    def close_all_windows(self):
         """关闭所有注册的窗口"""
-        for window in cls._windows[:]:  # 使用副本遍历，避免修改列表时出错
+        for window in self._windows[:]:  # 使用副本遍历，避免修改列表时出错
             try:
                 window.close()
-                cls.unregister_window(window)
+                self.unregister_window(window)
             except Exception:
                 # 如果窗口已经销毁，忽略错误
                 pass
 
-    @classmethod
-    def get_window_count(cls):
+    def get_window_count(self):
         """获取当前打开的窗口数量"""
-        return len(cls._windows)
+        return len(self._windows)
 
 
 class BaseWindow(QMainWindow):
@@ -70,7 +65,7 @@ class BaseWindow(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
 
         # 注册窗口到窗口管理器
-        WindowsManager.register_window(self)
+        WindowsManager().register_window(self)
 
     def closeEvent(self, event):
         """
@@ -80,7 +75,7 @@ class BaseWindow(QMainWindow):
             event (QCloseEvent): 关闭事件对象
         """
         # 从窗口管理器注销
-        WindowsManager.unregister_window(self)
+        WindowsManager().unregister_window(self)
         super().closeEvent(event)
 
 class BaseDialog(QDialog):
@@ -107,7 +102,7 @@ class BaseDialog(QDialog):
         self.setAttribute(Qt.WA_DeleteOnClose)
 
         # 注册对话框到窗口管理器
-        WindowsManager.register_window(self)
+        WindowsManager().register_window(self)
 
     def closeEvent(self, event):
         """
@@ -117,7 +112,7 @@ class BaseDialog(QDialog):
             event (QCloseEvent): 关闭事件对象
         """
         # 从窗口管理器注销
-        WindowsManager.unregister_window(self)
+        WindowsManager().unregister_window(self)
         super().closeEvent(event)
 
 

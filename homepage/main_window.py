@@ -176,7 +176,7 @@ class MainWindow(BaseWindow):
     def quit_(self):
         """退出应用程序，关闭所有窗口"""
         # 关闭所有注册的窗口
-        WindowsManager.close_all_windows()
+        WindowsManager().close_all_windows()
         # 停止所有后台线程
         ThreadManager().stop_all_threads()
         # 退出应用程序
