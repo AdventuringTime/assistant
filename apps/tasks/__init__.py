@@ -239,6 +239,36 @@ class TaskDialog(BaseDialog):
             self.deadline_edit.setDate(QDate(today.year, today.month, today.day))
         self.deadline_checkbox.stateChanged.connect(self.on_deadline_checkbox_changed)
 
+        # 预计完成日期（可选）
+        self.estimated_time_layout = QHBoxLayout()
+        self.estimated_time_label = QLabel('预计完成日期（可选）:')
+        self.estimated_time_checkbox = QCheckBox()
+        self.estimated_time_edit = QDateEdit()
+        self.estimated_time_edit.setDisplayFormat('yyyy-MM-dd')
+        self.estimated_time_edit.setCalendarPopup(True)
+
+        self.estimated_time_layout.addWidget(self.estimated_time_label)
+        self.estimated_time_layout.addStretch()
+        self.estimated_time_layout.addWidget(self.estimated_time_checkbox)
+        self.layout_.addLayout(self.estimated_time_layout)
+        self.layout_.addWidget(self.estimated_time_edit)
+
+        self.estimated_time_edit.hide()
+
+        if task:
+            estimated_time = task.get('estimated_time')
+            if estimated_time:
+                self.estimated_time_checkbox.setChecked(True)
+                self.estimated_time_edit.show()
+                self.estimated_time_edit.setDate(QDate.fromString(estimated_time, 'yyyy-MM-dd'))
+            else:
+                today = get_today()
+                self.estimated_time_edit.setDate(QDate(today.year, today.month, today.day))
+        else:
+            today = get_today()
+            self.estimated_time_edit.setDate(QDate(today.year, today.month, today.day))
+        self.estimated_time_checkbox.stateChanged.connect(self.on_estimated_time_checkbox_changed)
+
         # 链接（支持文件路径转换）
         self.link_label = QLabel('链接:')
         self.link_edit = QLineEdit()
@@ -318,6 +348,13 @@ class TaskDialog(BaseDialog):
         elif state == 0:
             self.deadline_edit.hide()
 
+    def on_estimated_time_checkbox_changed(self, state):
+        """处理预计完成日期复选框状态变化"""
+        if state == 2:
+            self.estimated_time_edit.show()
+        elif state == 0:
+            self.estimated_time_edit.hide()
+
     def get_task_data(self):
         """
         获取当前表单中的任务数据
@@ -335,6 +372,9 @@ class TaskDialog(BaseDialog):
         if self.deadline_checkbox.isChecked():
             deadline = self.deadline_edit.date().toString('yyyy-MM-dd')
             data['deadline'] = deadline
+        if self.estimated_time_checkbox.isChecked():
+            estimated_time = self.estimated_time_edit.date().toString('yyyy-MM-dd')
+            data['estimated_time'] = estimated_time
         link = self.link_edit.text().strip()
         if link:
             data['link'] = link
@@ -480,6 +520,12 @@ class TaskItem(QWidget):
         self.deadline_label.setStyleSheet("font-size: 15px; color: #808080;")
         self.content_layout.addWidget(self.deadline_label)
 
+        # 预计完成日期（如果有）
+        self.estimated_time_label = QLabel()
+        self.estimated_time_label.setWordWrap(True)
+        self.estimated_time_label.setStyleSheet("font-size: 15px; color: #808080;")
+        self.content_layout.addWidget(self.estimated_time_label)
+
         # 进度信息
         self.completed = self.task.get('completed', 0.0)
         self.required = self.task.get('required', 1.0)
@@ -522,6 +568,12 @@ class TaskItem(QWidget):
             self.deadline_label.setText(f'截止日期: {deadline}')
         else:
             self.deadline_label.hide()
+
+        estimated_time = self.task.get('estimated_time')
+        if estimated_time:
+            self.estimated_time_label.setText(f'预计完成日期: {estimated_time}')
+        else:
+            self.estimated_time_label.hide()
 
     def update_style(self):
         """根据追踪状态更新样式"""
@@ -671,6 +723,13 @@ class TaskItem(QWidget):
             self.deadline_label.show()
         else:
             self.deadline_label.hide()
+
+        estimated_time = self.task.get('estimated_time')
+        if estimated_time:
+            self.estimated_time_label.setText(f'预计完成日期: {estimated_time}')
+            self.estimated_time_label.show()
+        else:
+            self.estimated_time_label.hide()
 
         # 更新进度
         self.required = data['required']
