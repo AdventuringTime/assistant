@@ -47,13 +47,6 @@ class MainWindow(BaseWindow):
         # 创建托盘菜单
         tray_menu = QMenu()
 
-        # 更新顶部状态显示
-        update_topstatus_action = QAction("更新顶部状态", self)
-        update_topstatus_action.triggered.connect(lambda: self.top_status_widget.update_display())
-        tray_menu.addAction(update_topstatus_action)
-
-        tray_menu.addSeparator()
-
         # 退出
         exit_action = QAction("退出", self)
         exit_action.triggered.connect(self.quit_)
