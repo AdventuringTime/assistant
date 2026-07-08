@@ -449,10 +449,17 @@ class CalendarWindow(BaseWindow):
             copy
         )
 
-        if (self.year_displayed == year_new
-            and self.month_displayed == month_new
-            and self.day_displayed == day_new
-        ):
+        needs_refresh = (
+            (self.year_displayed == year_new
+             and self.month_displayed == month_new
+             and self.day_displayed == day_new)
+            or (not copy
+                and year_old is not None
+                and self.year_displayed == year_old
+                and self.month_displayed == month_old
+                and self.day_displayed == day_old)
+        )
+        if needs_refresh:
             self.refresh_schedules()
 
     def delete_schedule_from_editor(self, schedule_editor):
