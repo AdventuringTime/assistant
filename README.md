@@ -5,18 +5,7 @@
 ## 项目结构
 
 ```
-├── core/                    # 核心模块
-│   ├── base_objects.py      # 基础对象类
-│   ├── error_window.py      # 错误处理窗口
-│   ├── heartbeat.py         # 定时任务支持
-│   ├── widgets.py           # 通用组件
-│   ├── functions.py         # 常用的函数与类
-│   ├── user_interface.py    # 用户界面相关类
-│   ├── global_constants.py  # 全局常量
-│   └── notification.py      # 通知系统单例
-├── homepage/                # 主页面
-│   ├── main_window.py       # 主窗口
-│   └── widgets.py           # 主页组件
+├── agent/                   # 智能体模块（见资料库`agent`。该模块可独立运行，本主程序无该模块也可运行）
 ├── apps/                    # 应用模块
 │   ├── __init__.py          # 应用配置
 │   ├── <app_name>/          # 各应用的模块
@@ -28,12 +17,23 @@
 │   ├── version.json         # 当前版本号
 │   ├── logo.ico             # 应用图标
 │   └── logo.png             # PNG 图标
+├── core/                    # 核心模块
+│   ├── base_objects.py      # 基础对象类
+│   ├── error_window.py      # 错误处理窗口
+│   ├── heartbeat.py         # 定时任务支持
+│   ├── widgets.py           # 通用组件
+│   ├── functions.py         # 常用的函数与类
+│   ├── user_interface.py    # 用户界面相关类
+│   ├── global_constants.py  # 全局常量
+│   └── notification.py      # 通知系统单例
 ├── data/                    # 数据目录（不会被同步到代码库）
 ├── docs/                    # 文档
 │   └── roadmap.md           # 项目路线图
+├── homepage/                # 主页面
+│   ├── main_window.py       # 主窗口
+│   └── widgets.py           # 主页组件
 ├── run.py                   # 主程序入口
 ├── run_app.py               # 单独启动指定应用
-├── start.bat                # Windows启动脚本（无命令行窗口）
 └── requirements.txt         # 依赖包列表
 ```
 
