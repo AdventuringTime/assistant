@@ -6,6 +6,10 @@ from importlib import import_module
 
 
 APP_LIST = {
+    "agent": {
+        "display_name": "Agent",
+        "window": lambda: import_module('apps.agent').AgentWindow()
+    },
     "settings": {
         "display_name": "设置",
         "window": lambda: import_module('apps.settings').SettingsWindow()
