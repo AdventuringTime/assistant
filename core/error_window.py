@@ -19,7 +19,7 @@ class ErrorWindow(BaseDialog):
         初始化错误窗口
 
         Parameters:
-            error_message (str): 错误消息描述
+            error_message (str or None): 错误消息描述
             traceback_text (str): 异常堆栈跟踪信息
             parent (QWidget, optional): 父窗口，默认为None
         """
@@ -47,8 +47,9 @@ class ErrorWindow(BaseDialog):
         layout.addWidget(title_label)
 
         # 错误消息
-        error_label = QLabel(error_message)
-        layout.addWidget(error_label)
+        if error_message:
+            error_label = QLabel(error_message)
+            layout.addWidget(error_label)
 
         # 错误详情文本框
         self.traceback_edit = QTextEdit()
