@@ -165,7 +165,7 @@ class TaskDialog(BaseDialog):
 
         self.weight_label = QLabel('权重:')
         self.weight_spin = QSpinBox()
-        self.weight_spin.setRange(1, 2147483647)
+        self.weight_spin.setRange(0, 2147483647)
         if task:
             self.weight_spin.setValue(task.get('weight', 100))
         else:
@@ -473,7 +473,10 @@ class TaskWidget(QWidget):
                 total_percent += task.progress_percent * weight
                 total_weight += weight
 
-            total_percent = total_percent / total_weight # 前文代码注意确保 total_weight 不为 0
+            if total_weight > 0:
+                total_percent = total_percent / total_weight
+            else:
+                total_percent = 100
 
         progress_value = int(total_percent)
         if progress_value < 0:
