@@ -2,9 +2,6 @@ from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QLabel,
                                QLineEdit, QTextEdit, QDateTimeEdit, QComboBox,
                                QCheckBox, QSpinBox, QTimeEdit)
 from PySide6.QtCore import QDateTime, QTime
-from glom import glom, Assign
-import json
-import os
 
 from core.settings_manager import SettingsManager
 

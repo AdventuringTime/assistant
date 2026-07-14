@@ -328,6 +328,8 @@ class ClockWidget(QWidget):
                 painter.setBrush(QBrush(color))
 
                 if span_angle > 0:
+                    if span_angle > 5760: # 超过一圈
+                        span_angle = 5760
                     # 绘制对应颜色的圆弧（与周环一致的粗细和样式）
                     painter.setPen(pen)
                     painter.drawArc(rect, start_angle, -span_angle)  # 负值表示顺时针
