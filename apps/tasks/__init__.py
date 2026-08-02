@@ -652,7 +652,9 @@ class TaskItem(QWidget):
         self.progress_bar.setValue(progress_value)
 
     def set_completed_from_input(self, event=None):
-        """通过输入对话框修改完成数量"""
+        """通过输入对话框修改完成数量，仅响应鼠标左键点击"""
+        if event is not None and event.button() != Qt.MouseButton.LeftButton:
+            return
         self.completed, ok = QInputDialog.getDouble(self, '修改进度',
             f'请输入完成数量:',
             value=self.completed,

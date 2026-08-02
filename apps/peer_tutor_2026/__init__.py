@@ -323,11 +323,13 @@ class TaskItem(QWidget):
 
     def on_progress_clicked(self, event):
         """
-        通过输入对话框修改完成数量
+        通过输入对话框修改完成数量，仅响应鼠标左键点击
 
         Parameters:
             event (QMouseEvent): 鼠标点击事件
         """
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
         self.completed, ok = QInputDialog.getDouble(self, '修改进度',
             f'请输入完成数量:',
             value=self.completed,
