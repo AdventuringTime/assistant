@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QInputDialog, QSpinBox, QSizePolicy, QDoubleSpinBox, QListWidget,
     QTabWidget
 )
-from PySide6.QtCore import QDate, Qt, QUrl, QPointF
+from PySide6.QtCore import QDate, Qt, QUrl, QPointF, QEvent, QTimer
 from PySide6.QtSvgWidgets import QSvgWidget
 from PySide6.QtGui import QDesktopServices, QPainter, QColor
 from PySide6.QtCharts import (QChart, QChartView, QLineSeries, QValueAxis,
@@ -1001,7 +1001,24 @@ class TrendWidget(QWidget):
         self.balance_spinbox.setRange(-1e18, 1e18)
         self.balance_spinbox.setDecimals(2)
         self.balance_spinbox.valueChanged.connect(self.on_balance_changed)
+        self.balance_spinbox.installEventFilter(self)
         self.modify_layout.addWidget(self.balance_spinbox)
+
+    def eventFilter(self, obj, event):
+        """
+        事件过滤器，实现余额输入框聚焦时自动全选
+
+        Parameters:
+            obj (QObject): 事件源对象
+            event (QEvent): 事件对象
+
+        Returns:
+            bool: 是否拦截事件
+        """
+        if event.type() == QEvent.Type.FocusIn:
+            if obj == self.balance_spinbox:
+                QTimer.singleShot(0, self.balance_spinbox.selectAll)
+        return super().eventFilter(obj, event)
 
     def load_data(self):
         if os.path.exists(self.data_path):
