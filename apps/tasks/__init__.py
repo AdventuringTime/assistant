@@ -868,7 +868,7 @@ class FloatingWidget(QWidget):
             elif completed == 1.0:
                 progress_text = '(已完成)'
             else:
-                progress_text = f'({completed}/{required})'
+                progress_text = f'({completed * 100:g}%)'
         else:
             progress_text = f'({completed}/{required})'
 
