@@ -602,6 +602,15 @@ class TaskWidget(QWidget):
         self.header.setText(f'第{self.week_displayed}周')
         self.update_total_progress()
 
+    def get_content_height(self):
+        """
+        获取任务列表内容所需的总高度
+
+        Returns:
+            int: 所有任务项的总高度（像素）
+        """
+        return self.content_widget.sizeHint().height()
+
 
 class ExpensesWidget(QWidget):
     """流水管理组件"""
@@ -936,6 +945,7 @@ class FurinaWindow(BaseWindow):
         self.setWindowTitle('芙芙伴学')
         self.setWindowIcon(icon)
         self.setMinimumSize(600, 400)
+        self._size_fitted = False  # 是否已按任务数量调整过窗口大小
 
         self.tab_widget = QTabWidget()
         self.setCentralWidget(self.tab_widget)
@@ -947,6 +957,38 @@ class FurinaWindow(BaseWindow):
         self.tab_widget.addTab(self.expenses_widget, '流水')
         FurinaWindow._instance = self
         FurinaWindow._initialized = True
+
+    def showEvent(self, event):
+        """
+        窗口显示事件，首次显示时根据任务数量动态调整窗口大小
+        使默认大小能容纳所有任务项
+
+        Parameters:
+            event (QShowEvent): 显示事件
+        """
+        if not self._size_fitted:
+            self._size_fitted = True
+            self._fit_size_to_tasks()
+        super().showEvent(event)
+
+    def _fit_size_to_tasks(self):
+        """
+        根据当前任务数量动态调整窗口高度，使默认大小能容纳所有任务项
+
+        说明:
+            - 高度由任务项实际尺寸动态计算，任务数量变化时无需修改代码
+            - 窗口高度不低于 minimumSize 的最小高度限制
+            - 窗口高度不超过屏幕可用高度的 90%，防止任务过多时超出屏幕
+        """
+        content_height = self.task_widget.get_content_height()
+        other_height = self.height() - self.task_widget.scroll_area.viewport().height()
+        new_height = other_height + content_height
+        new_height = max(new_height, self.minimumHeight())
+        screen = self.screen()
+        if screen is not None:
+            screen_height = screen.availableGeometry().height()
+            new_height = min(new_height, int(screen_height * 0.9))
+        self.resize(self.width(), new_height)
 
     def closeEvent(self, event):
         """

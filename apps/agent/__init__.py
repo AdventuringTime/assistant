@@ -1,1 +1,1 @@
-from agent.agent_window import AgentWindow
+from agent.windows import AgentWindow
