@@ -376,11 +376,15 @@ class TaskItem(QWidget):
 class TaskWidget(QWidget):
     """任务管理组件"""
 
+    WEEK_START_DATE = datetime.datetime(2026, 5, 11, 4, 0, 0)  # 第1周起始（周一 04:00）
+    TARGET_DATE = datetime.datetime(2026, 12, 21, 4, 0, 0)  # 目标日期（12月21日 04:00 起）
+    TARGET_WEEK = floor(get_this_week(dt=TARGET_DATE, start_date=WEEK_START_DATE)) + 1  # 目标日期所在周
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.this_week_num = floor(get_this_week(
-            start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
+            start_date=TaskWidget.WEEK_START_DATE)) + 1
         self.week_displayed = self.this_week_num
         self.is_showing_this_week = True
         self.data_manager = TaskDataManager()
@@ -520,7 +524,7 @@ class TaskWidget(QWidget):
         """
         days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         week = floor(get_this_week(dt=dt,
-            start_date=datetime.datetime(2026, 5, 11, 4, 0, 0))) + 1
+            start_date=TaskWidget.WEEK_START_DATE)) + 1
         dt_date = get_today(dt) # 处理跨天问题
 
         data_dir = os.path.join(os.path.dirname(__file__), 'data',
@@ -576,6 +580,23 @@ class TaskWidget(QWidget):
             self.data_manager.mark_modified(self.week_displayed)
             self.update_total_progress()
 
+    @staticmethod
+    def get_weeks_left(today=None):
+        """
+        计算距离目标日期还剩几周
+
+        Parameters:
+            today (datetime.datetime, optional): 起始时间，默认使用当前时间
+
+        Returns:
+            int: 剩余周数（目标所在周 - 当前所在周）
+        """
+        if today is None:
+            today = datetime.datetime.now()
+        current_week = floor(get_this_week(
+            dt=today, start_date=TaskWidget.WEEK_START_DATE)) + 1
+        return TaskWidget.TARGET_WEEK - current_week
+
     def toggle_week(self):
         """切换显示本周/上周任务"""
         if self.is_showing_this_week:
@@ -599,7 +620,11 @@ class TaskWidget(QWidget):
             task_item.task_deleted.connect(self.on_task_deleted)
             self.task_items.append(task_item)
             self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
-        self.header.setText(f'第{self.week_displayed}周')
+        weeks_left = self.get_weeks_left()
+        if weeks_left > 0:
+            self.header.setText(f'距离考研还有{weeks_left}周')
+        else:
+            self.header.setText(f'考研已过{-weeks_left}周')
         self.update_total_progress()
 
     def get_content_height(self):
