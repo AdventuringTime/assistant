@@ -8,3 +8,5 @@ transformers
 numpy
 winotify
 pyyaml
+mcp
+uvicorn

@@ -16,5 +16,11 @@ from homepage.main_window import MainWindow
 window = MainWindow()
 window.show()
 
+# 启动 MCP 服务器（随主程序一起启动，退出时自动停止）
+from mcp_server.lifecycle import McpServerManager
+mcp_manager = McpServerManager()
+mcp_manager.start()
+app.aboutToQuit.connect(mcp_manager.stop)
+
 # 运行应用程序
 sys.exit(app.exec())

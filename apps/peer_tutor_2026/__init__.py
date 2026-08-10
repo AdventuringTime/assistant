@@ -14,13 +14,16 @@ import datetime
 from math import floor
 
 
-icon = QIcon('apps/peer_tutor_2026/assets/icon.ico')
+def get_icon():
+    """获取窗口图标（惰性加载，避免无 GUI 环境导入模块时崩溃）"""
+    return QIcon('apps/peer_tutor_2026/assets/icon.ico')
 
 
 class TaskDataManager:
     """任务数据管理类，单例模式，管理所有周的任务数据"""
 
     _instance = None
+    WEEK_START_DATE = datetime.datetime(2026, 5, 11, 4, 0, 0)  # 与 TaskWidget.WEEK_START_DATE 保持一致
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -34,6 +37,75 @@ class TaskDataManager:
         self._tasks = {}  # {week_num: [tasks_list]}
         self.modified_weeks = set()  # 记录被修改的周
         self._initialized = True
+
+    def get_current_week_num(self, dt=None):
+        """
+        计算当前周数
+
+        Parameters:
+            dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
+
+        Returns:
+            int: 周数（从1开始）
+        """
+        return floor(get_this_week(dt=dt, start_date=self.WEEK_START_DATE)) + 1
+
+    def inherit_tasks_from_last_week_if_not_exist(self, week):
+        """
+        如果指定周的任务数据不存在，则从上一周继承任务（重置完成次数）
+
+        Parameters:
+            week (int): 周数
+        """
+        data_dir = os.path.join(os.path.dirname(__file__), 'data', str(week))
+        json_path = os.path.join(data_dir, 'tasks.json')
+
+        if os.path.exists(json_path):
+            return
+
+        last_week_dir = os.path.join(os.path.dirname(__file__), 'data', str(week - 1))
+        last_week_json_path = os.path.join(last_week_dir, 'tasks.json')
+        if os.path.exists(last_week_json_path):
+            os.makedirs(data_dir, exist_ok=True)
+            with open(last_week_json_path, 'r', encoding='utf-8') as f:
+                tasks = json.load(f)
+            for task in tasks:
+                task['completed'] = 0.0
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(tasks, f, ensure_ascii=False, indent=4)
+
+    def get_current_week_tasks(self, dt=None):
+        """
+        获取当前周的任务数据，当前周数据不存在时从上一周继承
+
+        Parameters:
+            dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
+
+        Returns:
+            list: 当前周任务列表
+        """
+        week = self.get_current_week_num(dt)
+        self.inherit_tasks_from_last_week_if_not_exist(week)
+        return self.get_tasks(week)
+
+    def update_task_progress(self, week, task_index, completed):
+        """
+        更新指定任务的完成进度并保存
+
+        Parameters:
+            week (int): 周数
+            task_index (int): 任务序号（从1开始）
+            completed (float): 新的完成数量
+
+        Raises:
+            IndexError: 任务序号超出范围
+        """
+        tasks = self.get_tasks(week)
+        if not 1 <= task_index <= len(tasks):
+            raise IndexError(f"任务序号 {task_index} 超出范围（共 {len(tasks)} 个任务）")
+        tasks[task_index - 1]['completed'] = completed
+        self.mark_modified(week)
+        self.save_tasks()
 
     def get_tasks(self, week):
         """
@@ -141,7 +213,7 @@ class TaskDialog(BaseDialog):
         super().__init__(parent)
         self.task = task
         self.setWindowTitle('任务')
-        self.setWindowIcon(icon)
+        self.setWindowIcon(get_icon())
         self.setModal(True)
 
         self.layout_ = QVBoxLayout(self)
@@ -376,8 +448,8 @@ class TaskItem(QWidget):
 class TaskWidget(QWidget):
     """任务管理组件"""
 
-    WEEK_START_DATE = datetime.datetime(2026, 5, 11, 4, 0, 0)  # 第1周起始（周一 04:00）
-    TARGET_DATE = datetime.datetime(2026, 12, 21, 4, 0, 0)  # 目标日期（12月21日 04:00 起）
+    WEEK_START_DATE = datetime.datetime(2026, 5, 11, 4, 0, 0)
+    TARGET_DATE = datetime.datetime(2026, 12, 21, 4, 0, 0)
     TARGET_WEEK = floor(get_this_week(dt=TARGET_DATE, start_date=WEEK_START_DATE)) + 1  # 目标日期所在周
 
     def __init__(self, parent=None):
@@ -390,7 +462,7 @@ class TaskWidget(QWidget):
         self.data_manager = TaskDataManager()
         self.task_items = []
 
-        self.inherit_tasks_from_last_week_if_not_exist()
+        self.data_manager.inherit_tasks_from_last_week_if_not_exist(self.this_week_num)
 
         self.main_layout = QVBoxLayout(self)
 
@@ -449,25 +521,6 @@ class TaskWidget(QWidget):
         self.main_layout.addLayout(self.button_layout)
 
         self.load_and_display_tasks()
-
-    def inherit_tasks_from_last_week_if_not_exist(self):
-        """如果本周任务不存在，则从上一周继承任务（重置完成次数）"""
-        this_week_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.this_week_num))
-        this_week_json_path = os.path.join(this_week_dir, 'tasks.json')
-
-        if os.path.exists(this_week_json_path):
-            return
-
-        last_week_dir = os.path.join(os.path.dirname(__file__), 'data', str(self.this_week_num - 1))
-        last_week_json_path = os.path.join(last_week_dir, 'tasks.json')
-        if os.path.exists(last_week_json_path):
-            os.makedirs(this_week_dir, exist_ok=True)
-            with open(last_week_json_path, 'r', encoding='utf-8') as f:
-                tasks = json.load(f)
-            for task in tasks:
-                task['completed'] = 0.0
-            with open(this_week_json_path, 'w', encoding='utf-8') as f:
-                json.dump(tasks, f, ensure_ascii=False, indent=4)
 
     def update_total_progress(self):
         """更新加权总进度显示"""
@@ -968,7 +1021,7 @@ class FurinaWindow(BaseWindow):
             return
         super().__init__(parent)
         self.setWindowTitle('芙芙伴学')
-        self.setWindowIcon(icon)
+        self.setWindowIcon(get_icon())
         self.setMinimumSize(600, 400)
         self._size_fitted = False  # 是否已按任务数量调整过窗口大小
 
