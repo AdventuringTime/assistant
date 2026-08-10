@@ -100,7 +100,8 @@ def get_peer_tutor_week_tasks() -> dict:
     """读取当前周芙芙伴学所有任务信息，当前周数据不存在时自动从上周继承"""
     manager = PeerTutorTaskDataManager()
     week = manager.get_current_week_num()
-    tasks = manager.get_current_week_tasks()
+    manager.inherit_tasks_from_last_week_if_not_exist(week)
+    tasks = manager.get_tasks(week)
     return {"week": week, "tasks": tasks}
 
 
@@ -111,14 +112,24 @@ def update_peer_tutor_task_progress(task_index: int, completed: float) -> dict:
     Parameters:
         task_index (int): 任务序号（从1开始）
         completed (float): 新的完成数量
+
+    Returns:
+        dict: 包含当前周数与修改后的任务数据
+
+    Raises:
+        IndexError: 任务序号超出范围
     """
     manager = PeerTutorTaskDataManager()
     week = manager.get_current_week_num()
     manager.inherit_tasks_from_last_week_if_not_exist(week)
-    manager.update_task_progress(week, task_index, completed)
+    tasks = manager.get_tasks(week)
+    index = task_index - 1
+    if not 0 <= index < len(tasks):
+        raise IndexError(f"任务序号 {task_index} 超出范围（共 {len(tasks)} 个任务）")
+    tasks[index]['completed'] = completed
+    manager.mark_modified(week)
+    manager.save_tasks()
     return {
         "week": week,
-        "task_index": task_index,
-        "completed": completed,
-        "tasks": manager.get_tasks(week),
+        "task": tasks[index],
     }

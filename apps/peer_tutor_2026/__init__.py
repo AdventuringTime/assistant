@@ -74,39 +74,6 @@ class TaskDataManager:
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(tasks, f, ensure_ascii=False, indent=4)
 
-    def get_current_week_tasks(self, dt=None):
-        """
-        获取当前周的任务数据，当前周数据不存在时从上一周继承
-
-        Parameters:
-            dt (datetime.datetime, optional): 输入的时间，默认使用当前时间
-
-        Returns:
-            list: 当前周任务列表
-        """
-        week = self.get_current_week_num(dt)
-        self.inherit_tasks_from_last_week_if_not_exist(week)
-        return self.get_tasks(week)
-
-    def update_task_progress(self, week, task_index, completed):
-        """
-        更新指定任务的完成进度并保存
-
-        Parameters:
-            week (int): 周数
-            task_index (int): 任务序号（从1开始）
-            completed (float): 新的完成数量
-
-        Raises:
-            IndexError: 任务序号超出范围
-        """
-        tasks = self.get_tasks(week)
-        if not 1 <= task_index <= len(tasks):
-            raise IndexError(f"任务序号 {task_index} 超出范围（共 {len(tasks)} 个任务）")
-        tasks[task_index - 1]['completed'] = completed
-        self.mark_modified(week)
-        self.save_tasks()
-
     def get_tasks(self, week):
         """
         获取指定周的任务数据
