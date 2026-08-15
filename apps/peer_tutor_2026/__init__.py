@@ -1070,15 +1070,27 @@ def capture_window_screenshot():
     说明:
         - 窗口未创建时在后台创建实例渲染截图，完成后关闭实例并保存数据
         - 窗口已存在时直接截取现有窗口，不改变其显示状态
+        - 截图前临时调整滚动区域最小高度，确保所有任务项都包含在截图中
     """
     is_new = FurinaWindow._instance is None
     window = FurinaWindow() if is_new else FurinaWindow._instance
+    scroll_area = window.task_widget.scroll_area
+    original_min_height = scroll_area.minimumHeight()
     try:
-        if is_new:
-            # 手动调整窗口大小，使截图包含所有任务项
-            window._fit_size_to_tasks()
+        content_height = window.task_widget.get_content_height()
+        # 强制滚动区域至少容纳所有任务项，使布局分配足够高度
+        scroll_area.setMinimumHeight(content_height)
+        # 基于 sizeHint 计算能容纳所有内容的目标窗口高度（不依赖未布局的几何尺寸）
+        target_height = max(window.minimumSizeHint().height(),
+                            window.minimumHeight())
+        window.resize(window.width(), target_height)
+        # 强制布局生效，确保滚动区域视口高度重新分配
+        window.layout().activate()
+        QApplication.processEvents()
         pixmap = window.grab()
         QApplication.clipboard().setPixmap(pixmap)
     finally:
+        # 恢复滚动区域的最小高度约束
+        scroll_area.setMinimumHeight(original_min_height)
         if is_new:
             window.close()
