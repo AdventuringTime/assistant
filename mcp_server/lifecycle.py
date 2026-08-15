@@ -4,7 +4,9 @@
 服务器以 streamable HTTP 方式监听本机端口，供外部客户端连接。
 """
 
+import os
 import threading
+import traceback
 
 
 class McpServerManager:
@@ -39,20 +41,27 @@ class McpServerManager:
     def _run(self):
         """后台线程入口，创建事件循环并运行 streamable HTTP 服务器"""
         import asyncio
+        import sys
+
+        # pythonw（无控制台）环境下 sys.stdout/sys.stderr 为 None，
+        # 会导致 uvicorn 日志配置时访问 isatty() 崩溃，这里用 devnull 替代
+        if sys.stdout is None:
+            sys.stdout = open(os.devnull, 'w', encoding='utf-8')
+        if sys.stderr is None:
+            sys.stderr = open(os.devnull, 'w', encoding='utf-8')
 
         import uvicorn
 
         from mcp_server.server import server
 
-        app = server.streamable_http_app(streamable_http_path=self.PATH, host=self.HOST)
-        config = uvicorn.Config(app, host=self.HOST, port=self.PORT, log_level="warning")
-        self._uvicorn_server = uvicorn.Server(config)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         try:
+            app = server.streamable_http_app(streamable_http_path=self.PATH, host=self.HOST)
+            config = uvicorn.Config(app, host=self.HOST, port=self.PORT, log_level="warning")
+            self._uvicorn_server = uvicorn.Server(config)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
             loop.run_until_complete(self._uvicorn_server.serve())
         except Exception:
-            import traceback
             traceback.print_exc()
 
     def stop(self):
