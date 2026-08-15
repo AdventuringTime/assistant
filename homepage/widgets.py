@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QHBoxLayout, QVBoxLayout,
 from winotify import Notification
 
 from core.functions import get_today, get_this_week
-from core.global_constants import app_name
+from core.global_constants import app_name, APP_VERSION
 from core.heartbeat import Heartbeat
 from core.user_interface import QFlowLayout
 from core.settings_manager import SettingsManager
@@ -403,8 +403,7 @@ class VersionLabel(QLabel):
         """
         super().__init__(parent)
 
-        # 只在初始化时读取一次 app version
-        self.app_version = self._read_app_version()
+        self.app_version = APP_VERSION
 
         # 加载并显示数据
         self.load_data()
@@ -417,22 +416,6 @@ class VersionLabel(QLabel):
             str: user_version 值，如果读取失败返回"未知"
         """
         return SettingsManager().get_value("homepage.version.user_version", "未知")
-
-    def _read_app_version(self):
-        """
-        从 assets/version.json 读取 app_version
-
-        Returns:
-            str: app_version 值，如果读取失败返回"未知"
-        """
-        json_path = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                                'assets', 'version.json')
-        try:
-            with open(json_path, 'r', encoding='utf-8') as f:
-                content = json.load(f)
-            return content
-        except (FileNotFoundError, IOError, json.JSONDecodeError):
-            return '未知'
 
     def load_data(self):
         """

@@ -86,6 +86,37 @@ class ExpenseDataManager:
         self.month_data[key] = data
         return data
 
+    def sum_expenses(self, children, constants=None):
+        """
+        递归汇总记账数据的预估与实际总额
+
+        Parameters:
+            children (list): 记账子项列表
+            constants (dict, optional): 常量字典，用于评估预估金额表达式
+
+        Returns:
+            tuple: (预估总额, 实际总额)，预估表达式无效时预估总额为 "Error"
+        """
+        constants = constants or {}
+        estimated = 0.0
+        actual = 0.0
+        for child in children:
+            if child.get('type') == 'item':
+                value = evaluate_estimated_amount(child.get('estimated_amount', '0'), constants)
+                if value == "Error":
+                    estimated = "Error"
+                elif estimated != "Error":
+                    estimated += value
+                actual += child.get('actual_amount', 0)
+            elif child.get('type') == 'type':
+                sub_estimated, sub_actual = self.sum_expenses(child.get('children', []), constants)
+                if sub_estimated == "Error":
+                    estimated = "Error"
+                elif estimated != "Error":
+                    estimated += sub_estimated
+                actual += sub_actual
+        return estimated, actual
+
     def mark_modified(self, year, month):
         """
         标记指定月份的数据已被修改
@@ -619,56 +650,23 @@ class ExpenseTypeWidget(QWidget):
                 type_widget = ExpenseTypeWidget(child_data, self.constants)
                 self.children_layout.addWidget(type_widget)
 
-    def get_total_estimated(self, type_data=None):
+    def get_totals(self, type_data=None):
         """
-        递归计算预估总金额
+        递归计算预估与实际总金额（复用数据管理器的汇总逻辑）
 
         Parameters:
             type_data (dict, optional): 类型数据，默认为当前类型
 
         Returns:
-            float or str: 总预估金额或 "Error"
+            tuple: (总预估金额, 总实际金额)，预估表达式无效时预估金额为 "Error"
         """
         if type_data is None:
             type_data = self.type_data
-        total = 0.
-        for child in type_data.get('children', []):
-            if child['type'] == 'item':
-                val = evaluate_estimated_amount(child.get('estimated_amount', "0"), self.constants)
-                if val == "Error":
-                    return "Error"
-                total += val
-            elif child['type'] == 'type':
-                val = self.get_total_estimated(child)
-                if val == "Error":
-                    return "Error"
-                total += val
-        return total
-
-    def get_total_actual(self, type_data=None):
-        """
-        递归计算实际总金额
-
-        Parameters:
-            type_data (dict, optional): 类型数据，默认为当前类型
-
-        Returns:
-            float: 总实际金额
-        """
-        if type_data is None:
-            type_data = self.type_data
-        total = 0.
-        for child in type_data.get('children', []):
-            if child['type'] == 'item':
-                total += child.get('actual_amount', 0)
-            elif child['type'] == 'type':
-                total += self.get_total_actual(child)
-        return total
+        return ExpenseDataManager().sum_expenses(type_data.get('children', []), self.constants)
 
     def update_totals(self):
         """更新总计金额和进度条显示"""
-        estimated = self.get_total_estimated()
-        actual = self.get_total_actual()
+        estimated, actual = self.get_totals()
 
         self.total_estimated_label.setText("Error" if estimated == "Error" else f"{estimated:.2f}")
         self.total_actual_label.setText(f"{actual:.2f}")
@@ -901,8 +899,7 @@ class ExpenseRecordWidget(QWidget):
 
     def update_total_display(self):
         """更新总计金额显示和进度条"""
-        estimated = self.get_total_estimated()
-        actual = self.get_total_actual()
+        estimated, actual = self.get_totals()
 
         self.total_estimated_label.setText("Error" if estimated == "Error" else f"{estimated:.2f}")
         self.total_actual_label.setText(f"{actual:.2f}")
@@ -921,51 +918,19 @@ class ExpenseRecordWidget(QWidget):
             g = int(255 * (1 - ratio2))
             self.total_progress_bar.setStyleSheet(f"QProgressBar::chunk {{ background-color: rgb({r}, {g}, 0); }}")
 
-    def get_total_estimated(self, children_list=None):
+    def get_totals(self, children_list=None):
         """
-        递归计算所有子项的预估总金额
+        递归计算所有子项的预估与实际总金额（复用数据管理器的汇总逻辑）
 
         Parameters:
             children_list (list, optional): 子项列表，默认为根级子项
 
         Returns:
-            float or str: 总预估金额或 "Error"
+            tuple: (总预估金额, 总实际金额)，预估表达式无效时预估金额为 "Error"
         """
         if children_list is None:
             children_list = self.children_
-        total = 0.
-        for child in children_list:
-            if child['type'] == 'item':
-                val = evaluate_estimated_amount(child.get('estimated_amount', "0"), self.constants)
-                if val == "Error":
-                    return "Error"
-                total += val
-            elif child['type'] == 'type':
-                val = self.get_total_estimated(child.get('children', []))
-                if val == "Error":
-                    return "Error"
-                total += val
-        return total
-
-    def get_total_actual(self, children_list=None):
-        """
-        递归计算所有子项的实际总金额
-
-        Parameters:
-            children_list (list, optional): 子项列表，默认为根级子项
-
-        Returns:
-            float: 总实际金额
-        """
-        if children_list is None:
-            children_list = self.children_
-        total = 0.
-        for child in children_list:
-            if child['type'] == 'item':
-                total += child.get('actual_amount', 0)
-            elif child['type'] == 'type':
-                total += self.get_total_actual(child.get('children', []))
-        return total
+        return ExpenseDataManager().sum_expenses(children_list, self.constants)
 
     def open_constants_window(self):
         """打开常量编辑窗口"""

@@ -3,6 +3,7 @@
 随主程序（run.py）一起运行，由 McpServerManager 管理生命周期。
 """
 
+from core.global_constants import APP_VERSION
 from mcp.server.mcpserver import MCPServer
 
 from mcp_server.data_providers import (
@@ -17,31 +18,31 @@ from mcp_server.data_providers import (
 
 
 server = MCPServer(
-    name="assistant-data",
-    title="桌面应用数据服务器",
+    name="assistant",
+    title="探索酱的小助手连接器",
     description="读取日程、任务、研招工时、搜索词、记账和芙芙伴学数据，并支持修改芙芙伴学任务进度",
-    version="0.1.0",
+    version=APP_VERSION,
 )
 
 server.add_tool(
     get_today_schedules,
     name="get_today_schedules",
     title="读取今天日程",
-    description="读取今天的所有日程信息，包含标题、类型、开始/结束时间、地点、重复规则和描述",
+    description="读取今天的所有日程信息",
 )
 
 server.add_tool(
     get_tasks,
     name="get_tasks",
     title="读取任务",
-    description="读取当前所有任务信息。参数 is_completed 为 False 时返回未完成任务，为 True 时返回已完成任务",
+    description="读取当前所有未完成或已完成的任务信息。读取未完成还是已完成的任务由参数 is_completed 决定",
 )
 
 server.add_tool(
     get_graduate_worktime,
     name="get_graduate_worktime",
     title="读取研招工时",
-    description="读取当前所有研招工时记录（日期、内容、时长），并附带总时长统计",
+    description="读取当前所有研招工时记录，以及总时长统计",
 )
 
 server.add_tool(
@@ -62,7 +63,7 @@ server.add_tool(
     get_peer_tutor_week_tasks,
     name="get_peer_tutor_week_tasks",
     title="读取芙芙伴学本周任务",
-    description="读取当前周芙芙伴学所有任务信息，当前周数据不存在时自动从上周继承",
+    description="读取当前周芙芙伴学所有任务信息",
 )
 
 server.add_tool(

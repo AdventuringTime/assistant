@@ -43,6 +43,33 @@ class GraduateWorktimeDataManager:
         with open(self.data_file_path, 'w', encoding='utf-8') as f:
             json.dump(self.records, f, ensure_ascii=False, indent=4)
 
+    def get_export_text(self):
+        """
+        生成导出文本（每行一条记录 + 总时长统计）
+
+        Returns:
+            str: 导出的文本，无记录时返回空字符串
+        """
+        lines = []
+        total_hours = 0.0
+        for record in self.records:
+            date_str = record.get("date", "")
+            content = record.get("content", "")
+            hours = record.get("duration", "")
+            try:
+                total_hours += float(hours)
+            except (TypeError, ValueError):
+                pass
+            try:
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                lines.append(f"{date_obj.month}月{date_obj.day}日 {content} {hours}小时")
+            except ValueError:
+                lines.append(f"{date_str} {content} {hours}小时")
+        if lines:
+            lines.append(f"总时长：{total_hours}小时")
+            return "\n".join(lines)
+        return ""
+
 
 class GraduateWorktimeWindow(BaseWindow):
     """研招工时统计窗口，用于记录和统计研究生招生工作的工时"""
@@ -171,26 +198,8 @@ class GraduateWorktimeWindow(BaseWindow):
 
     def on_export_clicked(self):
         """导出工时记录到剪贴板，包含总时长统计"""
-        lines = []
-        total_hours = 0.0
-        for record in self.data_manager.records:
-            date_str = record["date"]
-            content = record["content"]
-            hours = record["duration"]
-            try:
-                total_hours += float(hours)
-            except ValueError:
-                pass
-            try:
-                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-                month = date_obj.month
-                day = date_obj.day
-                lines.append(f"{month}月{day}日 {content} {hours}小时")
-            except ValueError:
-                lines.append(f"{date_str} {content} {hours}小时")
-        if lines:
-            lines.append(f"总时长：{total_hours}小时")
-            output = "\n".join(lines)
+        output = self.data_manager.get_export_text()
+        if output:
             QGuiApplication.clipboard().setText(output)
 
     def on_delete_clicked(self):

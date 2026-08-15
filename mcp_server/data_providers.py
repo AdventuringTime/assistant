@@ -3,21 +3,18 @@
 from core.functions import get_today
 
 from apps.calendar.calendar_schedule_manager import CalendarSchedulesManager
-from apps.expenses import ExpenseDataManager, evaluate_estimated_amount
+from apps.expenses import ExpenseDataManager
 from apps.graduate_worktime import GraduateWorktimeDataManager
 from apps.peer_tutor_2026 import TaskDataManager as PeerTutorTaskDataManager
 from apps.search_words import SearchWordsDataManager
 from apps.tasks import TaskDataManager as TasksDataManager
 
 
-def get_today_schedules() -> list[dict]:
+def get_today_schedules() -> dict:
     """读取今天的所有日程信息"""
     today = get_today()
     schedules = CalendarSchedulesManager().get_schedules(today.year, today.month, today.day)
-    return [
-        {"id": str(id_), "date": today.isoformat(), **data}
-        for id_, data in schedules.items()
-    ]
+    return schedules
 
 
 def get_tasks(is_completed: bool = False) -> list[dict]:
@@ -32,16 +29,9 @@ def get_tasks(is_completed: bool = False) -> list[dict]:
     return list(tasks)
 
 
-def get_graduate_worktime() -> dict:
-    """读取当前所有研招工时信息，附带总时长统计"""
-    records = list(GraduateWorktimeDataManager().records)
-    total_hours = 0.0
-    for record in records:
-        try:
-            total_hours += float(record.get("duration", 0))
-        except (TypeError, ValueError):
-            pass
-    return {"records": records, "total_hours": total_hours}
+def get_graduate_worktime() -> str:
+    """读取当前所有研招工时信息（含总时长统计）"""
+    return GraduateWorktimeDataManager().get_export_text()
 
 
 def get_search_words() -> list[str]:
@@ -49,44 +39,14 @@ def get_search_words() -> list[str]:
     return list(SearchWordsDataManager().words)
 
 
-def _sum_expenses(children: list, constants: dict) -> tuple:
-    """
-    递归汇总记账数据中的预估与实际金额
-
-    Parameters:
-        children (list): 记账子项列表
-        constants (dict): 常量字典
-
-    Returns:
-        tuple: (预估总额, 实际总额)，预估表达式无效时预估总额为 "Error"
-    """
-    estimated = 0.0
-    actual = 0.0
-    for child in children:
-        if child.get('type') == 'item':
-            value = evaluate_estimated_amount(child.get('estimated_amount', '0'), constants)
-            if value == "Error":
-                estimated = "Error"
-            elif estimated != "Error":
-                estimated += value
-            actual += child.get('actual_amount', 0)
-        elif child.get('type') == 'type':
-            sub_estimated, sub_actual = _sum_expenses(child.get('children', []), constants)
-            if sub_estimated == "Error":
-                estimated = "Error"
-            elif estimated != "Error":
-                estimated += sub_estimated
-            actual += sub_actual
-    return estimated, actual
-
-
 def get_month_expenses() -> dict:
     """读取当前月的所有记账信息，附带预估与实际总额汇总"""
     today = get_today()
-    data = ExpenseDataManager().load_month_data(today.year, today.month)
+    manager = ExpenseDataManager()
+    data = manager.load_month_data(today.year, today.month)
     constants = data.get('constants', {})
     children = data.get('children', [])
-    estimated, actual = _sum_expenses(children, constants)
+    estimated, actual = manager.sum_expenses(children, constants)
     return {
         "year": today.year,
         "month": today.month,
@@ -114,7 +74,7 @@ def update_peer_tutor_task_progress(task_index: int, completed: float) -> dict:
         completed (float): 新的完成数量
 
     Returns:
-        dict: 包含当前周数与修改后的任务数据
+        dict: 修改后的任务数据
 
     Raises:
         IndexError: 任务序号超出范围
@@ -129,7 +89,4 @@ def update_peer_tutor_task_progress(task_index: int, completed: float) -> dict:
     tasks[index]['completed'] = completed
     manager.mark_modified(week)
     manager.save_tasks()
-    return {
-        "week": week,
-        "task": tasks[index],
-    }
+    return tasks[index]
