@@ -440,6 +440,7 @@ class TaskWidget(QWidget):
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
@@ -1078,19 +1079,16 @@ def capture_window_screenshot():
     original_min_height = scroll_area.minimumHeight()
     try:
         content_height = window.task_widget.get_content_height()
-        # 强制滚动区域至少容纳所有任务项，使布局分配足够高度
-        scroll_area.setMinimumHeight(content_height)
-        # 基于 sizeHint 计算能容纳所有内容的目标窗口高度（不依赖未布局的几何尺寸）
+        scroll_margin = scroll_area.frameWidth() * 2
+        scroll_area.setMinimumHeight(content_height + scroll_margin)
         target_height = max(window.minimumSizeHint().height(),
                             window.minimumHeight())
         window.resize(window.width(), target_height)
-        # 强制布局生效，确保滚动区域视口高度重新分配
         window.layout().activate()
         QApplication.processEvents()
         pixmap = window.grab()
         QApplication.clipboard().setPixmap(pixmap)
     finally:
-        # 恢复滚动区域的最小高度约束
         scroll_area.setMinimumHeight(original_min_height)
         if is_new:
             window.close()
