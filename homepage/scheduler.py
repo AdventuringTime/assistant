@@ -150,11 +150,11 @@ def start():
     if settings.get_value("startup.activated.furina_notification", True):
         scheduled_notifications.append(
             ScheduledNotificationItem(
-                datetime.time(22, 30),
+                datetime.time(21, 30),
                 "FurinaNotification",
                 "芙芙伴学",
-                "芙芙喊你来记录今日任务完成情况啦",
-                {"type": "open_app", "value": "peer_tutor_2026"}
+                "芙芙喊你总结今日任务完成情况啦",
+                {"type": "copy_window_screenshot", "value": "peer_tutor_2026"}
             )
         )
 

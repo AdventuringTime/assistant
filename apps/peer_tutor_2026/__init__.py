@@ -4,9 +4,9 @@ import os
 from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
                                QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
                                QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
-                               QTabWidget, QFrame)
+                               QTabWidget, QFrame, QApplication)
 from PySide6.QtCore import Qt, Signal, QEvent, QTimer
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QGuiApplication
 
 from core.base_objects import BaseWindow, BaseDialog, DeleteButton
 from core.functions import get_this_week, get_today, block_signals
@@ -1006,7 +1006,7 @@ class FurinaWindow(BaseWindow):
     def showEvent(self, event):
         """
         窗口显示事件，首次显示时根据任务数量动态调整窗口大小
-        使默认大小能容纳所有任务项
+        并将窗口移动到屏幕高度 5% 的位置
 
         Parameters:
             event (QShowEvent): 显示事件
@@ -1014,7 +1014,21 @@ class FurinaWindow(BaseWindow):
         if not self._size_fitted:
             self._size_fitted = True
             self._fit_size_to_tasks()
+            self._move_to_screen_top()
         super().showEvent(event)
+
+    def _move_to_screen_top(self):
+        """
+        将窗口移动到屏幕高度 5% 的位置（水平位置保持默认）
+
+        说明:
+            - 使用屏幕可用区域计算目标 y 坐标
+            - 仅在窗口首次显示时调用，避免覆盖用户手动拖动的位置
+        """
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        if screen is not None:
+            screen_height = screen.availableGeometry().height()
+            self.move(self.x(), int(screen_height * 0.05))
 
     def _fit_size_to_tasks(self):
         """
@@ -1047,3 +1061,24 @@ class FurinaWindow(BaseWindow):
         super().closeEvent(event)
         FurinaWindow._instance = None
         FurinaWindow._initialized = False
+
+
+def capture_window_screenshot():
+    """
+    截取芙芙伴学主窗口截图并复制到剪贴板（窗口无需打开）
+
+    说明:
+        - 窗口未创建时在后台创建实例渲染截图，完成后关闭实例并保存数据
+        - 窗口已存在时直接截取现有窗口，不改变其显示状态
+    """
+    is_new = FurinaWindow._instance is None
+    window = FurinaWindow() if is_new else FurinaWindow._instance
+    try:
+        if is_new:
+            # 手动调整窗口大小，使截图包含所有任务项
+            window._fit_size_to_tasks()
+        pixmap = window.grab()
+        QApplication.clipboard().setPixmap(pixmap)
+    finally:
+        if is_new:
+            window.close()

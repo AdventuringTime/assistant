@@ -798,6 +798,7 @@ class NotificationItemWidget(QWidget):
         - open_file: 打开本地文件
         - open_app: 打开应用
         - copy_to_clipboard: 将内容复制到剪贴板
+        - copy_window_screenshot: 复制指定应用窗口截图到剪贴板（窗口无需打开）
 
         Parameters:
             event (QMouseEvent): 鼠标事件
@@ -816,6 +817,13 @@ class NotificationItemWidget(QWidget):
                 elif self.click_action["type"] == "copy_to_clipboard":
                     clipboard_text = self.click_action["value"]
                     QApplication.clipboard().setText(clipboard_text)
+                elif self.click_action["type"] == "copy_window_screenshot":
+                    app_name = self.click_action["value"]
+                    app_info = APP_LIST.get(app_name)
+                    if app_info and "screenshot" in app_info:
+                        app_info["screenshot"]()
+                    else:
+                        raise TypeError(f"应用 {app_name} 未定义截图功能")
                 else:
                     raise ValueError(f"未知点击操作类型: {self.click_action['type']}")
         self.mark_as_read()
