@@ -39,8 +39,40 @@ def get_search_words() -> list[str]:
     return list(SearchWordsDataManager().words)
 
 
+def _annotate_expense_types(children: list, manager: ExpenseDataManager, constants: dict) -> list:
+    """
+    递归为记账类型节点附加预估与实际汇总，不修改原始数据
+
+    Parameters:
+        children (list): 记账子项列表
+        manager (ExpenseDataManager): 数据管理器，用于调用汇总逻辑
+        constants (dict): 常量字典，用于评估预估金额表达式
+
+    Returns:
+        list: 新列表，每个 type 节点的 estimated 与 actual 插入在 name 与 children 之间
+    """
+    result = []
+    for child in children:
+        if child.get('type') != 'type':
+            result.append(child)
+            continue
+        estimated, actual = manager.sum_expenses(child.get('children', []), constants)
+        annotated = {}
+        for key, value in child.items():
+            if key == 'name':
+                annotated[key] = value
+                annotated['estimated'] = estimated
+                annotated['actual'] = actual
+            elif key == 'children':
+                annotated[key] = _annotate_expense_types(value, manager, constants)
+            else:
+                annotated[key] = value
+        result.append(annotated)
+    return result
+
+
 def get_month_expenses() -> dict:
-    """读取当前月的所有记账信息，附带预估与实际总额汇总"""
+    """读取当前月的所有记账信息，每个记账类型附上自身汇总，附带总额汇总"""
     today = get_today()
     manager = ExpenseDataManager()
     data = manager.load_month_data(today.year, today.month)
@@ -51,7 +83,7 @@ def get_month_expenses() -> dict:
         "year": today.year,
         "month": today.month,
         "constants": constants,
-        "children": children,
+        "children": _annotate_expense_types(children, manager, constants),
         "summary": {"estimated": estimated, "actual": actual},
     }
 
