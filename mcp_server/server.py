@@ -10,6 +10,7 @@ from mcp_server.data_providers import (
     get_graduate_worktime,
     get_month_expenses,
     get_peer_tutor_week_tasks,
+    get_peer_tutor_window_screenshot,
     get_search_words,
     get_tasks,
     get_today_schedules,
@@ -20,7 +21,7 @@ from mcp_server.data_providers import (
 server = MCPServer(
     name="assistant",
     title="探索酱的小助手连接器",
-    description="读取日程、任务、研招工时、搜索词、记账和芙芙伴学数据，并支持修改芙芙伴学任务进度",
+    description="读取日程、任务、研招工时、搜索词、记账和芙芙伴学数据，支持修改芙芙伴学任务进度与获取其窗口截图",
     version=APP_VERSION,
 )
 
@@ -71,4 +72,11 @@ server.add_tool(
     name="update_peer_tutor_task_progress",
     title="修改芙芙伴学任务进度",
     description="修改当前周芙芙伴学特定任务的完成进度。task_index 为任务序号（从1开始），completed 为新的完成数量",
+)
+
+server.add_tool(
+    get_peer_tutor_window_screenshot,
+    name="get_peer_tutor_window_screenshot",
+    title="读取芙芙伴学窗口截图",
+    description="截取芙芙伴学主窗口，返回窗口图片",
 )

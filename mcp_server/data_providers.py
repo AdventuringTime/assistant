@@ -97,6 +97,18 @@ def get_peer_tutor_week_tasks() -> dict:
     return {"week": week, "tasks": tasks}
 
 
+def get_peer_tutor_window_screenshot():
+    """截取芙芙伴学主窗口并返回窗口图片给 AI。
+
+    Returns:
+        Image: PNG 格式的窗口截图
+    """
+    from mcp.server.mcpserver.utilities.types import Image
+    from apps.peer_tutor_2026 import get_window_screenshot_bytes
+
+    return Image(data=get_window_screenshot_bytes(), format="png")
+
+
 def update_peer_tutor_task_progress(task_index: int, completed: float) -> dict:
     """
     修改当前周芙芙伴学特定任务的完成进度

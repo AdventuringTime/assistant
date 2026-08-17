@@ -1,11 +1,15 @@
-import sys
+import base64
 import json
 import os
-from PySide6.QtWidgets import (QWidget, QLabel, QProgressBar, QVBoxLayout,
-                               QScrollArea, QHBoxLayout, QInputDialog, QPushButton,
-                               QLineEdit, QDoubleSpinBox, QMessageBox, QSpinBox,
-                               QTabWidget, QFrame, QApplication)
-from PySide6.QtCore import Qt, Signal, QEvent, QTimer
+import sys
+import threading
+
+from PySide6.QtCore import (QBuffer, QEvent, QIODevice, QMetaObject, QObject,
+                            Q_RETURN_ARG, Qt, QThread, QTimer, Signal, Slot)
+from PySide6.QtWidgets import (QApplication, QDoubleSpinBox, QFrame, QHBoxLayout,
+                               QInputDialog, QLabel, QLineEdit, QMessageBox,
+                               QProgressBar, QPushButton, QScrollArea, QSpinBox,
+                               QTabWidget, QVBoxLayout, QWidget)
 from PySide6.QtGui import QIcon, QGuiApplication
 
 from core.base_objects import BaseWindow, BaseDialog, DeleteButton
@@ -1064,14 +1068,18 @@ class FurinaWindow(BaseWindow):
         FurinaWindow._initialized = False
 
 
-def capture_window_screenshot():
+def _grab_window_pixmap():
     """
-    截取芙芙伴学主窗口截图并复制到剪贴板（窗口无需打开）
+    截取芙芙伴学主窗口并返回 QPixmap（窗口无需打开，不复制到剪贴板）
 
     说明:
-        - 窗口未创建时在后台创建实例渲染截图，完成后关闭实例并保存数据
+        - 窗口未创建时在后台创建实例渲染截图，完成后关闭实例
         - 窗口已存在时直接截取现有窗口，不改变其显示状态
         - 截图前临时调整滚动区域最小高度，确保所有任务项都包含在截图中
+        - 必须由 GUI 主线程调用
+
+    Returns:
+        QPixmap: 窗口截图
     """
     is_new = FurinaWindow._instance is None
     window = FurinaWindow() if is_new else FurinaWindow._instance
@@ -1086,9 +1094,73 @@ def capture_window_screenshot():
         window.resize(window.width(), target_height)
         window.layout().activate()
         QApplication.processEvents()
-        pixmap = window.grab()
-        QApplication.clipboard().setPixmap(pixmap)
+        return window.grab()
     finally:
         scroll_area.setMinimumHeight(original_min_height)
         if is_new:
             window.close()
+
+
+def capture_window_screenshot():
+    """
+    截取芙芙伴学主窗口截图并复制到剪贴板（窗口无需打开）
+
+    说明:
+        - 需在 GUI 主线程调用（如主页通知点击），复制结果到剪贴板
+    """
+    QApplication.clipboard().setPixmap(_grab_window_pixmap())
+
+
+class ScreenshotBridge(QObject):
+    """跨线程截图桥（单例），供后台线程安全获取主线程渲染的窗口截图"""
+
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        super().__init__()
+        # 无论实例在哪创建，都移入 GUI 主线程，确保截图在事件循环中执行
+        self.moveToThread(QApplication.instance().thread())
+        self._initialized = True
+
+    @Slot(result=str)
+    def _grab_base64(self):
+        """在主线程执行的槽：截取窗口并返回 base64 编码的 PNG 数据"""
+        pixmap = _grab_window_pixmap()
+        buffer = QBuffer()
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        pixmap.save(buffer, 'PNG')
+        return base64.b64encode(bytes(buffer.data())).decode('ascii')
+
+
+def get_window_screenshot_bytes() -> bytes:
+    """
+    截取芙芙伴学主窗口截图，返回 PNG 图片字节数据
+
+    Returns:
+        bytes: PNG 格式的图片数据
+    """
+    app = QApplication.instance()
+    if app is None:
+        raise RuntimeError('QApplication 未创建，无法截取窗口')
+    if QThread.currentThread() is app.thread():
+        return base64.b64decode(ScreenshotBridge()._grab_base64())
+    result = QMetaObject.invokeMethod(
+        ScreenshotBridge(),
+        '_grab_base64',
+        Qt.ConnectionType.BlockingQueuedConnection,
+        Q_RETURN_ARG(str),
+    )
+    if result is None:
+        raise RuntimeError('截图请求未能派发到主线程执行')
+    return base64.b64decode(result)
