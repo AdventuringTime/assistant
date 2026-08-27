@@ -134,3 +134,74 @@ def update_peer_tutor_task_progress(task_index: int, completed: float) -> dict:
     manager.mark_modified(week)
     manager.save_tasks()
     return tasks[index]
+
+
+def update_peer_tutor_task(
+    index: int = None,
+    name: str = None,
+    required: float = None,
+    weight: int = None,
+) -> dict | str:
+    """
+    添加、修改或删除当前周芙芙伴学任务数据
+
+    规则：
+    - index 未指定：添加新任务（必须提供非空 name，completed 固定为 0.0，required 默认 1.0，weight 默认 100）
+    - index 指定且至少提供一项数据字段：修改该任务对应的字段（未提供的字段保持不变）
+    - index 指定但未提供任何数据字段：删除该任务
+
+    Parameters:
+        index (int, optional): 任务序号（从1开始），未指定表示添加
+        name (str, optional): 任务名称
+        required (float, optional): 所需次数
+        weight (int, optional): 权重
+
+    Returns:
+        dict: 添加/修改时返回操作结果，包含周数、任务序号与任务数据
+        str: 删除时返回“已删除”
+
+    Raises:
+        ValueError: 添加时未提供任务名称
+        IndexError: 任务序号超出范围
+    """
+    manager = PeerTutorTaskDataManager()
+    week = manager.get_current_week_num()
+    manager.inherit_tasks_from_last_week_if_not_exist(week)
+    tasks = manager.get_tasks(week)
+
+    if index is None:
+        # 未指定 index，添加新任务
+        if not name or not str(name).strip():
+            raise ValueError("添加任务时必须提供非空的任务名称 name")
+        task = {
+            'name': str(name).strip(),
+            'completed': 0.0,
+            'required': required if required is not None else 1.0,
+            'weight': weight if weight is not None else 100,
+        }
+        tasks.append(task)
+        manager.mark_modified(week)
+        manager.save_tasks()
+        return {"week": week, "index": len(tasks), "task": task}
+
+    idx = index - 1
+    if not 0 <= idx < len(tasks):
+        raise IndexError(f"任务序号 {index} 超出范围（共 {len(tasks)} 个任务）")
+    task = tasks[idx]
+
+    fields = {k: v for k, v in (
+        ('name', name),
+        ('required', required),
+        ('weight', weight),
+    ) if v is not None}
+    if not fields:
+        # 指定 index 但未提供任何数据字段，删除该任务
+        tasks.pop(idx)
+        manager.mark_modified(week)
+        manager.save_tasks()
+        return "已删除任务"
+
+    task.update(fields)
+    manager.mark_modified(week)
+    manager.save_tasks()
+    return {"week": week, "index": index, "task": task}

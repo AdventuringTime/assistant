@@ -14,6 +14,7 @@ from mcp_server.data_providers import (
     get_search_words,
     get_tasks,
     get_today_schedules,
+    update_peer_tutor_task,
     update_peer_tutor_task_progress,
 )
 
@@ -21,7 +22,7 @@ from mcp_server.data_providers import (
 server = MCPServer(
     name="assistant",
     title="探索酱的小助手连接器",
-    description="读取日程、任务、研招工时、搜索词、记账和芙芙伴学数据，支持修改芙芙伴学任务进度与获取其窗口截图",
+    description="读取日程、任务、研招工时、搜索词、记账和芙芙伴学数据，支持修改芙芙伴学任务与获取其窗口截图",
     version=APP_VERSION,
 )
 
@@ -72,6 +73,13 @@ server.add_tool(
     name="update_peer_tutor_task_progress",
     title="修改芙芙伴学任务进度",
     description="修改当前周芙芙伴学特定任务的完成进度。task_index 为任务序号（从1开始），completed 为新的完成数量",
+)
+
+server.add_tool(
+    update_peer_tutor_task,
+    name="update_peer_tutor_task",
+    title="修改芙芙伴学任务",
+    description="添加、修改或删除当前周芙芙伴学任务。index 未指定时添加新任务（需提供 name）；指定 index 且提供数据字段（name/required/weight）时修改对应任务；指定 index 且未提供任何数据字段时删除该任务。修改完成进度请使用 update_peer_tutor_task_progress",
 )
 
 server.add_tool(
