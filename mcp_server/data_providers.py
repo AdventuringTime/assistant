@@ -199,7 +199,7 @@ def update_peer_tutor_task(
         tasks.pop(idx)
         manager.mark_modified(week)
         manager.save_tasks()
-        return "已删除任务"
+        return "已删除任务：" + task['name']
 
     task.update(fields)
     manager.mark_modified(week)
