@@ -1,7 +1,6 @@
 import base64
 import json
 import os
-import sys
 import threading
 
 from PySide6.QtCore import (QBuffer, QEvent, QIODevice, QMetaObject, QObject,
@@ -478,18 +477,6 @@ class TaskWidget(QWidget):
         self.add_button.clicked.connect(self.on_add_task)
         self.button_layout.addWidget(self.add_button)
 
-        self.open_yesterday_folder_button = QPushButton('打开昨日文件夹')
-        self.open_yesterday_folder_button.clicked.connect(self.open_yesterday_folder)
-        self.button_layout.addWidget(self.open_yesterday_folder_button)
-
-        self.open_today_folder_button = QPushButton('打开今日文件夹')
-        self.open_today_folder_button.clicked.connect(self.open_today_folder)
-        self.button_layout.addWidget(self.open_today_folder_button)
-
-        self.open_folder_button = QPushButton('打开此周文件夹')
-        self.open_folder_button.clicked.connect(self.open_this_week_folder)
-        self.button_layout.addWidget(self.open_folder_button)
-
         self.main_layout.addLayout(self.button_layout)
 
         self.load_and_display_tasks()
@@ -516,55 +503,6 @@ class TaskWidget(QWidget):
             progress_value = 100
         self.total_progress_bar.setValue(progress_value)
         self.total_progress_label.setText(f'{int(total_percent)}%')
-
-    @staticmethod
-    def _open_folder_of_dir(data_dir):
-        """
-        打开指定目录
-
-        Parameters:
-            data_dir (str): 目录路径
-        """
-        os.makedirs(data_dir, exist_ok=True)
-        if sys.platform == 'win32': # 限 Windows
-            os.startfile(data_dir)
-        else:
-            from PySide6.QtGui import QDesktopServices
-            from PySide6.QtCore import QUrl
-            QDesktopServices.openUrl(QUrl.fromLocalFile(data_dir))
-
-    def open_this_week_folder(self):
-        """打开当前显示周的文件夹"""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data',
-                                str(self.week_displayed))
-        self._open_folder_of_dir(data_dir)
-
-    @staticmethod
-    def open_folder_of_the_day(dt: datetime.datetime):
-        """
-        打开指定日期对应的文件夹
-
-        Parameters:
-            dt (datetime.datetime): 日期时间对象
-        """
-        days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        week = floor(get_this_week(dt=dt,
-            start_date=TaskWidget.WEEK_START_DATE)) + 1
-        dt_date = get_today(dt) # 处理跨天问题
-
-        data_dir = os.path.join(os.path.dirname(__file__), 'data',
-                                str(week), days_of_week[dt_date.weekday()])
-        TaskWidget._open_folder_of_dir(data_dir)
-
-    @staticmethod
-    def open_today_folder():
-        """打开今日文件夹"""
-        TaskWidget.open_folder_of_the_day(datetime.datetime.now())
-
-    @staticmethod
-    def open_yesterday_folder():
-        """打开昨日文件夹"""
-        TaskWidget.open_folder_of_the_day(datetime.datetime.now() - datetime.timedelta(days=1))
 
     def on_task_updated(self):
         """任务更新处理，标记数据已修改并更新总进度"""
