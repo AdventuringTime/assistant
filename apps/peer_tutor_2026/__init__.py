@@ -935,14 +935,17 @@ class FurinaWindow(BaseWindow):
         self.setMinimumSize(600, 400)
         self._size_fitted = False  # 是否已按任务数量调整过窗口大小
 
-        self.tab_widget = QTabWidget()
-        self.setCentralWidget(self.tab_widget)
+        # self.tab_widget = QTabWidget()
+        # self.setCentralWidget(self.tab_widget)
+        #
+        # self.task_widget = TaskWidget(self)
+        # self.tab_widget.addTab(self.task_widget, '任务')
+        #
+        # self.expenses_widget = ExpensesWidget(self)
+        # self.tab_widget.addTab(self.expenses_widget, '流水')
 
         self.task_widget = TaskWidget(self)
-        self.tab_widget.addTab(self.task_widget, '任务')
-
-        self.expenses_widget = ExpensesWidget(self)
-        self.tab_widget.addTab(self.expenses_widget, '流水')
+        self.setCentralWidget(self.task_widget)
         FurinaWindow._instance = self
         FurinaWindow._initialized = True
 
