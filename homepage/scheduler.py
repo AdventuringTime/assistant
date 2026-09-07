@@ -153,8 +153,7 @@ def start():
                 datetime.time(21, 30),
                 "FurinaNotification",
                 "芙芙伴学",
-                "芙芙喊你总结今日任务完成情况啦",
-                {"type": "copy_window_screenshot", "value": "peer_tutor_2026"}
+                "芙芙喊你总结今日任务完成情况啦"
             )
         )
 

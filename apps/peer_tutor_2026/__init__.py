@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QApplication, QDoubleSpinBox, QFrame, QHBoxLayout
                                QInputDialog, QLabel, QLineEdit, QMessageBox,
                                QProgressBar, QPushButton, QScrollArea, QSpinBox,
                                QTabWidget, QVBoxLayout, QWidget)
-from PySide6.QtGui import QIcon, QGuiApplication
+from PySide6.QtGui import QIcon, QGuiApplication, QPixmap
 
 from core.base_objects import BaseWindow, BaseDialog, DeleteButton
 from core.functions import get_this_week, get_today, block_signals
@@ -436,10 +436,29 @@ class TaskWidget(QWidget):
 
         self.main_layout = QVBoxLayout(self)
 
+        self.header_row = QWidget()
+        self.header_layout = QHBoxLayout(self.header_row)
+        self.header_layout.setContentsMargins(5, 5, 5, 5)
+        self.header_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.header_layout.setSpacing(10)
+
+        self.logo_label = QLabel()
+        logo_path = os.path.join(os.path.dirname(__file__), 'assets', 'icon.png')
+        logo_height = 48
+        dpr = QApplication.instance().devicePixelRatio()
+        logo_pixmap = QPixmap(logo_path).scaled(
+            int(logo_height * dpr), int(logo_height * dpr),
+            Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        logo_pixmap.setDevicePixelRatio(dpr)
+        self.logo_label.setPixmap(logo_pixmap)
+        self.logo_label.setFixedSize(logo_height, logo_height)
+        self.header_layout.addWidget(self.logo_label)
+
         self.header = QLabel()
         self.header.setStyleSheet("font-size: 24px; font-weight: bold; color: #FFFFFF;")
-        self.header.setMargin(5)
-        self.main_layout.addWidget(self.header)
+        self.header_layout.addWidget(self.header)
+
+        self.main_layout.addWidget(self.header_row)
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
