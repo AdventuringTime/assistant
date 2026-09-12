@@ -22,10 +22,6 @@ APP_LIST = {
         "display_name": "任务",
         "window": lambda: import_module('apps.tasks').TaskWindow()
     },
-    "graduate_worktime": {
-        "display_name": "研招工时统计",
-        "window": lambda: import_module('apps.graduate_worktime').GraduateWorktimeWindow()
-    },
     "search_words": {
         "display_name": "搜索词",
         "window": lambda: import_module('apps.search_words').SearchWordsWindow()

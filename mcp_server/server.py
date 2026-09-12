@@ -7,7 +7,6 @@ from core.global_constants import APP_VERSION
 from mcp.server.mcpserver import MCPServer
 
 from mcp_server.data_providers import (
-    get_graduate_worktime,
     get_month_expenses,
     get_peer_tutor_week_tasks,
     get_peer_tutor_window_screenshot,
@@ -22,7 +21,7 @@ from mcp_server.data_providers import (
 server = MCPServer(
     name="assistant",
     title="探索酱的小助手连接器",
-    description="读取日程、任务、研招工时、搜索词、记账和芙芙伴学数据，支持修改芙芙伴学任务与获取其窗口截图",
+    description="读取日程、任务、搜索词、记账和芙芙伴学数据，支持修改芙芙伴学任务与获取其窗口截图",
     version=APP_VERSION,
 )
 
@@ -38,13 +37,6 @@ server.add_tool(
     name="get_tasks",
     title="读取任务",
     description="读取当前所有未完成或已完成的任务信息。读取未完成还是已完成的任务由参数 is_completed 决定",
-)
-
-server.add_tool(
-    get_graduate_worktime,
-    name="get_graduate_worktime",
-    title="读取研招工时",
-    description="读取当前所有研招工时记录，以及总时长统计",
 )
 
 server.add_tool(

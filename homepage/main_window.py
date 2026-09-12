@@ -9,9 +9,8 @@ from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication, QVBoxLayout,
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 
-from core.base_objects import BaseWindow, WindowsManager, ThreadManager, BaseThread
+from core.base_objects import BaseWindow, WindowsManager, ThreadManager
 from core.global_constants import app_name
-from core.heartbeat import DynamicHeartbeat
 from core.settings_manager import SettingsManager
 from homepage.widgets import top_status, app_entry, NotificationSystemWidget
 
@@ -155,15 +154,6 @@ class MainWindow(BaseWindow):
         from homepage import scheduler
         scheduler.start()
         self.auto_start["scheduled_notifications"] = scheduler
-
-        # news_monitor - 新闻监控心跳器，定期检查新闻更新
-        if self._settings_manager.get_value("startup.activated.news_monitor", False):
-            from apps import news_monitor
-            interval = self._settings_manager.get_value("startup.news_monitor.interval", 1800)
-            self.news_monitor_worker = DynamicHeartbeat(news_monitor.check_news_update, interval)
-            self.news_monitor_thread = BaseThread(self.news_monitor_worker)
-            self.news_monitor_thread.start()
-            self.auto_start["news_monitor"] = self.news_monitor_thread
 
         # daily_year - 每日年度事记，导入时自动推送当天年度事记通知
         if self._settings_manager.get_value("startup.activated.daily_year", False):

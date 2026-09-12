@@ -39,12 +39,6 @@
                 "激活",
                 [
                     {
-                        "label": "新闻监控",
-                        "type": "bool",
-                        "json_path": "startup.activated.news_monitor",
-                        "default": false
-                    },
-                    {
                         "label": "每日年份",
                         "type": "bool",
                         "json_path": "startup.activated.daily_year",
@@ -61,27 +55,6 @@
                         "type": "bool",
                         "json_path": "startup.activated.furina_notification",
                         "default": false
-                    }
-                ]
-            ],
-            [
-                "新闻监控",
-                [
-                    {
-                        "label": "检查间隔（秒）",
-                        "type": "int",
-                        "json_path": "startup.news_monitor.interval",
-                        "min": 1,
-                        "max": 2147483647,
-                        "default": 1800
-                    },
-                    {
-                        "label": "网络异常时重试间隔（秒）",
-                        "type": "int",
-                        "json_path": "startup.news_monitor.disconnect_delay",
-                        "min": 1,
-                        "max": 2147483647,
-                        "default": 300
                     }
                 ]
             ]

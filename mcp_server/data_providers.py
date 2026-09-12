@@ -4,7 +4,6 @@ from core.functions import get_today
 
 from apps.calendar.calendar_schedule_manager import CalendarSchedulesManager
 from apps.expenses import ExpenseDataManager
-from apps.graduate_worktime import GraduateWorktimeDataManager
 from apps.peer_tutor_2026 import TaskDataManager as PeerTutorTaskDataManager
 from apps.search_words import SearchWordsDataManager
 from apps.tasks import TaskDataManager as TasksDataManager
@@ -27,11 +26,6 @@ def get_tasks(is_completed: bool = False) -> list[dict]:
     manager = TasksDataManager()
     tasks = manager.completed_tasks if is_completed else manager.tasks
     return list(tasks)
-
-
-def get_graduate_worktime() -> str:
-    """读取当前所有研招工时信息（含总时长统计）"""
-    return GraduateWorktimeDataManager().get_export_text()
 
 
 def get_search_words() -> list[str]:
