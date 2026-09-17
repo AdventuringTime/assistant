@@ -18,9 +18,9 @@ TARGETS = [
     ("https://gradschool.ustc.edu.cn/column/9", "研究生院公告通知")
 ]
 # 2. 检查间隔时间
-news_monitor_settings = SettingsManager().get_value("startup.news_monitor")
-CHECK_INTERVAL = news_monitor_settings["interval"]
-DISCONNECT_DELAY = news_monitor_settings["disconnect_delay"]
+news_monitor_settings = SettingsManager().get_value("startup.news_monitor") or {}
+CHECK_INTERVAL = news_monitor_settings.get("interval", 1800)
+DISCONNECT_DELAY = news_monitor_settings.get("disconnect_delay", 300)
 # 3. 存储文件路径
 STORAGE_FILE = os.path.join(os.path.dirname(__file__), "data", "news_ids.json")
 # 4. 新闻数量配置
@@ -136,6 +136,8 @@ def check_news_update():
         except:
             traceback.print_exc()
             continue  # 获取失败则跳过该网页
+        else:
+            network_error = False
 
         # 获取存储的所有历史ID
         stored_ids = last_news_ids[i]
@@ -178,6 +180,7 @@ def load_saved_ids():
 
 def save_current_ids():
     """将当前最新的ID记录（列表形式）保存到JSON文件"""
+    os.makedirs(os.path.dirname(STORAGE_FILE), exist_ok=True)
     with open(STORAGE_FILE, "w", encoding="utf-8") as f:
         json.dump(last_news_ids, f, ensure_ascii=False, indent=4)
 
