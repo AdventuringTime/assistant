@@ -17,16 +17,19 @@ def get_today_schedules() -> dict:
     return schedules
 
 
-def get_tasks(is_completed: bool = False) -> list[dict]:
+def get_tasks(is_completed: bool = False) -> dict:
     """
     读取所有未完成或已完成任务信息
 
     Parameters:
         is_completed (bool): 是否读取已完成任务，False 读取未完成任务（默认）
+
+    Returns:
+        dict: 以任务名为键的任务数据
     """
     manager = TasksDataManager()
-    tasks = manager.completed_tasks if is_completed else manager.tasks
-    return list(tasks)
+    names = manager.completed_names if is_completed else manager.todo_names
+    return {name: manager.tasks[name] for name in names}
 
 
 def get_graduate_worktime() -> str:

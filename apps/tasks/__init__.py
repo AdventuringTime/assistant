@@ -88,18 +88,18 @@ def get_subtasks_first_line(task):
 class SortDialog(BaseDialog):
     """排序对话框，支持拖拽排序任务列表"""
 
-    def __init__(self, parent, children, title="排序"):
+    def __init__(self, parent, names, title="排序"):
         """
         初始化排序对话框
 
         Parameters:
             parent (QWidget): 父窗口
-            children (list): 待排序的任务列表，每个元素包含 'name' 键
+            names (list): 待排序的任务名列表
             title (str, optional): 对话框标题，默认为"排序"
         """
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.children = children
+        self.names = names
 
         layout = QVBoxLayout(self)
 
@@ -110,8 +110,8 @@ class SortDialog(BaseDialog):
         layout.addWidget(self.list_widget)
 
         # 添加任务名称到列表
-        for child in self.children:
-            self.list_widget.addItem(child['name'])
+        for name in self.names:
+            self.list_widget.addItem(name)
 
         # 按钮布局
         button_layout = QHBoxLayout()
@@ -131,16 +131,8 @@ class SortDialog(BaseDialog):
         self.result = None
 
     def accept(self):
-        """确认排序，根据列表顺序重新排列任务"""
-        new_order = []
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            name = item.text()
-            for child in self.children:
-                if child['name'] == name and child not in new_order:
-                    new_order.append(child)
-                    break
-        self.result = new_order
+        """确认排序，按列表顺序返回任务名"""
+        self.result = [self.list_widget.item(i).text() for i in range(self.list_widget.count())]
         super().accept()
 
     def reject(self):
@@ -156,12 +148,13 @@ class TaskDialog(BaseDialog):
     on_save_copy_signal = Signal(dict) # 保存副本信号
     on_delete_signal = Signal()        # 删除任务信号
 
-    def __init__(self, task=None, parent=None):
+    def __init__(self, task=None, name='', parent=None):
         """
         初始化任务编辑对话框
 
         Parameters:
             task (dict, optional): 待编辑的任务数据，None表示新建任务
+            name (str, optional): 待编辑的任务名，默认为空
             parent (QWidget, optional): 父窗口
         """
         super().__init__(parent)
@@ -174,8 +167,8 @@ class TaskDialog(BaseDialog):
         # 任务名称
         self.name_label = QLabel('任务名称:')
         self.name_edit = QLineEdit()
-        if task:
-            self.name_edit.setText(task.get('name', ''))
+        if name:
+            self.name_edit.setText(name)
         self.layout_.addWidget(self.name_label)
         self.layout_.addWidget(self.name_edit)
 
@@ -423,23 +416,24 @@ class TaskItem(QWidget):
     task_updated = Signal()           # 任务更新信号
     task_deleted = Signal()           # 任务删除信号
     task_copy_created = Signal(dict)  # 任务副本创建信号
-    tracking_changed = Signal(int)    # 追踪状态改变信号
-    task_completed = Signal(int)      # 任务完成信号
+    tracking_changed = Signal(str)    # 追踪状态改变信号
+    task_completed = Signal(str)      # 任务完成信号
+    task_saved = Signal(dict)         # 任务保存信号
 
-    def __init__(self, task, id_, is_tracking=False, is_completed=False, parent=None):
+    def __init__(self, task, name, is_tracking=False, is_completed=False, parent=None):
         """
         初始化任务项部件
 
         Parameters:
             task (dict): 任务数据字典
-            id_ (int): 任务索引ID
+            name (str): 任务名
             is_tracking (bool, optional): 是否正在追踪，默认为False
             is_completed (bool, optional): 是否在已完成列表中，默认为False
             parent (QWidget, optional): 父控件
         """
         super().__init__(parent)
         self.task = task
-        self.id_ = id_
+        self.name = name
         self.is_tracking = is_tracking
         self.is_completed = is_completed
         self.task_type = task.get('type', 0)
@@ -470,7 +464,7 @@ class TaskItem(QWidget):
         # 顶部布局（标题和按钮）
         self.top_layout = QHBoxLayout()
 
-        self.name_label = QLabel(self.task.get('name', ''))
+        self.name_label = QLabel(self.name)
         self.name_label.setWordWrap(True)
         self.name_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         font = QFont()
@@ -612,7 +606,7 @@ class TaskItem(QWidget):
 
     def on_complete_clicked(self):
         """触发任务完成信号"""
-        self.task_completed.emit(self.id_)
+        self.task_completed.emit(self.name)
 
     def on_go_clicked(self):
         """打开任务关联的链接"""
@@ -624,7 +618,7 @@ class TaskItem(QWidget):
 
     def on_track_clicked(self):
         """触发追踪状态改变信号"""
-        self.tracking_changed.emit(self.id_)
+        self.tracking_changed.emit(self.name)
 
     def update_progress_percent(self):
         """更新进度条和进度标签显示"""
@@ -668,7 +662,7 @@ class TaskItem(QWidget):
 
     def on_edit_clicked(self, event):
         """打开任务编辑对话框"""
-        dialog = TaskDialog(self.task, self)
+        dialog = TaskDialog(self.task, self.name, self)
         dialog.on_save_signal.connect(self.on_dialog_save)
         dialog.on_save_copy_signal.connect(self.on_dialog_save_copy)
         dialog.on_delete_signal.connect(self.delete_task)
@@ -683,61 +677,8 @@ class TaskItem(QWidget):
         self.task_deleted.emit()
 
     def on_dialog_save(self, data):
-        """处理保存操作，更新任务数据"""
-        # 编辑未完成任务且任务名有变动时，进行重名去重
-        if not self.is_completed and data.get('name', '').strip():
-            name = data['name'].strip()
-            existing_names = set()
-            for task in _data_manager.tasks:
-                task_name = task.get('name')
-                if task_name:
-                    existing_names.add(task_name)
-            # 排除自身
-            existing_names.discard(self.task.get('name'))
-            data['name'] = _get_unique_task_name(name, existing_names)
-
-        self.task.clear()
-        self.task.update(data)
-            # self.task 是更大字典的子字典项，只能原位操作，否则会破坏指针关联
-        self.name_label.setText(data['name'])
-
-        # 更新任务类型和颜色
-        new_type = data.get('type', 0)
-        if new_type != self.task_type:
-            self.task_type = new_type
-            if self.task_type == 0:
-                self.current_color = self.color_branch
-            elif self.task_type == 1:
-                self.current_color = self.color_main
-            self.line_widget.setStyleSheet(f"background-color: {self.current_color};")
-            self.update_style()
-
-        # 更新子任务（只显示第一行）
-        self.subtask_label.setText(get_subtasks_first_line(self.task))
-        if self.subtask_label.text():
-            self.subtask_label.show()
-        else:
-            self.subtask_label.hide()
-
-        deadline = self.task.get('deadline')
-        if deadline:
-            self.deadline_label.setText(f'截止日期: {deadline}')
-            self.deadline_label.show()
-        else:
-            self.deadline_label.hide()
-
-        estimated_time = self.task.get('estimated_time')
-        if estimated_time:
-            self.estimated_time_label.setText(f'预计完成日期: {estimated_time}')
-            self.estimated_time_label.show()
-        else:
-            self.estimated_time_label.hide()
-
-        # 更新进度
-        self.required = data['required']
-        self.update_progress_percent()
-        self.update_buttons_visibility()
-        self.task_updated.emit()
+        """处理保存操作，把任务数据交给任务窗口"""
+        self.task_saved.emit(data)
 
 
 class TaskDataManager:
@@ -754,11 +695,78 @@ class TaskDataManager:
     def __init__(self):
         if self._initialized:
             return
-        self.tasks = []
-        self.completed_tasks = []
-        self.tracking_task_id = None
+        self.tasks = {}
+        self.todo_names = []
+        self.completed_names = []
+        self.tracking_task_name = None
         self._initialized = True
         self.load_tasks()
+
+    @staticmethod
+    def _repair_names(task_dict, todo_names, completed_names):
+        """
+        修正顺序列表与任务数据不一致的情况
+
+        任务数据中有、顺序列表中没有的任务追加到未完成顺序列表尾部；
+        顺序列表中有、任务数据中没有的任务名从顺序列表中移除；
+        同时存在于两个顺序列表中的任务名只保留在未完成顺序列表
+
+        Parameters:
+            task_dict (dict): 以任务名为键的任务数据
+            todo_names (list): 未完成任务的顺序列表
+            completed_names (list): 已完成任务的顺序列表
+
+        Returns:
+            tuple: 修正后的 (未完成顺序列表, 已完成顺序列表)
+        """
+        listed_names = set(todo_names) | set(completed_names)
+        todo_names = todo_names + [name for name in task_dict if name not in listed_names]
+        todo_names = [name for name in todo_names if name in task_dict]
+        completed_names = [name for name in completed_names
+                           if name in task_dict and name not in set(todo_names)]
+        return todo_names, completed_names
+
+    def replace_task(self, old_name, new_name, data):
+        """
+        替换任务：删除原任务及其数据，以新任务名写入新任务数据
+
+        顺序列表中的位置、所在列表（未完成或已完成）与追踪任务名保持一致
+
+        Parameters:
+            old_name (str): 原任务名
+            new_name (str): 新任务名
+            data (dict): 新的任务数据
+        """
+        if self.tasks.pop(old_name) is None:
+            return
+
+        self.tasks[new_name] = data
+
+        for names in (self.todo_names, self.completed_names):
+            if old_name in names:
+                names[names.index(old_name)] = new_name
+                break
+
+        if self.tracking_task_name == old_name:
+            self.tracking_task_name = new_name
+
+    def remove_task(self, name):
+        """
+        按任务名删除任务（未完成或已完成），若追踪该任务则同时停止追踪
+
+        Parameters:
+            name (str): 任务名
+        """
+        if self.tasks.pop(name, None) is None:
+            return
+
+        for names in (self.todo_names, self.completed_names):
+            if name in names:
+                names.remove(name)
+                break
+
+        if self.tracking_task_name == name:
+            self.tracking_task_name = None
 
     def load_tasks(self):
         """从文件加载任务数据"""
@@ -770,9 +778,11 @@ class TaskDataManager:
 
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            self.tasks = data.get('tasks', [])
-            self.completed_tasks = data.get('completed_tasks', [])
-            self.tracking_task_id = data.get('tracking_task_id', None)
+
+        self.tasks = data.get('tasks', {})
+        self.todo_names, self.completed_names = self._repair_names(
+            self.tasks, data.get('todo_names', []), data.get('completed_names', []))
+        self.tracking_task_name = data.get('tracking_task_name', None)
 
     def save_tasks(self):
         """保存任务数据到文件"""
@@ -782,8 +792,9 @@ class TaskDataManager:
 
         data = {
             'tasks': self.tasks,
-            'completed_tasks': self.completed_tasks,
-            'tracking_task_id': self.tracking_task_id
+            'todo_names': self.todo_names,
+            'completed_names': self.completed_names,
+            'tracking_task_name': self.tracking_task_name
         }
 
         with open(json_path, 'w', encoding='utf-8') as f:
@@ -940,7 +951,7 @@ class TaskWindow(BaseWindow):
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)
 
-        self.task_items = []
+        self.task_items = {}
         self.content_layout.addStretch()
         self.scroll_area.setWidget(self.content_widget)
         self.main_layout.addWidget(self.scroll_area)
@@ -967,100 +978,109 @@ class TaskWindow(BaseWindow):
 
     def open_sort_dialog(self):
         """打开任务排序对话框"""
-        if not self.data_manager.tasks:
+        if not self.data_manager.todo_names:
             return
 
-        dialog = SortDialog(self, self.data_manager.tasks, "排序")
+        dialog = SortDialog(self, self.data_manager.todo_names, "排序")
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            # 排序后暂时移除追踪
-            if self.data_manager.tracking_task_id is not None:
-                self.on_tracking_changed(self.data_manager.tracking_task_id)
-            self.data_manager.tasks = dialog.result
+            self.data_manager.todo_names = dialog.result
             self.refresh_ui()
 
-    def _create_task_item(self, task, id_, is_tracking=False, is_completed=False):
+    def _create_task_item(self, task, name, is_tracking=False, is_completed=False):
         """
         创建任务项并连接信号
 
         Parameters:
             task (dict): 任务数据
-            id_ (int): 任务项在列表中的ID
+            name (str): 任务名
             is_tracking (bool, optional): 是否正在追踪该任务，默认False
             is_completed (bool, optional): 是否已完成该任务，默认False
         """
-        task_item = TaskItem(task, id_, is_tracking, is_completed)
+        task_item = TaskItem(task, name, is_tracking, is_completed)
         task_item.task_updated.connect(self.on_task_updated)
+        task_item.task_saved.connect(self.on_task_saved)
         task_item.task_deleted.connect(self.on_task_deleted)
         task_item.task_copy_created.connect(self.on_creation_via_dialog)
         task_item.tracking_changed.connect(self.on_tracking_changed)
         task_item.task_completed.connect(self.on_task_completed)
-        self.task_items.append(task_item)
+        self.task_items[name] = task_item
         self.content_layout.insertWidget(len(self.task_items) - 1, task_item)
 
     def refresh_ui(self):
         """刷新任务列表UI"""
         # 清除现有任务项
-        for item in self.task_items:
-            item.deleteLater()
+        for task_item in self.task_items.values():
+            task_item.deleteLater()
         self.task_items.clear()
 
         # 显示待办任务
-        for id_, task in enumerate(self.data_manager.tasks):
-            is_tracking = (self.data_manager.tracking_task_id == id_)
-            self._create_task_item(task, id_, is_tracking, False)
+        for name in self.data_manager.todo_names:
+            is_tracking = (self.data_manager.tracking_task_name == name)
+            self._create_task_item(self.data_manager.tasks[name], name, is_tracking, False)
 
         # 显示已完成任务（在待办任务后面）
-        for id_old, task in enumerate(self.data_manager.completed_tasks):
-            id_ = len(self.data_manager.tasks) + id_old
-            is_tracking = (self.data_manager.tracking_task_id == id_)
-            self._create_task_item(task, id_, is_tracking, True)
+        for name in self.data_manager.completed_names:
+            is_tracking = (self.data_manager.tracking_task_name == name)
+            self._create_task_item(self.data_manager.tasks[name], name, is_tracking, True)
 
     def on_task_updated(self):
         """任务更新后的处理"""
         self.update_floating_widget()
 
-    def remove_task(self, display_index):
-        """
-        删除任务并更新追踪ID
-
-        Parameters:
-            display_index (int): 任务项在显示列表中的索引
-        """
-        if display_index < len(self.data_manager.tasks):
-            # 删除待办任务
-            del self.data_manager.tasks[display_index]
-        else:
-            # 删除已完成任务
-            completed_index = display_index - len(self.data_manager.tasks)
-            del self.data_manager.completed_tasks[completed_index]
-
-        # 更新追踪ID
-        if self.data_manager.tracking_task_id == display_index:
-            self.data_manager.tracking_task_id = None
-        elif self.data_manager.tracking_task_id is not None and self.data_manager.tracking_task_id > display_index:
-            self.data_manager.tracking_task_id -= 1
-
     def on_task_deleted(self):
         """任务删除后的处理"""
         sender = self.sender()
-        if sender in self.task_items:
-            display_index = self.task_items.index(sender)
-            self.remove_task(display_index)
+        if sender.name in self.task_items:
+            self.data_manager.remove_task(sender.name)
             self.refresh_ui()
             self.update_floating_widget()
 
-    def on_task_completed(self, index):
+    def _get_task_name(self, name, old_name=None):
+        """
+        规范化任务名并与所有任务去重
+
+        Parameters:
+            name (str): 待处理的任务名，为空时使用"未命名任务"
+            old_name (str, optional): 原任务名，不参与去重，默认为None
+
+        Returns:
+            str: 唯一任务名
+        """
+        existing_names = set(self.data_manager.tasks)
+        if old_name is not None:
+            existing_names.discard(old_name)
+        return _get_unique_task_name(name.strip() or '未命名任务', existing_names)
+
+    def on_task_saved(self, data):
+        """
+        任务编辑保存后的处理
+
+        Parameters:
+            data (dict): 任务数据
+        """
+        old_name = self.sender().name
+        name = self._get_task_name(data.pop('name', ''), old_name)
+
+        self.data_manager.replace_task(old_name, name, data)
+
+        self.refresh_ui()
+        self.update_floating_widget()
+
+    def on_task_completed(self, name):
         """
         任务完成后的处理
 
         Parameters:
-            index (int): 任务项在列表中的索引
+            name (str): 任务名
         """
-        task = self.data_manager.tasks[index]
+        task = self.data_manager.tasks[name]
 
-        # 将任务追加到已完成任务列表
-        self.data_manager.completed_tasks.append(task.copy())
+        # 已完成任务的任务名加上"-已完成"后缀并与所有任务去重
+        completed_name = _get_unique_task_name(f"{name}-已完成", set(self.data_manager.tasks))
+        completed_task = dict(task)
+        self.data_manager.tasks[completed_name] = completed_task
+        self.data_manager.completed_names.append(completed_name)
 
         # 获取子任务内容
         subtasks = task.get('subtasks', task.get('description', ''))
@@ -1074,7 +1094,7 @@ class TaskWindow(BaseWindow):
             task['required'] = 1.0
         else:
             # 子任务只有一行或没有，删除此任务
-            self.remove_task(index)
+            self.data_manager.remove_task(name)
 
         # 重新加载列表
         self.refresh_ui()
@@ -1093,37 +1113,23 @@ class TaskWindow(BaseWindow):
         Parameters:
             data (dict): 任务数据
         """
-        if not data['name'].strip():
-            data['name'] = '未命名任务'
+        name = self._get_task_name(data.pop('name', ''))
+        self.data_manager.tasks[name] = data
+        self.data_manager.todo_names.append(name)
 
-        # 重名去重
-        existing_names = set()
-        for task in self.data_manager.tasks:
-            task_name = task.get('name')
-            if task_name:
-                existing_names.add(task_name)
-        data['name'] = _get_unique_task_name(data['name'].strip(), existing_names)
-
-        self.data_manager.tasks.append(data)
         self.refresh_ui()
 
     def update_floating_widget(self):
         """更新悬浮窗口显示当前追踪任务"""
-        if self.data_manager.tracking_task_id is not None:
-            if self.data_manager.tracking_task_id < len(self.data_manager.tasks):
-                # 追踪待办任务
-                task = self.data_manager.tasks[self.data_manager.tracking_task_id]
-            else:
-                # 追踪已完成任务
-                completed_index = self.data_manager.tracking_task_id - len(self.data_manager.tasks)
-                task = self.data_manager.completed_tasks[completed_index]
+        name = self.data_manager.tracking_task_name
+        if name in self.data_manager.tasks:
+            task = self.data_manager.tasks[name]
 
             task_type = task.get('type', 0)
             color = '#00CC66' if task_type == 0 else '#FFCC00'
 
             completed = task.get('completed', 0.0)
             required = task.get('required', 1.0)
-            name = task.get('name', '')
             subtask = get_subtasks_first_line(task)
 
             if not self.floating_widget:
@@ -1139,8 +1145,9 @@ class TaskWindow(BaseWindow):
 
     def on_floating_clicked(self):
         """悬浮窗口点击处理，打开进度修改对话框"""
-        if self.data_manager.tracking_task_id is not None and 0 <= self.data_manager.tracking_task_id < len(self.task_items):
-            self.task_items[self.data_manager.tracking_task_id].set_completed_from_input()
+        item = self.task_items.get(self.data_manager.tracking_task_name)
+        if item:
+            item.set_completed_from_input()
 
     def set_floating_position(self):
         """设置悬浮窗口位置（屏幕右上角）"""
@@ -1150,25 +1157,29 @@ class TaskWindow(BaseWindow):
             y = 50
             self.floating_widget.move(x, y)
 
-    def on_tracking_changed(self, index):
+    def on_tracking_changed(self, name):
         """
         追踪状态改变处理
 
         Parameters:
-            index (int): 任务项在列表中的索引
+            name (str): 任务名
         """
-        old_index = self.data_manager.tracking_task_id
+        old_name = self.data_manager.tracking_task_name
 
-        if self.data_manager.tracking_task_id == index:
+        if old_name == name:
             # 停止追踪当前任务
-            self.data_manager.tracking_task_id = None
-            self.task_items[index].set_tracking(False)
+            self.data_manager.tracking_task_name = None
         else:
             # 开始追踪新任务
-            self.data_manager.tracking_task_id = index
-            if old_index is not None:
-                self.task_items[old_index].set_tracking(False)
-            self.task_items[index].set_tracking(True)
+            self.data_manager.tracking_task_name = name
+
+        old_item = self.task_items.get(old_name) if old_name else None
+        if old_item:
+            old_item.set_tracking(False)
+
+        new_item = self.task_items.get(self.data_manager.tracking_task_name)
+        if new_item:
+            new_item.set_tracking(True)
 
         self.update_floating_widget()
 
