@@ -97,7 +97,7 @@ class ScheduleItemWidget(QWidget):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet("""
             ScheduleItemWidget:hover {
-                background-color: rgba(255, 255, 255, 0.05);
+                background-color: rgba(255, 255, 255, 0.03);
             }
         """)
 

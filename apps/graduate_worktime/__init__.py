@@ -118,7 +118,7 @@ class GraduateWorktimeWindow(BaseWindow):
                 border-bottom: 1px solid #3D3D3D;
             }
             QTableWidget::item:hover {
-                background-color: rgba(255, 255, 255, 0.05);
+                background-color: rgba(255, 255, 255, 0.03);
             }
             QTableWidget::item:selected {
                 background-color: rgba(255, 255, 255, 0.1);

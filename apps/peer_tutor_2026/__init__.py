@@ -306,7 +306,7 @@ class TaskItem(QWidget):
                 font-size: 14px;
             }
             QLabel:hover {
-                background-color: rgba(255, 255, 255, 0.05);
+                background-color: rgba(255, 255, 255, 0.03);
             }
         """)
         self.name_label.mousePressEvent = self.on_name_clicked
@@ -330,7 +330,7 @@ class TaskItem(QWidget):
 
         self.progress_widget.setStyleSheet("""
             #progress_widget:hover {
-                background-color: rgba(255, 255, 255, 0.05);
+                background-color: rgba(255, 255, 255, 0.03);
             }
         """)
         self.progress_widget.mousePressEvent = self.on_progress_clicked

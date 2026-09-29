@@ -542,7 +542,7 @@ class TaskItem(QWidget):
 
         self.progress_widget.setStyleSheet("""
             #progress_widget:hover {
-                background-color: rgba(255, 255, 255, 0.05);
+                background-color: rgba(255, 255, 255, 0.03);
             }
         """)
         self.progress_widget.mousePressEvent = self.set_completed_from_input
