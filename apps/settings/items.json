@@ -9,13 +9,13 @@
                         "label": "时期",
                         "type": "text",
                         "json_path": "homepage.period_season.period",
-                        "default": "萌镇"
+                        "default": "未知"
                     },
                     {
                         "label": "季节",
                         "type": "text",
                         "json_path": "homepage.period_season.season",
-                        "default": "樱绽"
+                        "default": "未知"
                     }
                 ]
             ],
@@ -26,7 +26,7 @@
                         "label": "用户版本",
                         "type": "text",
                         "json_path": "homepage.version.user_version",
-                        "default": "5.1.0"
+                        "default": "未知"
                     }
                 ]
             ]

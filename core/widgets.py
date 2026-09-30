@@ -269,6 +269,7 @@ class SettingSubcategoryWidget(QWidget):
             item_widget = SettingItemWidget_Config(
                 label=item["label"],
                 field_type=item["type"],
+                placeholder=item.get("default"),
                 config_data=item
             )
             subcategory_layout.addWidget(item_widget)

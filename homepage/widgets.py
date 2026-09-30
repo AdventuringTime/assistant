@@ -380,12 +380,12 @@ class PeriodSeasonLabel(QLabel):
 
     def load_data(self):
         """
-        加载时期和季节数据并更新显示。默认值为"原初期 夏季"。
+        加载时期和季节数据并更新显示。值为空字符串或缺失时回退为"未知"，保留"期""季"后缀。
         """
 
         # 读取时期和季节数据
-        period = SettingsManager().get_value("homepage.period_season.period", "原初")
-        season = SettingsManager().get_value("homepage.period_season.season", "夏")
+        period = SettingsManager().get_value("homepage.period_season.period") or "未知"
+        season = SettingsManager().get_value("homepage.period_season.season") or "未知"
 
         # 设置显示文本
         display_text = f"{period}期 {season}季"
@@ -413,9 +413,9 @@ class VersionLabel(QLabel):
         读取 user_version
 
         Returns:
-            str: user_version 值，如果读取失败返回"未知"
+            str: user_version 值，如果为空字符串或读取失败返回"未知"
         """
-        return SettingsManager().get_value("homepage.version.user_version", "未知")
+        return SettingsManager().get_value("homepage.version.user_version") or "未知"
 
     def load_data(self):
         """
