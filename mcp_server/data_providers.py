@@ -17,6 +17,21 @@ def get_today_schedules() -> dict:
     return schedules
 
 
+def get_date_schedules(year: int, month: int, day: int) -> dict:
+    """
+    读取指定日期的所有日程信息
+
+    Parameters:
+        year (int): 年份
+        month (int): 月份（1-12）
+        day (int): 日期
+
+    Returns:
+        dict: 以日程ID为键的日程数据，该日期无日程时返回空字典
+    """
+    return CalendarSchedulesManager().get_schedules(year, month, day)
+
+
 def get_tasks(is_completed: bool = False) -> dict:
     """
     读取所有未完成或已完成任务信息

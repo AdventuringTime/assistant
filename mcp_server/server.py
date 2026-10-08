@@ -7,6 +7,7 @@ from core.global_constants import APP_VERSION
 from mcp.server.mcpserver import MCPServer
 
 from mcp_server.data_providers import (
+    get_date_schedules,
     get_graduate_worktime,
     get_month_expenses,
     get_peer_tutor_week_tasks,
@@ -31,6 +32,13 @@ server.add_tool(
     name="get_today_schedules",
     title="读取今天日程",
     description="读取今天的所有日程信息",
+)
+
+server.add_tool(
+    get_date_schedules,
+    name="get_date_schedules",
+    title="读取指定日期日程",
+    description="读取指定日期的所有日程信息",
 )
 
 server.add_tool(
