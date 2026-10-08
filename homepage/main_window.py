@@ -13,7 +13,29 @@ from core.base_objects import BaseWindow, WindowsManager, ThreadManager, BaseThr
 from core.global_constants import app_name
 from core.heartbeat import DynamicHeartbeat
 from core.settings_manager import SettingsManager
-from homepage.widgets import top_status, app_entry, NotificationSystemWidget
+from homepage.widgets import top_status, app_entry, NotificationSystemWidget, open_app
+from apps import APP_LIST
+
+
+class AppAction(QAction):
+    """托盘菜单中的应用项，触发时打开对应应用的窗口"""
+
+    def __init__(self, app_key, display_name, parent=None):
+        """
+        初始化应用菜单项
+
+        Parameters:
+            app_key (str): 应用名称（APP_LIST 中的键）
+            display_name (str): 菜单中显示的名称
+            parent (QObject, optional): 父对象，默认为None
+        """
+        super().__init__(display_name, parent)
+        self.app_key = app_key
+        self.triggered.connect(self.on_triggered)
+
+    def on_triggered(self):
+        """触发时打开对应应用的窗口"""
+        open_app(self.app_key)
 
 
 class MainWindow(BaseWindow):
@@ -46,6 +68,13 @@ class MainWindow(BaseWindow):
 
         # 创建托盘菜单
         tray_menu = QMenu()
+
+        # 各应用
+        for name, app_info in APP_LIST.items():
+            tray_menu.addAction(AppAction(name, app_info["display_name"], self))
+
+        # 分隔线
+        tray_menu.addSeparator()
 
         # 退出
         exit_action = QAction("退出", self)
