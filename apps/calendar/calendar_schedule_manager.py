@@ -72,7 +72,7 @@ class CalendarSchedulesManager:
         # 处理每天重复事件
         yesterday = date - datetime.timedelta(days=1)
         events_yesterday = self.get_schedules(yesterday.year, yesterday.month, yesterday.day)
-        for event in events_yesterday.values():
+        for id_, event in events_yesterday.items():
             if event.get("repetition") == 1:  # 每天重复
                 start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
                 start_time_new = start_time_old + datetime.timedelta(days=1)
@@ -82,7 +82,6 @@ class CalendarSchedulesManager:
                 end_time_new = end_time_old + datetime.timedelta(days=1)
                 event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
 
-                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
                 self.save_schedule(
                     event,
                     date.year, date.month, date.day, id_,
@@ -91,7 +90,7 @@ class CalendarSchedulesManager:
         # 处理每周重复事件
         lastweek = date - datetime.timedelta(days=7)
         events_lastweek = self.get_schedules(lastweek.year, lastweek.month, lastweek.day)
-        for event in events_lastweek.values():
+        for id_, event in events_lastweek.items():
             if event.get("repetition") == 2:  # 每周重复
                 start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
                 start_time_new = start_time_old + datetime.timedelta(days=7)
@@ -101,7 +100,6 @@ class CalendarSchedulesManager:
                 end_time_new = end_time_old + datetime.timedelta(days=7)
                 event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
 
-                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
                 self.save_schedule(
                     event,
                     date.year, date.month, date.day, id_,
@@ -255,18 +253,22 @@ class CalendarSchedulesManager:
         """
         将所有脏数据一次性写入磁盘。
 
-        遍历所有已修改的月份，将缓存中的月度日程数据直接写入JSON文件。
-        如果某月缓存为空，则删除对应的文件。
+        遍历所有已修改的月份，过滤掉其中已无日程的日期键，
+        再将月度日程数据写入JSON文件。
+        如果某月已无日程，则删除对应的文件。
         """
         for year, month in self._dirty_months:
             month_cache = self._cache_dict.get(year, {}).get(month, {})
-            file_path = self._month_file_path(year, month)
 
-            if month_cache:
+            # 已无日程的日期键不写入磁盘，不动缓存
+            month_data = {day: schedules for day, schedules in month_cache.items() if schedules}
+
+            file_path = self._month_file_path(year, month)
+            if month_data:
                 # 有日程数据 -> 写入月度文件
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(month_cache, f, ensure_ascii=False, indent=4)
+                    json.dump(month_data, f, ensure_ascii=False, indent=4)
             else:
                 # 该月所有日程已被清空 -> 删除文件（如果存在）
                 if os.path.exists(file_path):
