@@ -72,8 +72,9 @@ class CalendarSchedulesManager:
         # 处理每天重复事件
         yesterday = date - datetime.timedelta(days=1)
         events_yesterday = self.get_schedules(yesterday.year, yesterday.month, yesterday.day)
-        for id_, event in events_yesterday.items():
+        for event in events_yesterday.values():
             if event.get("repetition") == 1:  # 每天重复
+                event = dict(event)  # 拷贝一份，避免改写源日期的事件数据
                 start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
                 start_time_new = start_time_old + datetime.timedelta(days=1)
                 event["start_time"] = start_time_new.strftime('%Y-%m-%d %H:%M')
@@ -82,6 +83,7 @@ class CalendarSchedulesManager:
                 end_time_new = end_time_old + datetime.timedelta(days=1)
                 event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
 
+                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
                 self.save_schedule(
                     event,
                     date.year, date.month, date.day, id_,
@@ -90,8 +92,9 @@ class CalendarSchedulesManager:
         # 处理每周重复事件
         lastweek = date - datetime.timedelta(days=7)
         events_lastweek = self.get_schedules(lastweek.year, lastweek.month, lastweek.day)
-        for id_, event in events_lastweek.items():
+        for event in events_lastweek.values():
             if event.get("repetition") == 2:  # 每周重复
+                event = dict(event)  # 拷贝一份，避免改写源日期的事件数据
                 start_time_old = datetime.datetime.strptime(event["start_time"], '%Y-%m-%d %H:%M')
                 start_time_new = start_time_old + datetime.timedelta(days=7)
                 event["start_time"] = start_time_new.strftime('%Y-%m-%d %H:%M')
@@ -100,6 +103,7 @@ class CalendarSchedulesManager:
                 end_time_new = end_time_old + datetime.timedelta(days=7)
                 event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
 
+                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
                 self.save_schedule(
                     event,
                     date.year, date.month, date.day, id_,
