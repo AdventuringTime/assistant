@@ -212,12 +212,6 @@ class ScheduleEditorWindow(BaseWindow):
             if reply == QMessageBox.StandardButton.No:
                 return
 
-        self.year_new, self.month_new, self.day_new = _get_date(self.start_time.toPython())
-
-        # 计算新的ID（从事件当天凌晨4点到开始时间的分钟数）
-        start_time = self.start_time.time()
-        self.id_new = int(((start_time.hour() * 60 + start_time.minute()) - 240) % 1440)
-
         schedule_type = self.type_editor.get_value()
 
         start_time_str = self.start_time.toString("yyyy-MM-dd HH:mm")

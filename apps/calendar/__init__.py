@@ -407,10 +407,6 @@ class CalendarWindow(BaseWindow):
         """
         self.save_schedule(
             schedule_data=schedule_editor.schedule_data,
-            year_new=schedule_editor.year_new,
-            month_new=schedule_editor.month_new,
-            day_new=schedule_editor.day_new,
-            id_new=schedule_editor.id_new,
             year_old=schedule_editor.year,
             month_old=schedule_editor.month,
             day_old=schedule_editor.day,
@@ -421,7 +417,6 @@ class CalendarWindow(BaseWindow):
     def save_schedule(
             self,
             schedule_data,
-            year_new, month_new, day_new, id_new,
             year_old=None, month_old=None, day_old=None, id_old=None,
             copy=False
         ):
@@ -430,19 +425,14 @@ class CalendarWindow(BaseWindow):
 
         Parameters:
             schedule_data: 日程数据字典。
-            year_new: 新日期的年份。
-            month_new: 新日期的月份。
-            day_new: 新日期的日期。
-            id_new: 新日程的id。
             year_old: 旧日期的年份。
             month_old: 旧日期的月份。
             day_old: 旧日期的日期。
             id_old: 旧日程的id。
             copy: 是否复制旧日程，默认False。
         """
-        self.schedule_manager.save_schedule(
+        year_new, month_new, day_new, id_new = self.schedule_manager.save_schedule(
             schedule_data,
-            year_new, month_new, day_new, id_new,
             year_old, month_old,
             day_old,
             id_old,

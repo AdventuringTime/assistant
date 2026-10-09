@@ -613,8 +613,7 @@ class TaskItem(QWidget):
         link = self.task.get('link', '')
         if not link:
             return
-        url = QUrl(link)
-        QDesktopServices.openUrl(url)
+        TaskDataManager().open_link(link)
 
     def on_track_clicked(self):
         """触发追踪状态改变信号"""
@@ -730,15 +729,24 @@ class TaskDataManager:
         """
         替换任务：删除原任务及其数据，以新任务名写入新任务数据
 
+        新任务名会与除原任务外的现有任务名去重（自动追加 -1、-2 等后缀），
         顺序列表中的位置、所在列表（未完成或已完成）与追踪任务名保持一致
 
         Parameters:
             old_name (str): 原任务名
-            new_name (str): 新任务名
+            new_name (str): 期望的新任务名，为空时使用“未命名任务”
             data (dict): 新的任务数据
+
+        Returns:
+            str: 实际保存的新任务名；原任务不存在时返回 None
         """
-        if self.tasks.pop(old_name) is None:
-            return
+        if self.tasks.pop(old_name, None) is None:
+            return None
+
+        new_name = _get_unique_task_name(
+            (str(new_name).strip() or '未命名任务') if new_name else '未命名任务',
+            set(self.tasks),
+        )
 
         self.tasks[new_name] = data
 
@@ -749,6 +757,61 @@ class TaskDataManager:
 
         if self.tracking_task_name == old_name:
             self.tracking_task_name = new_name
+
+        return new_name
+
+    def add_task(self, name, data):
+        """
+        添加新任务到未完成任务列表
+
+        任务名会与现有任务名去重（自动追加 -1、-2 等后缀），为空时使用“未命名任务”。
+
+        Parameters:
+            name (str): 期望的任务名
+            data (dict): 任务数据（不含任务名）
+
+        Returns:
+            str: 实际保存的任务名
+        """
+        new_name = _get_unique_task_name(
+            (str(name).strip() or '未命名任务') if name else '未命名任务',
+            set(self.tasks),
+        )
+        self.tasks[new_name] = data
+        self.todo_names.append(new_name)
+        return new_name
+
+    def copy_task(self, name, new_name, data):
+        """
+        以原任务为参照生成副本，副本插入原任务在原列表中的位置之后
+
+        副本名称会与现有任务名去重（自动追加 -1、-2 等后缀），为空时使用原名。
+
+        Parameters:
+            name (str): 原任务名
+            new_name (str): 期望的副本名，为空时使用原名
+            data (dict): 副本的任务数据
+
+        Returns:
+            str: 实际保存的副本名
+        """
+        if name not in self.tasks:
+            return self.add_task(new_name, data)
+
+        new_name = _get_unique_task_name(
+            (str(new_name).strip() or name) if new_name else name,
+            set(self.tasks),
+        )
+        self.tasks[new_name] = data
+
+        for names in (self.todo_names, self.completed_names):
+            if name in names:
+                names.insert(names.index(name) + 1, new_name)
+                break
+        else:
+            self.todo_names.append(new_name)
+
+        return new_name
 
     def remove_task(self, name):
         """
@@ -767,6 +830,51 @@ class TaskDataManager:
 
         if self.tracking_task_name == name:
             self.tracking_task_name = None
+
+    @staticmethod
+    def open_link(link):
+        """
+        用系统默认程序打开链接（网址或本地文件路径）
+
+        Parameters:
+            link (str): 链接
+        """
+        QDesktopServices.openUrl(QUrl(link))
+
+    def complete_task(self, name):
+        """
+        完成指定任务
+
+        任务名追加 -已完成 后缀后移入已完成列表；
+        子任务多于一行时，移除第一行并重置进度；否则直接删除该任务。
+
+        Parameters:
+            name (str): 任务名
+
+        Returns:
+            str: 已完成的任务名
+        """
+        task = self.tasks[name]
+
+        # 已完成任务的任务名加上"-已完成"后缀并与所有任务去重
+        completed_name = _get_unique_task_name(f"{name}-已完成", set(self.tasks))
+        self.tasks[completed_name] = dict(task)
+        self.completed_names.append(completed_name)
+
+        # 获取子任务内容
+        subtasks = task.get('subtasks', task.get('description', ''))
+        lines = [line.strip() for line in subtasks.split('\n') if line.strip()]
+
+        if len(lines) > 1:
+            # 子任务不仅一行，移除第一行
+            task['subtasks'] = '\n'.join(lines[1:])
+            task['completed'] = 0.0
+            task['required'] = 1.0
+        else:
+            # 子任务只有一行或没有，删除此任务
+            self.remove_task(name)
+
+        return completed_name
 
     def load_tasks(self):
         """从文件加载任务数据"""
@@ -1074,27 +1182,7 @@ class TaskWindow(BaseWindow):
         Parameters:
             name (str): 任务名
         """
-        task = self.data_manager.tasks[name]
-
-        # 已完成任务的任务名加上"-已完成"后缀并与所有任务去重
-        completed_name = _get_unique_task_name(f"{name}-已完成", set(self.data_manager.tasks))
-        completed_task = dict(task)
-        self.data_manager.tasks[completed_name] = completed_task
-        self.data_manager.completed_names.append(completed_name)
-
-        # 获取子任务内容
-        subtasks = task.get('subtasks', task.get('description', ''))
-        lines = [line.strip() for line in subtasks.split('\n') if line.strip()]
-
-        if len(lines) > 1:
-            # 子任务不仅一行，移除第一行
-            remaining_lines = lines[1:]
-            task['subtasks'] = '\n'.join(remaining_lines)
-            task['completed'] = 0.0
-            task['required'] = 1.0
-        else:
-            # 子任务只有一行或没有，删除此任务
-            self.data_manager.remove_task(name)
+        self.data_manager.complete_task(name)
 
         # 重新加载列表
         self.refresh_ui()
@@ -1113,10 +1201,7 @@ class TaskWindow(BaseWindow):
         Parameters:
             data (dict): 任务数据
         """
-        name = self._get_task_name(data.pop('name', ''))
-        self.data_manager.tasks[name] = data
-        self.data_manager.todo_names.append(name)
-
+        self.data_manager.add_task(data.pop('name', ''), data)
         self.refresh_ui()
 
     def update_floating_widget(self):

@@ -83,11 +83,7 @@ class CalendarSchedulesManager:
                 end_time_new = end_time_old + datetime.timedelta(days=1)
                 event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
 
-                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
-                self.save_schedule(
-                    event,
-                    date.year, date.month, date.day, id_,
-                    copy=True)
+                self.save_schedule(event, copy=True)
 
         # 处理每周重复事件
         lastweek = date - datetime.timedelta(days=7)
@@ -103,11 +99,7 @@ class CalendarSchedulesManager:
                 end_time_new = end_time_old + datetime.timedelta(days=7)
                 event["end_time"] = end_time_new.strftime('%Y-%m-%d %H:%M')
 
-                id_ = int(((start_time_new.hour * 60 + start_time_new.minute) - 240) % 1440)
-                self.save_schedule(
-                    event,
-                    date.year, date.month, date.day, id_,
-                    copy=True)
+                self.save_schedule(event, copy=True)
 
     def init_repeat_events_until_today(self, today):
         """
@@ -179,7 +171,6 @@ class CalendarSchedulesManager:
     def save_schedule(
             self,
             schedule_data,
-            year_new, month_new, day_new, id_new,
             year_old=None, month_old=None, day_old=None, id_old=None,
             copy=False
         ):
@@ -197,7 +188,16 @@ class CalendarSchedulesManager:
             day_old: 旧日期的日期。
             id_old: 旧日程的id。
             copy: 是否复制旧日程，默认False。
+
+        Returns:
+            tuple: 新日程的 (year_new, month_new, day_new, id_new)
         """
+        # 根据开始时间计算新日程的日期与ID
+        start_time = datetime.datetime.strptime(schedule_data["start_time"], '%Y-%m-%d %H:%M')
+        date_new = get_today(start_time)
+        year_new, month_new, day_new = date_new.year, date_new.month, date_new.day
+        id_new = int(((start_time.hour * 60 + start_time.minute) - 240) % 1440)
+
         # 获取当前数据
         current_data = self.get_schedules(year_new, month_new, day_new)
         schedules = SortedDict(current_data)
@@ -226,6 +226,8 @@ class CalendarSchedulesManager:
         # 更新缓存并标记为脏数据
         self._cache_dict.setdefault(year_new, {}).setdefault(month_new, {})[str(day_new)] = dict(schedules)
         self._dirty_months.add((year_new, month_new))
+
+        return year_new, month_new, day_new, id_new
 
     def delete_schedule(self, year_old, month_old, day_old, id_old):
         """
